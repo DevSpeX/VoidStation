@@ -44,7 +44,7 @@ SETTINGS = {
     "cursor": {"theme": "Bibata-Modern-Ice", "size": 48,
                "themes": [{"id": "Bibata-Modern-Ice", "label": "Hell"}, {"id": "Bibata-Modern-Classic", "label": "Dunkel"}],
                "sizes": [32, 48, 64, 80, 96]},
-    "displays": [{"name": "HDMI-A-0", "current": "1920x1080", "modes": ["3840x2160", "1920x1080", "1280x720"]}],
+    "displays": [{"name": "HDMI-1", "current": "1280x720", "rate": 60.0, "modes": ["1920x1080i", "1280x720", "720x576"]}],
     "audio": {"ok": True, "outputs": [
         {"card": "c", "profile": "output:hdmi-stereo", "label": "Digital Stereo (HDMI)", "active": True},
         {"card": "c", "profile": "output:analog-stereo", "label": "Analog Stereo", "active": False}]},

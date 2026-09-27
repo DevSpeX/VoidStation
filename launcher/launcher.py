@@ -446,6 +446,7 @@ def restart_home_later(delay=0.8):
 
 
 def xrandr_info():
+    """Angeschlossene Ausgaenge mit Modi und Bildraten (aus xrandr --query)."""
     r = run(["xrandr", "--query"])
     outs = []
     if not r or r.returncode != 0:
@@ -456,7 +457,8 @@ def xrandr_info():
             parts = line.split()
             cur = None
             if len(parts) > 1 and parts[1] == "connected":
-                cur = {"name": parts[0], "modes": [], "current": None}
+                cur = {"name": parts[0], "modes": [], "current": None, "rate": None,
+                       "preferred": None, "rates": {}}
                 outs.append(cur)
         elif cur is not None:
             p = line.split()
@@ -465,17 +467,53 @@ def xrandr_info():
             mode = p[0]
             if mode not in cur["modes"]:
                 cur["modes"].append(mode)
-            if any("*" in x for x in p[1:]):
-                cur["current"] = mode
+            for tok in p[1:]:
+                try:
+                    hz = float(tok.rstrip("*+"))
+                except ValueError:
+                    continue
+                cur["rates"].setdefault(mode, []).append(hz)
+                if "*" in tok:
+                    cur["current"], cur["rate"] = mode, hz
+                if "+" in tok and not cur["preferred"]:
+                    cur["preferred"] = mode
     return outs
 
 
+def _best_rate(rates):
+    """Moeglichst 60 Hz (60.00 vor 59.94), sonst die hoechste Rate."""
+    if not rates:
+        return None
+    near = [r for r in rates if abs(r - 60) < 0.5]
+    return max(near) if near else max(rates)
+
+
+def _auto_mode(o):
+    """Meldet der Fernseher ein Halbbild-Format (1080i) als Standard, lieber den
+    groessten Vollbild-Modus mit ~60 Hz nehmen (ruhigeres Bild, YouTube ohne Ruckeln)."""
+    pref = o.get("preferred") or o.get("current")
+    if not pref or not pref.endswith("i"):
+        return None
+    prog = [m for m in o["modes"] if not m.endswith("i")
+            and any(abs(r - 60) < 0.5 for r in o["rates"].get(m, []))]
+    if not prog:
+        return None
+    return max(prog, key=lambda m: int(m.split("x")[0]) * int(m.split("x")[1].rstrip("i")))
+
+
 def apply_resolution(res):
-    if not res:
-        return
     for o in xrandr_info():
-        if res in o["modes"]:
-            run(["xrandr", "--output", o["name"], "--mode", res])
+        mode = res if res in o["modes"] else (None if res else _auto_mode(o))
+        if not mode:
+            continue
+        rate = _best_rate(o["rates"].get(mode, []))
+        if mode == o["current"] and (rate is None or o["rate"] == rate):
+            continue
+        cmd = ["xrandr", "--output", o["name"], "--mode", mode]
+        if rate:
+            cmd += ["--rate", f"{rate:.2f}"]
+        run(cmd)
+        log("Aufloesung", o["name"], mode, f"{rate} Hz" if rate else "", "(automatisch)" if not res else "")
 
 
 def pactl_json(*args):

@@ -750,8 +750,11 @@ function renderSettings() {
   }
   for (const d of sett.displays || []) {
     const rr = row(col(tr, `Auflösung · ${d.name}`));
-    const modes = d.modes.filter(m => { const [w, h] = m.split('x').map(Number); return w >= 1024 && h >= 576; }).slice(0, 6);
-    for (const m of modes) { const b = pill(m.replace('x', '×'), () => setResolution(m), m === d.current); b.dataset.key = 'res' + m; rr.appendChild(b); }
+    const modes = d.modes.filter(m => { const [w, h] = m.split('x').map(v => parseInt(v, 10)); return w >= 1024 && h >= 576; }).slice(0, 6);
+    for (const m of modes) {
+      const label = m.replace('x', '×').replace(/i$/, ' Halbbild') + (m === d.current && d.rate ? ` · ${Math.round(d.rate)} Hz` : '');
+      const b = pill(label, () => setResolution(m), m === d.current); b.dataset.key = 'res' + m; rr.appendChild(b);
+    }
   }
 
   // Ton
