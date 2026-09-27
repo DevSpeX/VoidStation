@@ -63,6 +63,10 @@ while :; do
   warn "Bitte eine Nummer aus der Liste."
 done
 DISK="${DISKS[$((n-1))]}"
+# Sicherung: niemals die Platte des gerade laufenden Systems
+if lsblk -nro MOUNTPOINTS "$DISK" 2>/dev/null | grep -qx '/'; then
+  die "Auf $DISK laeuft gerade dieses System. Der Installer ist nur fuer den Start vom USB-Stick gedacht."
+fi
 
 # ---------------------------------------------------------------------
 say "Angaben fuer das neue System"

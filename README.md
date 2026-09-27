@@ -14,9 +14,14 @@ Tonausgang, WLAN, Mauszeiger), Samba-Freigabe `\\<rechner>\share`, mehrere Apps 
 
 ```sh
 loadkeys de
-xbps-fetch https://codeberg.org/goldhahn/VoidStation/raw/branch/main/dist/voidstation-install.sh
-bash voidstation-install.sh
+xbps-fetch https://goldhahn.codeberg.page/vs
+bash vs
 ```
+
+`vs` ist ein kleiner Starter (siehe `pages/vs`, veröffentlicht über das Repo `goldhahn/pages`):
+Er lädt jedes Mal den aktuellen `dist/voidstation-install.sh` aus diesem Repo und startet ihn.
+Lange Variante ohne Starter:
+`xbps-fetch https://codeberg.org/goldhahn/VoidStation/raw/branch/main/dist/voidstation-install.sh`
 
 Das Skript fragt Ziel-SSD, Rechnername, Name und Passwort ab. **Es löscht die komplette SSD.**
 Danach installiert es Void, VoidStation, EFISTUB (GRUB als Rückfall) und die Samba-Freigabe.
