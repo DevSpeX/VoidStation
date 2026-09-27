@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-TV-Start Launcher
+VoidStation Launcher
 -----------------
 Kleiner lokaler Dienst fuer die Kacheloberflaeche:
   * liefert die Startseite (web/, tiles.json) aus
@@ -31,13 +31,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 HOST = "127.0.0.1"
-PORT = int(os.environ.get("TVSTART_PORT", "8765"))
+PORT = int(os.environ.get("VOIDSTATION_PORT", "8765"))
 BASE = Path(__file__).resolve().parent
 WEB = BASE / "web"
-CONFIG = Path(os.environ.get("TVSTART_CONFIG", BASE / "tiles.json"))
+CONFIG = Path(os.environ.get("VOIDSTATION_CONFIG", BASE / "tiles.json"))
 FAVS = BASE / "radio.json"
 MPV_SOCK = str(BASE / "mpv.sock")
-HOME_TITLE = "TV-Start"                      # <title> der Startseite
+HOME_TITLE = "VoidStation"                      # <title> der Startseite
 RADIO_SERVERS = ["de1.api.radio-browser.info", "de2.api.radio-browser.info",
                  "fi1.api.radio-browser.info", "at1.api.radio-browser.info"]
 
@@ -54,7 +54,7 @@ POWER = {
 
 
 def log(*a):
-    print("[tvstart]", *a, file=sys.stderr, flush=True)
+    print("[voidstation]", *a, file=sys.stderr, flush=True)
 
 
 def load_config():
@@ -301,7 +301,7 @@ def radio_search(query):
     for host in RADIO_SERVERS:
         try:
             req = urllib.request.Request(f"https://{host}/json/stations/search?{params}",
-                                         headers={"User-Agent": "TVStart/2.0"})
+                                         headers={"User-Agent": "VoidStation/2.0"})
             with urllib.request.urlopen(req, timeout=6) as r:
                 items = json.load(r)
             return [{
@@ -441,7 +441,7 @@ def restart_home_later(delay=0.8):
     """Startseite neu starten, damit sie den neuen Mauszeiger uebernimmt (home.sh startet sie neu)."""
     def _go():
         time.sleep(delay)
-        run(["pkill", "-f", "tvstart-shell.py|profiles/home"])
+        run(["pkill", "-f", "voidstation-shell.py|profiles/home"])
     threading.Thread(target=_go, daemon=True).start()
 
 
@@ -589,7 +589,7 @@ def share_info():
 IPTV_API = "https://iptv-org.github.io/api/"
 CACHE = BASE / "cache"
 TVFAVS = BASE / "tvfavs.json"
-UA = {"User-Agent": "TVStart/4.0"}
+UA = {"User-Agent": "VoidStation/4.0"}
 
 
 def fetch(url, dest, max_age):
@@ -753,7 +753,7 @@ TV = IPTV()
 # ---------------------------------------------------------------------------
 CATALOG = BASE / "catalog.json"
 APPDIR = BASE / "apps"
-PKG_HELPER = "/usr/local/sbin/tvstart-pkg"
+PKG_HELPER = "/usr/local/sbin/voidstation-pkg"
 FLATHUB = "https://dl.flathub.org/repo/flathub.flatpakrepo"
 
 
@@ -787,7 +787,7 @@ def app_installed(a):
 def app_cmd(a):
     if a["source"]["type"] == "web":
         return ["firefox", "--kiosk", "--no-remote", "--profile",
-                f"~/.local/share/tvstart/profiles/{a['id']}", a["source"]["url"]]
+                f"~/.local/share/voidstation/profiles/{a['id']}", a["source"]["url"]]
     return a["cmd"]
 
 
@@ -1012,7 +1012,7 @@ def settings_payload():
 #  HTTP
 # ---------------------------------------------------------------------------
 class Handler(BaseHTTPRequestHandler):
-    server_version = "tvstart"
+    server_version = "voidstation"
 
     def log_message(self, fmt, *args):
         pass

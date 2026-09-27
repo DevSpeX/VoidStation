@@ -1,5 +1,5 @@
-# --- TV-Start: Openbox-Autostart ---------------------------------------
-TV="$HOME/.local/share/tvstart"
+# --- VoidStation: Openbox-Autostart ---------------------------------------
+TV="$HOME/.local/share/voidstation"
 mkdir -p "$TV/logs"
 [ -f "$TV/env.sh" ] && . "$TV/env.sh"          # Mauszeiger, dunkles Theme (vom Launcher gepflegt)
 

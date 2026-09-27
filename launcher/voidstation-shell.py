@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-TV-Start Shell
+VoidStation Shell
 --------------
 Schlankes Vollbildfenster fuer die Startseite (WebKitGTK statt Firefox).
 Zeigt http://127.0.0.1:8765/ an, wartet beim Start auf den Launcher,
@@ -19,7 +19,7 @@ gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, GLib, Gtk, WebKit2  # noqa: E402
 
 URL = "http://127.0.0.1:8765/"
-TITLE = "TV-Start"                      # muss zum Fenstertitel passen, den der Launcher sucht
+TITLE = "VoidStation"                      # muss zum Fenstertitel passen, den der Launcher sucht
 
 
 class Shell(Gtk.Window):

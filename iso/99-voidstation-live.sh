@@ -1,4 +1,4 @@
-# TV-Start Live-Stick: Netzwerk ueber NetworkManager (auch WLAN per nmtui),
+# VoidStation Live-Stick: Netzwerk ueber NetworkManager (auch WLAN per nmtui),
 # SSH-Zugang als root mit Passwort "voidlinux" (nur im Live-System!)
 _d=/etc/runit/runsvdir/default
 for _s in dbus NetworkManager sshd; do

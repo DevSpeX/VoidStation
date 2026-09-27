@@ -1,0 +1,12 @@
+#!/bin/sh
+# vsctl home            -> laufendes Programm schliessen, zurueck zur Startseite
+# vsctl launch <id>     -> Kachel starten (id aus tiles.json)
+# vsctl status          -> was laeuft gerade?
+URL=http://127.0.0.1:8765/api
+case "$1" in
+  home)   curl -fsS -X POST -H 'X-TV: 1' "$URL/home" ;;
+  launch) curl -fsS -X POST -H 'X-TV: 1' "$URL/launch/$2" ;;
+  status) curl -fsS "$URL/status" ;;
+  *) echo "Benutzung: vsctl home | launch <id> | status" >&2; exit 1 ;;
+esac
+echo

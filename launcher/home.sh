@@ -1,8 +1,8 @@
 #!/bin/sh
 # Startet die Kacheloberflaeche im Vollbild und haelt sie am Leben.
 # Bevorzugt die schlanke WebKit-Shell; Firefox bleibt als Rueckfall
-# (erzwingen mit:  touch ~/.local/share/tvstart/use-firefox).
-TV="$HOME/.local/share/tvstart"
+# (erzwingen mit:  touch ~/.local/share/voidstation/use-firefox).
+TV="$HOME/.local/share/voidstation"
 for i in $(seq 1 50); do
   curl -fs http://127.0.0.1:8765/api/status >/dev/null 2>&1 && break
   sleep 0.2
@@ -12,7 +12,7 @@ use_shell() {
 }
 while true; do
   if use_shell; then
-    python3 "$TV/tvstart-shell.py" >"$TV/logs/shell.log" 2>&1
+    python3 "$TV/voidstation-shell.py" >"$TV/logs/shell.log" 2>&1
   else
     firefox --kiosk --no-remote --profile "$TV/profiles/home" http://127.0.0.1:8765/
   fi

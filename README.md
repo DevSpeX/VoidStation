@@ -14,12 +14,12 @@ Tonausgang, WLAN, Mauszeiger), Samba-Freigabe `\\<rechner>\share`, mehrere Apps 
 
 ```sh
 loadkeys de
-xbps-fetch https://codeberg.org/goldhahn/VoidStation/raw/branch/main/dist/tvstart-install.sh
-bash tvstart-install.sh
+xbps-fetch https://codeberg.org/goldhahn/VoidStation/raw/branch/main/dist/voidstation-install.sh
+bash voidstation-install.sh
 ```
 
 Das Skript fragt Ziel-SSD, Rechnername, Name und Passwort ab. **Es löscht die komplette SSD.**
-Danach installiert es Void, TV-Start, EFISTUB (GRUB als Rückfall) und die Samba-Freigabe.
+Danach installiert es Void, VoidStation, EFISTUB (GRUB als Rückfall) und die Samba-Freigabe.
 Grafiktreiber für Intel, AMD oder NVIDIA (nouveau) wählt es automatisch.
 
 ## Auf ein bestehendes Void
@@ -33,7 +33,7 @@ sudo bash update.sh               # Aktualisieren, eigene Kacheln/Favoriten blei
 ## Eigene Live-ISO bauen (optional, für Installation ohne Internet-Download des Skripts)
 
 Auf einem Void-System: `sudo bash dist/build-iso.sh`. Die ISO landet unter `~/share/ISO/`.
-Sie enthält `tvstart-install`, `nmtui` für WLAN, SSH mit root/voidlinux und die eigenen Radio- und TV-Favoriten.
+Sie enthält `voidstation-install`, `nmtui` für WLAN, SSH mit root/voidlinux und die eigenen Radio- und TV-Favoriten.
 
 ## Aufbau
 
@@ -41,19 +41,19 @@ Sie enthält `tvstart-install`, `nmtui` für WLAN, SSH mit root/voidlinux und di
 |---|---|
 | `launcher/launcher.py` | Backend: HTTP-API auf 127.0.0.1:8765, Apps starten/umschalten, Radio, TV, AppCenter, Einstellungen |
 | `launcher/web/index.html` | Oberfläche (Kacheln, Radio, TV, AppCenter, Einstellungen) |
-| `launcher/tvstart-shell.py` | Vollbild-Fenster (WebKitGTK) für die Startseite; Firefox als Rückfall |
+| `launcher/voidstation-shell.py` | Vollbild-Fenster (WebKitGTK) für die Startseite; Firefox als Rückfall |
 | `launcher/tiles.json` | Standard-Kacheln |
 | `launcher/catalog.json` | App-Katalog für das AppCenter |
-| `launcher/tvstart-pkg` | root-Helfer, installiert nur freigegebene Pakete |
+| `launcher/voidstation-pkg` | root-Helfer, installiert nur freigegebene Pakete |
 | `launcher/openbox/`, `launcher/firefox/` | Openbox-Konfiguration, Firefox-Profile und Richtlinien |
 | `install-head.sh`, `update-head.sh` | Kopf der Installations- und Update-Skripte (Payload wird angehängt) |
-| `iso/` | Neuinstallation (`tvstart-install`) und ISO-Bau |
+| `iso/` | Neuinstallation (`voidstation-install`) und ISO-Bau |
 | `dist/` | **fertige Skripte**, erzeugt mit `./build.sh` |
 
 Nach Änderungen am Code: `./build.sh`, dann `dist/` mit einchecken.
 
 ## Auf dem Gerät
 
-- Kacheln anpassen: `~/.local/share/tvstart/tiles.json`
-- Logs: `~/.local/share/tvstart/logs/`
-- Startseite wieder über Firefox statt WebKit: `touch ~/.local/share/tvstart/use-firefox`
+- Kacheln anpassen: `~/.local/share/voidstation/tiles.json`
+- Logs: `~/.local/share/voidstation/logs/`
+- Startseite wieder über Firefox statt WebKit: `touch ~/.local/share/voidstation/use-firefox`

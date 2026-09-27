@@ -26,7 +26,7 @@
             "--kiosk",
             "--no-remote",
             "--profile",
-            "~/.local/share/tvstart/profiles/youtube",
+            "~/.local/share/voidstation/profiles/youtube",
             "https://www.youtube.com"
           ]
         },

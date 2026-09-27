@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- TV-Start: schlanke Openbox-Konfiguration, Openbox bleibt unsichtbar -->
+<!-- VoidStation: schlanke Openbox-Konfiguration, Openbox bleibt unsichtbar -->
 <openbox_config xmlns="http://openbox.org/3.4/rc">
   <resistance><strength>10</strength><screen_edge_strength>20</screen_edge_strength></resistance>
   <focus>
@@ -22,9 +22,9 @@
   <keyboard>
     <chainQuitKey>C-g</chainQuitKey>
     <!-- Win-Taste: zurueck zur Startseite -->
-    <keybind key="Super_L"><action name="Execute"><command>sh -c '$HOME/.local/share/tvstart/tvctl home'</command></action></keybind>
-    <keybind key="Super_R"><action name="Execute"><command>sh -c '$HOME/.local/share/tvstart/tvctl home'</command></action></keybind>
-    <keybind key="XF86HomePage"><action name="Execute"><command>sh -c '$HOME/.local/share/tvstart/tvctl home'</command></action></keybind>
+    <keybind key="Super_L"><action name="Execute"><command>sh -c '$HOME/.local/share/voidstation/vsctl home'</command></action></keybind>
+    <keybind key="Super_R"><action name="Execute"><command>sh -c '$HOME/.local/share/voidstation/vsctl home'</command></action></keybind>
+    <keybind key="XF86HomePage"><action name="Execute"><command>sh -c '$HOME/.local/share/voidstation/vsctl home'</command></action></keybind>
     <!-- Fenster schliessen -->
     <keybind key="A-F4"><action name="Close"/></keybind>
     <!-- Notfall-Terminal -->

@@ -1,6 +1,6 @@
 #!/bin/bash
 # =====================================================================
-#  TV-Start Update – fuer eine bestehende Installation
+#  VoidStation Update – fuer eine bestehende Installation
 #  Aufruf (per SSH als paul):   sudo bash update.sh
 #  Neu: schlanke Startseite (WebKit statt Firefox), Fernsehen, AppCenter,
 #       Freigabe-Ordner (Samba), dunkles Theme, grosser Mauszeiger
@@ -8,15 +8,41 @@
 # =====================================================================
 set -uo pipefail
 
-TVUSER="${TVUSER:-${SUDO_USER:-paul}}"
-HOMEDIR="$(getent passwd "$TVUSER" | cut -d: -f6)"
-TV="$HOMEDIR/.local/share/tvstart"
+VSUSER="${VSUSER:-${SUDO_USER:-paul}}"
+HOMEDIR="$(getent passwd "$VSUSER" | cut -d: -f6)"
+TV="$HOMEDIR/.local/share/voidstation"
 SHARE="$HOMEDIR/share"
 say()  { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m[!] %s\033[0m\n' "$*"; }
 
 [ "$(id -u)" -eq 0 ] || { echo "Bitte mit sudo starten: sudo bash update.sh"; exit 1; }
-[ -d "$TV" ] || { echo "Keine TV-Start-Installation unter $TV gefunden."; exit 1; }
+
+# ---------------------------------------------------------------------
+# Umzug von "TV-Start" (alter Name) nach "VoidStation"
+OLD="$HOMEDIR/.local/share/tvstart"
+if [ -d "$OLD" ] && [ ! -L "$OLD" ]; then
+  say "0/8  Umzug: TV-Start -> VoidStation"
+  if [ -e "$TV" ]; then
+    warn "$TV existiert schon – Umzug uebersprungen, bitte von Hand pruefen."
+  else
+    mv "$OLD" "$TV"
+    ln -s voidstation "$OLD"      # alte absolute Pfade (Firefox-Profile, eigene Kacheln) laufen weiter
+    sed -i 's|/\.local/share/tvstart/|/.local/share/voidstation/|g' "$TV/tiles.json" 2>/dev/null || true
+    rm -f "$TV/tvstart-shell.py" "$TV/tvstart-pkg" "$TV/tvctl"
+    echo "Datenordner umgezogen: $TV  (alter Pfad bleibt als Verweis)"
+  fi
+  # Systemdateien mit altem Namen ersetzen
+  rm -f /usr/local/sbin/tvstart-pkg /etc/sudoers.d/tvstart /etc/sudoers.d/zz-tvstart
+  rm -rf /usr/local/share/tvstart
+  for f in /etc/kernel.d/post-install/40-tvstart-esp /etc/kernel.d/post-remove/40-tvstart-esp \
+           /etc/kernel.d/post-install/60-tvstart-bootorder; do
+    [ -f "$f" ] && mv "$f" "${f/tvstart/voidstation}" && echo "Kernel-Hook umbenannt: ${f/tvstart/voidstation}"
+  done
+  [ -f "$HOMEDIR/.bash_profile" ] && sed -i 's/tvstart-runtime/voidstation-runtime/g; s/# TVSTART:/# VOIDSTATION:/' "$HOMEDIR/.bash_profile"
+  [ -f /etc/samba/smb.conf.vor-tvstart ] && mv /etc/samba/smb.conf.vor-tvstart /etc/samba/smb.conf.vor-voidstation
+fi
+
+[ -d "$TV" ] || { echo "Keine VoidStation-Installation unter $TV gefunden."; exit 1; }
 
 say "1/8  Pakete"
 MISSING=""
@@ -31,7 +57,7 @@ for f in tiles.json radio.json tvfavs.json settings.json; do [ -f "$TV/$f" ] && 
 sed -n '/^__PAYLOAD_BELOW__$/,$p' "$0" | tail -n +2 | base64 -d | tar -xz -C "$TV" || { warn "Entpacken fehlgeschlagen"; exit 1; }
 for f in tiles.json radio.json tvfavs.json settings.json; do [ -f "$KEEP/$f" ] && cp "$KEEP/$f" "$TV/$f"; done
 rm -rf "$KEEP"
-chmod +x "$TV/launcher.py" "$TV/home.sh" "$TV/tvctl" "$TV/tvstart-shell.py"
+chmod +x "$TV/launcher.py" "$TV/home.sh" "$TV/vsctl" "$TV/voidstation-shell.py"
 cp "$TV/openbox/"{rc.xml,menu.xml,autostart} "$HOMEDIR/.config/openbox/"
 
 python3 - "$TV/tiles.json" <<'PYEOF'
@@ -65,24 +91,24 @@ PYEOF
 xbps-query vba-m >/dev/null 2>&1 && xbps-remove -Ry vba-m >/dev/null 2>&1 && echo "defektes vba-m entfernt"
 
 say "3/8  AppCenter-Helfer (installiert nur freigegebene Pakete)"
-install -o root -g root -m 755 "$TV/tvstart-pkg" /usr/local/sbin/tvstart-pkg
-install -d -o root -g root -m 755 /usr/local/share/tvstart
-python3 - "$TV/catalog.json" > /usr/local/share/tvstart/allowed-packages <<'PYEOF'
+install -o root -g root -m 755 "$TV/voidstation-pkg" /usr/local/sbin/voidstation-pkg
+install -d -o root -g root -m 755 /usr/local/share/voidstation
+python3 - "$TV/catalog.json" > /usr/local/share/voidstation/allowed-packages <<'PYEOF'
 import json, sys
 c = json.load(open(sys.argv[1], encoding="utf-8"))
 pk = sorted({a["source"]["pkg"] for a in c["apps"] if a["source"]["type"] == "xbps"} | {"flatpak"})
 print("\n".join(pk))
 PYEOF
-chmod 644 /usr/local/share/tvstart/allowed-packages
-echo "$(wc -l < /usr/local/share/tvstart/allowed-packages) Pakete freigegeben"
+chmod 644 /usr/local/share/voidstation/allowed-packages
+echo "$(wc -l < /usr/local/share/voidstation/allowed-packages) Pakete freigegeben"
 
 say "4/8  Rechte ohne Passwort: Ausschalten, WLAN, AppCenter"
-rm -f /etc/sudoers.d/tvstart
-cat > /etc/sudoers.d/zz-tvstart <<EOF
-$TVUSER ALL=(root) NOPASSWD: /usr/bin/poweroff, /usr/bin/reboot, /usr/bin/nmcli, /usr/local/sbin/tvstart-pkg
+rm -f /etc/sudoers.d/voidstation /etc/sudoers.d/tvstart /etc/sudoers.d/zz-tvstart
+cat > /etc/sudoers.d/zz-voidstation <<EOF
+$VSUSER ALL=(root) NOPASSWD: /usr/bin/poweroff, /usr/bin/reboot, /usr/bin/nmcli, /usr/local/sbin/voidstation-pkg
 EOF
-chmod 440 /etc/sudoers.d/zz-tvstart
-visudo -cf /etc/sudoers.d/zz-tvstart >/dev/null || { warn "sudoers-Regel fehlerhaft, entferne sie"; rm -f /etc/sudoers.d/zz-tvstart; }
+chmod 440 /etc/sudoers.d/zz-voidstation
+visudo -cf /etc/sudoers.d/zz-voidstation >/dev/null || { warn "sudoers-Regel fehlerhaft, entferne sie"; rm -f /etc/sudoers.d/zz-voidstation; }
 
 say "5/8  Laufzeitordner fuer den Ton"
 python3 - "$HOMEDIR/.bash_profile" <<'PYEOF'
@@ -92,9 +118,9 @@ s = open(p).read()
 s = re.sub(r'if \[ -z "\$XDG_RUNTIME_DIR" \]; then\n.*?\nfi\n', '', s, flags=re.S)
 marker = 'if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then\n'
 block = ('  # Eigener Laufzeitordner fuer die TV-Sitzung (unabhaengig von elogind)\n'
-         '  export XDG_RUNTIME_DIR="/tmp/tvstart-runtime-$(id -u)"\n'
+         '  export XDG_RUNTIME_DIR="/tmp/voidstation-runtime-$(id -u)"\n'
          '  rm -rf "$XDG_RUNTIME_DIR"; mkdir -m 0700 "$XDG_RUNTIME_DIR"\n')
-if 'tvstart-runtime' not in s and marker in s:
+if 'voidstation-runtime' not in s and marker in s:
     s = s.replace(marker, marker + block, 1)
 open(p, "w").write(s)
 print("ok")
@@ -106,26 +132,26 @@ for d in ROMs/gba ROMs/nes ROMs/snes ROMs/psx ROMs/psp ROMs/nds ROMs/gamecube RO
   mkdir -p "$SHARE/$d"
 done
 [ -f "$SHARE/LIESMICH.txt" ] || cat > "$SHARE/LIESMICH.txt" <<'EOF'
-TV-Start Freigabe
+VoidStation Freigabe
 =================
 ROMs/<system>   Spiele fuer die Emulatoren (gba, nes, snes, psx, psp, nds …)
 BIOS            BIOS-Dateien (z. B. PlayStation fuer DuckStation)
 Musik, Videos   eigene Medien fuer VLC oder Kodi
 Bilder          fuer den Bildbetrachter
 EOF
-chown -R "$TVUSER:$TVUSER" "$SHARE"
+chown -R "$VSUSER:$VSUSER" "$SHARE"
 
 say "7/8  Samba (Zugriff vom Windows-PC)"
 HOST="$(cat /etc/hostname 2>/dev/null || hostname)"
-if [ -f /etc/samba/smb.conf ] && ! grep -q 'TV-Start' /etc/samba/smb.conf; then
-  cp /etc/samba/smb.conf /etc/samba/smb.conf.vor-tvstart
+if [ -f /etc/samba/smb.conf ] && ! grep -q 'VoidStation' /etc/samba/smb.conf; then
+  cp /etc/samba/smb.conf /etc/samba/smb.conf.vor-voidstation
 fi
 mkdir -p /etc/samba /var/log/samba
 cat > /etc/samba/smb.conf <<EOF
-# TV-Start: Freigabe fuer den Windows-PC
+# VoidStation: Freigabe fuer den Windows-PC
 [global]
    workgroup = WORKGROUP
-   server string = TV-Start
+   server string = VoidStation
    netbios name = ${HOST}
    server role = standalone server
    map to guest = never
@@ -138,25 +164,25 @@ cat > /etc/samba/smb.conf <<EOF
    max log size = 1000
 
 [share]
-   comment = TV-Start
+   comment = VoidStation
    path = ${SHARE}
-   valid users = ${TVUSER}
-   force user = ${TVUSER}
+   valid users = ${VSUSER}
+   force user = ${VSUSER}
    read only = no
    browseable = yes
    create mask = 0664
    directory mask = 0775
 EOF
-if pdbedit -L 2>/dev/null | grep -q "^${TVUSER}:" && [ -z "${SMBPASS:-}" ]; then
-  echo "Freigabe-Benutzer $TVUSER existiert schon (Passwort bleibt)."
+if pdbedit -L 2>/dev/null | grep -q "^${VSUSER}:" && [ -z "${SMBPASS:-}" ]; then
+  echo "Freigabe-Benutzer $VSUSER existiert schon (Passwort bleibt)."
 else
   PW="${SMBPASS:-}"
   while [ -z "$PW" ]; do
-    read -r -s -p "Passwort fuer die Freigabe (Benutzer $TVUSER): " PW1 </dev/tty; echo
+    read -r -s -p "Passwort fuer die Freigabe (Benutzer $VSUSER): " PW1 </dev/tty; echo
     read -r -s -p "Nochmal: " PW2 </dev/tty; echo
     [ -n "$PW1" ] && [ "$PW1" = "$PW2" ] && PW="$PW1" || warn "Leer oder nicht gleich – bitte nochmal."
   done
-  printf '%s\n%s\n' "$PW" "$PW" | smbpasswd -s -a "$TVUSER" >/dev/null && echo "Freigabe-Passwort gesetzt."
+  printf '%s\n%s\n' "$PW" "$PW" | smbpasswd -s -a "$VSUSER" >/dev/null && echo "Freigabe-Passwort gesetzt."
 fi
 for s in smbd nmbd; do
   [ -d "/etc/sv/$s" ] && { [ -e "/var/service/$s" ] || ln -s "/etc/sv/$s" /var/service/; }
@@ -211,11 +237,11 @@ user_pref("browser.theme.toolbar-theme", 0);
 user_pref("browser.theme.content-theme", 0);
 JS
 done
-chown -R "$TVUSER:$TVUSER" "$HOMEDIR/.config" "$HOMEDIR/.gtkrc-2.0"
+chown -R "$VSUSER:$VSUSER" "$HOMEDIR/.config" "$HOMEDIR/.gtkrc-2.0"
 echo "dunkles Theme eingerichtet (Mauszeiger-Stil und -Größe unter Einstellungen)"
 
 say "8/8  Besitzrechte"
-chown -R "$TVUSER:$TVUSER" "$HOMEDIR/.config" "$HOMEDIR/.local" "$HOMEDIR/.bash_profile" "$HOMEDIR/.xinitrc"
+chown -R "$VSUSER:$VSUSER" "$HOMEDIR/.config" "$HOMEDIR/.local" "$HOMEDIR/.bash_profile" "$HOMEDIR/.xinitrc"
 
 IP="$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -1)"
 cat <<EOF
@@ -225,7 +251,7 @@ cat <<EOF
 
  Freigabe im Windows-Explorer:   \\\\${HOST}\\share
                      oder:       \\\\${IP}\\share
- Anmelden als "${TVUSER}" mit dem Freigabe-Passwort.
+ Anmelden als "${VSUSER}" mit dem Freigabe-Passwort.
 ---------------------------------------------------------------------
 EOF
 exit 0

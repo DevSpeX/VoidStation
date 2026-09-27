@@ -1,4 +1,4 @@
-// TV-Start: ruhiger, entruempelter Firefox
+// VoidStation: ruhiger, entruempelter Firefox
 user_pref("browser.shell.checkDefaultBrowser", false);
 user_pref("browser.aboutwelcome.enabled", false);
 user_pref("browser.startup.homepage_override.mstone", "ignore");

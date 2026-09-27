@@ -36,7 +36,7 @@
         "url": "https://github.com/stenzek/duckstation/releases/download/latest/DuckStation-x64.AppImage"
       },
       "cmd": [
-        "~/.local/share/tvstart/apps/duckstation/AppRun"
+        "~/.local/share/voidstation/apps/duckstation/AppRun"
       ],
       "tile": {
         "group": "Spiele",
