@@ -1,0 +1,5 @@
+*.sh text eol=lf
+iso/tvstart-install text eol=lf
+launcher/tvctl text eol=lf
+launcher/tvstart-pkg text eol=lf
+launcher/home.sh text eol=lf

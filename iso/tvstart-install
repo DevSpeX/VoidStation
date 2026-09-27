@@ -1,0 +1,218 @@
+#!/bin/bash
+# =====================================================================
+#  TV-Start: komplette Installation vom Stick auf eine ganze SSD
+#  Vom TV-Start-Stick:           tvstart-install
+#  Mit der offiziellen Void-ISO:  bash tvstart-install.sh   (Datei vorher laden)
+#  Ablauf: Platte waehlen -> Name/Passwort -> Void-Grundsystem ->
+#          TV-Start (Kacheln, Ton, Samba, Theme, EFISTUB) -> fertig
+# =====================================================================
+set -euo pipefail
+
+REPO="${REPO:-https://repo-default.voidlinux.org/current}"
+PAYLOAD=/usr/local/share/tvstart/install.sh
+T=/mnt
+LOG=/root/tvstart-install.log
+
+say()  { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
+warn() { printf '\033[1;33m[!] %s\033[0m\n' "$*"; }
+die()  { printf '\n\033[1;31m[x] %s\033[0m\n' "$*"; exit 1; }
+
+cleanup() {
+  sync
+  if mountpoint -q "$T"; then umount -R "$T" 2>/dev/null || umount -Rl "$T" 2>/dev/null || true; fi
+}
+trap 'rc=$?; [ $rc -ne 0 ] && { warn "Abgebrochen (Code $rc). Log: $LOG"; cleanup; }' EXIT
+
+[ "$(id -u)" -eq 0 ] || die "Bitte als root starten."
+# Einzeldatei-Variante: der TV-Start-Installer haengt unten an diesem Skript
+SELF="$(readlink -f "$0" 2>/dev/null || true)"
+if [ -f "$SELF" ] && grep -q '^__INSTALLER_BELOW__$' "$SELF"; then
+  PAYLOAD=/tmp/tvstart-setup.sh
+  sed -n '/^__INSTALLER_BELOW__$/,$p' "$SELF" | tail -n +2 | base64 -d > "$PAYLOAD"
+fi
+[ -s "$PAYLOAD" ] || die "TV-Start-Teil fehlt. Datei erst herunterladen, dann starten:  bash tvstart-install.sh"
+[ -d /sys/firmware/efi ] || die "Nicht im UEFI-Modus gestartet. Im BIOS UEFI-Boot waehlen (Ventoy: GRUB2-Modus), Secure Boot aus."
+
+# ---------------------------------------------------------------------
+say "Internetverbindung pruefen"
+net_ok() {
+  if command -v curl >/dev/null; then curl -fsI -m 15 "$REPO/x86_64-repodata" >/dev/null 2>&1; return; fi
+  xbps-fetch -o /tmp/.tvstart-net "$REPO/x86_64-repodata" >/dev/null 2>&1; local r=$?; rm -f /tmp/.tvstart-net; return $r
+}
+if ! net_ok; then
+  echo "Keine Verbindung zu $REPO."
+  if command -v nmtui >/dev/null; then echo "LAN-Kabel stecken – oder WLAN verbinden mit:  nmtui"
+  else echo "LAN-Kabel stecken – oder WLAN: void-installer starten, nur 'Network' einrichten, dann 'Exit'."; fi
+  die "Danach nochmal starten."
+fi
+echo "ok"
+
+# ---------------------------------------------------------------------
+say "Ziel-SSD waehlen (wird KOMPLETT geloescht)"
+mapfile -t DISKS < <(lsblk -dnpo NAME,TYPE,TRAN,SIZE | awk '$2=="disk" && $3!="usb" && $1!~/(zram|loop|ram|sr)[0-9]|mmcblk[0-9]+(boot|rpmb)/ {print $1}')
+[ "${#DISKS[@]}" -gt 0 ] || die "Keine interne Platte gefunden (USB-Laufwerke werden ausgeblendet)."
+i=1
+for d in "${DISKS[@]}"; do
+  printf '  %d) %-14s %8s  %s\n' "$i" "$d" "$(lsblk -dno SIZE "$d")" "$(lsblk -dno MODEL "$d" | xargs)"
+  lsblk -no NAME,SIZE,FSTYPE,LABEL "$d" | tail -n +2 | sed 's/^/        /'
+  i=$((i+1))
+done
+while :; do
+  read -r -p "Nummer der Ziel-SSD [1]: " n </dev/tty; n="${n:-1}"
+  [[ "$n" =~ ^[0-9]+$ ]] && [ "$n" -ge 1 ] && [ "$n" -le "${#DISKS[@]}" ] && break
+  warn "Bitte eine Nummer aus der Liste."
+done
+DISK="${DISKS[$((n-1))]}"
+
+# ---------------------------------------------------------------------
+say "Angaben fuer das neue System"
+read -r -p "Rechnername [tv]: " HN </dev/tty; HN="${HN:-tv}"
+[[ "$HN" =~ ^[A-Za-z0-9-]{1,15}$ ]] || die "Rechnername: nur Buchstaben, Ziffern, Bindestrich, max. 15 Zeichen."
+while :; do
+  read -r -p "Name [Paul]: " TVNAME </dev/tty; TVNAME="${TVNAME:-Paul}"
+  # Anmeldename: klein geschrieben, Umlaute umschreiben, nur a-z 0-9 _ -
+  TVU="$(printf '%s' "$TVNAME" | sed 's/Ä/Ae/g;s/Ö/Oe/g;s/Ü/Ue/g;s/ä/ae/g;s/ö/oe/g;s/ü/ue/g;s/ß/ss/g' \
+         | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd 'a-z0-9_-')"
+  [[ "$TVU" =~ ^[a-z_][a-z0-9_-]{0,30}$ ]] && [ "$TVU" != root ] && break
+  warn "Daraus laesst sich kein Anmeldename bilden – bitte mit einem Buchstaben beginnen."
+done
+echo "  -> Anmeldename: $TVU   (angezeigt wird: $TVNAME)"
+while :; do
+  read -r -s -p "Passwort (Anmeldung, sudo, root, Freigabe): " PW1 </dev/tty; echo
+  read -r -s -p "Nochmal: " PW2 </dev/tty; echo
+  [ -n "$PW1" ] && [ "$PW1" = "$PW2" ] && break
+  warn "Leer oder nicht gleich – bitte nochmal."
+done
+PW="$PW1"; unset PW1 PW2
+
+echo
+echo "  Ziel:      $DISK  ($(lsblk -dno SIZE "$DISK"), $(lsblk -dno MODEL "$DISK" | xargs))"
+echo "  Rechner:   $HN      Benutzer: $TVU ($TVNAME)"
+echo
+warn "ALLE Daten auf $DISK werden geloescht (auch Windows)."
+read -r -p "Zum Fortfahren JA eintippen: " ok </dev/tty
+[ "$ok" = "JA" ] || die "Abgebrochen, nichts veraendert."
+
+# Ab hier alles mitloggen
+exec > >(tee -a "$LOG") 2>&1
+START=$(date +%s)
+
+# ---------------------------------------------------------------------
+say "1/6  Partitionieren: 512 MB EFI + Rest fuer Void"
+cleanup
+swapoff -a 2>/dev/null || true
+for p in $(lsblk -lnpo NAME "$DISK" | tail -n +2); do umount "$p" 2>/dev/null || true; done
+wipefs -af "$DISK" >/dev/null
+printf '%s\n' 'label: gpt' 'size=512MiB, type=uefi, name=EFI' 'type=linux, name=void' \
+  | sfdisk -q --wipe always --wipe-partitions always "$DISK"
+partx -u "$DISK" 2>/dev/null || true
+udevadm settle 2>/dev/null || sleep 1
+case "$DISK" in *[0-9]) P1="${DISK}p1"; P2="${DISK}p2" ;; *) P1="${DISK}1"; P2="${DISK}2" ;; esac
+for _ in $(seq 1 20); do [ -b "$P1" ] && [ -b "$P2" ] && break; sleep 0.5; done
+[ -b "$P2" ] || die "Partitionen $P1/$P2 nicht gefunden."
+mkfs.vfat -F32 -n EFI "$P1" >/dev/null
+mkfs.ext4 -qF -L void "$P2"
+mount "$P2" "$T"
+mkdir -p "$T/boot/efi"
+mount "$P1" "$T/boot/efi"
+lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINTS "$DISK"
+
+# ---------------------------------------------------------------------
+say "2/6  Void-Grundsystem laden und installieren (dauert ein paar Minuten)"
+mkdir -p "$T/var/db/xbps/keys" "$T/proc" "$T/sys" "$T/dev" "$T/run" "$T/tmp"
+mount -t proc proc "$T/proc"
+mount --rbind /sys "$T/sys"; mount --make-rslave "$T/sys"
+mount --rbind /dev "$T/dev"; mount --make-rslave "$T/dev"
+mount --rbind /run "$T/run"; mount --make-rslave "$T/run"
+mount -t tmpfs tmpfs "$T/tmp"
+cp -a /var/db/xbps/keys/. "$T/var/db/xbps/keys/"
+XBPS_ARCH=x86_64 xbps-install -Sy -R "$REPO" -r "$T" \
+  base-system grub-x86_64-efi efibootmgr sudo chrony
+
+# ---------------------------------------------------------------------
+say "3/6  Grundeinstellungen (Sprache, Zeit, Tastatur, fstab)"
+echo "$HN" > "$T/etc/hostname"
+printf '%s\n' '' '# TV-Start' 'KEYMAP="de"' 'HARDWARECLOCK="UTC"' >> "$T/etc/rc.conf"
+ln -sf /usr/share/zoneinfo/Europe/Berlin "$T/etc/localtime"
+sed -i 's/^#\s*\(de_DE.UTF-8 UTF-8\)/\1/' "$T/etc/default/libc-locales"
+echo "LANG=de_DE.UTF-8" > "$T/etc/locale.conf"
+cp -L /etc/resolv.conf "$T/etc/resolv.conf"
+
+U_ROOT="$(blkid -s UUID -o value "$P2")"
+U_ESP="$(blkid -s UUID -o value "$P1")"
+{
+  echo "# <file system>  <dir>  <type>  <options>  <dump>  <pass>"
+  echo "UUID=$U_ROOT  /          ext4   defaults,noatime  0 1"
+  echo "UUID=$U_ESP   /boot/efi  vfat   defaults,umask=0077  0 2"
+  echo "tmpfs  /tmp  tmpfs  defaults,nosuid,nodev  0 0"
+} > "$T/etc/fstab"
+
+# Auslagerungsdatei bei wenig RAM (< 8 GB)
+MEM_MB=$(( $(awk '/MemTotal/{print $2}' /proc/meminfo) / 1024 ))
+if [ "$MEM_MB" -lt 7800 ]; then
+  fallocate -l 2G "$T/swapfile" && chmod 600 "$T/swapfile" && mkswap -q "$T/swapfile" \
+    && echo "/swapfile  none  swap  defaults  0 0" >> "$T/etc/fstab" && echo "2 GB Auslagerungsdatei angelegt (RAM: ${MEM_MB} MB)"
+fi
+
+# ---------------------------------------------------------------------
+say "4/6  Benutzer, Bootloader, Kernel"
+TVU="$TVU" TVNAME="$TVNAME" PW="$PW" chroot "$T" /bin/bash -euo pipefail <<'CHROOT'
+xbps-reconfigure -f glibc-locales
+useradd -m -U -s /bin/bash -G wheel -c "$TVNAME" "$TVU"
+printf '%s:%s\n' "$TVU" "$PW" | chpasswd
+printf 'root:%s\n' "$PW" | chpasswd
+echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
+chmod 440 /etc/sudoers.d/wheel
+# GRUB als Rueckfall: eigener Eintrag + Standardpfad EFI/BOOT (falls die Firmware Eintraege vergisst)
+grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=void_grub
+grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable
+xbps-reconfigure -fa
+CHROOT
+
+# ---------------------------------------------------------------------
+say "5/6  TV-Start einrichten (Kacheln, Ton, Freigabe, Theme, EFISTUB)"
+cp "$PAYLOAD" "$T/root/tvstart-setup.sh"
+chroot "$T" /usr/bin/env TVUSER="$TVU" TVNAME="$TVNAME" EFISTUB=1 SMBPASS="$PW" ROOTUUID="$U_ROOT" \
+  SVDIR=/etc/runit/runsvdir/default TVSTART_CHROOT=1 \
+  bash /root/tvstart-setup.sh
+unset PW
+
+# WLAN-Zugang aus dem Live-System uebernehmen (TV-Start-Stick, per nmtui verbunden)
+if ls /etc/NetworkManager/system-connections/* >/dev/null 2>&1; then
+  install -d -m 700 "$T/etc/NetworkManager/system-connections"
+  cp -a /etc/NetworkManager/system-connections/. "$T/etc/NetworkManager/system-connections/"
+  chmod 600 "$T"/etc/NetworkManager/system-connections/*
+  echo "WLAN-Verbindung uebernommen"
+fi
+
+# Mitgebrachte Radio-/TV-Favoriten
+if ls /usr/local/share/tvstart/personal/*.json >/dev/null 2>&1; then
+  cp /usr/local/share/tvstart/personal/*.json "$T/home/$TVU/.local/share/tvstart/"
+  chroot "$T" chown -R "$TVU:$TVU" "/home/$TVU/.local/share/tvstart"
+  echo "Radio-/TV-Favoriten uebernommen"
+fi
+
+# ---------------------------------------------------------------------
+say "6/6  Abschluss"
+chroot "$T" efibootmgr 2>/dev/null | sed -n '1,3p;/Void Linux\|void_grub/p' || true
+cp "$LOG" "$T/var/log/tvstart-install.log" 2>/dev/null || true
+sync
+cleanup
+trap - EXIT
+
+MIN=$(( ($(date +%s) - START) / 60 ))
+cat <<EOF
+
+---------------------------------------------------------------------
+ Fertig nach ca. $MIN Minuten.
+
+ 1. Stick abziehen
+ 2. reboot
+
+ Danach startet direkt die Kacheloberflaeche.
+ SSH:       ssh $TVU@$HN   (oder per IP)
+ Freigabe:  \\\\$HN\\share   (Benutzer $TVU)
+ Log:       /var/log/tvstart-install.log
+---------------------------------------------------------------------
+EOF
+exit 0

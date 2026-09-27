@@ -1,0 +1,416 @@
+{
+  "categories": [
+    "Spiele",
+    "Streaming",
+    "Medien",
+    "Werkzeuge"
+  ],
+  "apps": [
+    {
+      "id": "retroarch",
+      "name": "RetroArch",
+      "cat": "Spiele",
+      "desc": "Alles-in-einem-Emulator für sehr viele Konsolen. Emulatorkerne lädt RetroArch selbst über sein Online-Menü.",
+      "source": {
+        "type": "xbps",
+        "pkg": "retroarch"
+      },
+      "cmd": [
+        "retroarch"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "wide",
+        "color": "#3a2d52",
+        "icon": "gamepad",
+        "sub": "Viele Systeme"
+      }
+    },
+    {
+      "id": "duckstation",
+      "name": "DuckStation",
+      "cat": "Spiele",
+      "desc": "PlayStation 1. Sehr genau und schnell, braucht BIOS-Dateien im Ordner share/bios.",
+      "source": {
+        "type": "appimage",
+        "url": "https://github.com/stenzek/duckstation/releases/download/latest/DuckStation-x64.AppImage"
+      },
+      "cmd": [
+        "~/.local/share/tvstart/apps/duckstation/AppRun"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#2f3d57",
+        "icon": "gamepad",
+        "sub": "PlayStation"
+      }
+    },
+    {
+      "id": "ppsspp",
+      "name": "PPSSPP",
+      "cat": "Spiele",
+      "desc": "PlayStation Portable. Läuft auf dem Esprimo bei vielen Spielen flüssig.",
+      "source": {
+        "type": "xbps",
+        "pkg": "ppsspp"
+      },
+      "cmd": "for b in PPSSPPSDL ppsspp PPSSPPQt; do command -v $b >/dev/null && exec $b; done",
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#27415a",
+        "icon": "handheld",
+        "sub": "PSP"
+      }
+    },
+    {
+      "id": "snes9x",
+      "name": "Snes9x",
+      "cat": "Spiele",
+      "desc": "Super Nintendo. Leichtgewichtig und bewährt.",
+      "source": {
+        "type": "xbps",
+        "pkg": "snes9x-gtk"
+      },
+      "cmd": [
+        "snes9x-gtk"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#44385e",
+        "icon": "gamepad",
+        "sub": "SNES"
+      }
+    },
+    {
+      "id": "nestopia",
+      "name": "Nestopia",
+      "cat": "Spiele",
+      "desc": "NES / Famicom.",
+      "source": {
+        "type": "xbps",
+        "pkg": "nestopia"
+      },
+      "cmd": [
+        "nestopia"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#5a2f2f",
+        "icon": "gamepad",
+        "sub": "NES"
+      }
+    },
+    {
+      "id": "melonds",
+      "name": "melonDS",
+      "cat": "Spiele",
+      "desc": "Nintendo DS. Beide Bildschirme nebeneinander oder übereinander.",
+      "source": {
+        "type": "xbps",
+        "pkg": "melonDS"
+      },
+      "cmd": [
+        "melonDS"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#3b4a3a",
+        "icon": "handheld",
+        "sub": "Nintendo DS"
+      }
+    },
+    {
+      "id": "flycast",
+      "name": "Flycast",
+      "cat": "Spiele",
+      "desc": "Sega Dreamcast, Naomi und Atomiswave.",
+      "source": {
+        "type": "flatpak",
+        "ref": "org.flycast.Flycast"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "org.flycast.Flycast"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#4a3f2a",
+        "icon": "gamepad",
+        "sub": "Dreamcast"
+      }
+    },
+    {
+      "id": "dolphin",
+      "name": "Dolphin",
+      "cat": "Spiele",
+      "desc": "GameCube und Wii. Anspruchsvoll – auf dem Esprimo laufen nur leichtere Spiele flüssig.",
+      "source": {
+        "type": "xbps",
+        "pkg": "dolphin-emu"
+      },
+      "cmd": [
+        "dolphin-emu"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#2c4a55",
+        "icon": "gamepad",
+        "sub": "GameCube"
+      }
+    },
+    {
+      "id": "dosbox",
+      "name": "DOSBox Staging",
+      "cat": "Spiele",
+      "desc": "DOS-Spiele und -Programme.",
+      "source": {
+        "type": "xbps",
+        "pkg": "dosbox-staging"
+      },
+      "cmd": [
+        "dosbox"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#333a44",
+        "icon": "terminal",
+        "sub": "DOS",
+        "label": "DOSBox"
+      }
+    },
+    {
+      "id": "scummvm",
+      "name": "ScummVM",
+      "cat": "Spiele",
+      "desc": "Klassische Point-&-Click-Adventures (Monkey Island, Indiana Jones …).",
+      "source": {
+        "type": "xbps",
+        "pkg": "scummvm"
+      },
+      "cmd": [
+        "scummvm"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#3f4a2e",
+        "icon": "gamepad",
+        "sub": "Adventures"
+      }
+    },
+    {
+      "id": "vice",
+      "name": "VICE",
+      "cat": "Spiele",
+      "desc": "Commodore 64.",
+      "source": {
+        "type": "xbps",
+        "pkg": "vice"
+      },
+      "cmd": [
+        "x64sc"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#3a3a58",
+        "icon": "terminal",
+        "sub": "C64"
+      }
+    },
+    {
+      "id": "stella",
+      "name": "Stella",
+      "cat": "Spiele",
+      "desc": "Atari 2600.",
+      "source": {
+        "type": "xbps",
+        "pkg": "stella"
+      },
+      "cmd": [
+        "stella"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#4d3528",
+        "icon": "gamepad",
+        "sub": "Atari 2600"
+      }
+    },
+    {
+      "id": "moonlight",
+      "name": "Moonlight",
+      "cat": "Streaming",
+      "desc": "Spiele vom Gaming-PC auf den Fernseher streamen (braucht Sunshine oder NVIDIA GameStream auf dem PC).",
+      "source": {
+        "type": "flatpak",
+        "ref": "com.moonlight_stream.Moonlight"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "com.moonlight_stream.Moonlight"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "wide",
+        "color": "#26384d",
+        "icon": "globe",
+        "sub": "PC-Streaming"
+      }
+    },
+    {
+      "id": "youtube-tv",
+      "name": "YouTube TV-Oberfläche",
+      "cat": "Streaming",
+      "desc": "Experimentell: youtube.com/tv mit großer Fernbedienungs-Oberfläche und Koppeln mit dem Handy. Kann Google jederzeit sperren.",
+      "source": {
+        "type": "web",
+        "url": "https://www.youtube.com/tv",
+        "ua": "Mozilla/5.0 (SMART-TV; Linux; Tizen 6.0) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/4.0 Chrome/76.0.3809.146 TV Safari/537.36"
+      },
+      "tile": {
+        "group": "Unterhaltung",
+        "size": "medium",
+        "color": "#5b2626",
+        "icon": "play",
+        "sub": "TV-Modus",
+        "label": "YouTube TV"
+      }
+    },
+    {
+      "id": "ard",
+      "name": "ARD Mediathek",
+      "cat": "Streaming",
+      "desc": "Sendungen und Livestreams der ARD.",
+      "source": {
+        "type": "web",
+        "url": "https://www.ardmediathek.de"
+      },
+      "tile": {
+        "group": "Unterhaltung",
+        "size": "medium",
+        "color": "#1f3a5a",
+        "icon": "globe",
+        "sub": "Mediathek"
+      }
+    },
+    {
+      "id": "zdf",
+      "name": "ZDF Mediathek",
+      "cat": "Streaming",
+      "desc": "Sendungen und Livestreams des ZDF.",
+      "source": {
+        "type": "web",
+        "url": "https://www.zdf.de"
+      },
+      "tile": {
+        "group": "Unterhaltung",
+        "size": "medium",
+        "color": "#4a3a1f",
+        "icon": "globe",
+        "sub": "Mediathek"
+      }
+    },
+    {
+      "id": "arte",
+      "name": "ARTE",
+      "cat": "Streaming",
+      "desc": "Dokumentationen, Filme und Konzerte.",
+      "source": {
+        "type": "web",
+        "url": "https://www.arte.tv/de/"
+      },
+      "tile": {
+        "group": "Unterhaltung",
+        "size": "medium",
+        "color": "#3d2d2d",
+        "icon": "globe",
+        "sub": "Mediathek"
+      }
+    },
+    {
+      "id": "kodi",
+      "name": "Kodi",
+      "cat": "Medien",
+      "desc": "Großes Mediacenter für eigene Filme, Serien und Musik mit Covern und Bibliothek.",
+      "source": {
+        "type": "xbps",
+        "pkg": "kodi"
+      },
+      "cmd": [
+        "kodi"
+      ],
+      "tile": {
+        "group": "Unterhaltung",
+        "size": "medium",
+        "color": "#1f4150",
+        "icon": "film",
+        "sub": "Mediacenter"
+      }
+    },
+    {
+      "id": "gpicview",
+      "name": "Bildbetrachter",
+      "cat": "Medien",
+      "desc": "Schlanker Bildbetrachter (GPicView) für den Ordner share/Bilder.",
+      "source": {
+        "type": "xbps",
+        "pkg": "gpicview"
+      },
+      "cmd": [
+        "gpicview",
+        "~/share/Bilder"
+      ],
+      "tile": {
+        "group": "System",
+        "size": "medium",
+        "color": "#2f4538",
+        "icon": "image",
+        "sub": "Bilder",
+        "label": "Bilder"
+      }
+    },
+    {
+      "id": "htop",
+      "name": "Systemmonitor",
+      "cat": "Werkzeuge",
+      "desc": "Zeigt Auslastung von Prozessor und Speicher (htop im Terminal).",
+      "source": {
+        "type": "xbps",
+        "pkg": "htop"
+      },
+      "cmd": [
+        "xterm",
+        "-fa",
+        "Monospace",
+        "-fs",
+        "13",
+        "-bg",
+        "#111316",
+        "-fg",
+        "#dcdcdc",
+        "-e",
+        "htop"
+      ],
+      "tile": {
+        "group": "System",
+        "size": "medium",
+        "color": "#2e3338",
+        "icon": "chart",
+        "sub": "htop",
+        "label": "Systemmonitor"
+      }
+    }
+  ]
+}

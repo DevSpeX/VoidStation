@@ -1,0 +1,20 @@
+# --- TV-Start: Openbox-Autostart ---------------------------------------
+TV="$HOME/.local/share/tvstart"
+mkdir -p "$TV/logs"
+[ -f "$TV/env.sh" ] && . "$TV/env.sh"          # Mauszeiger, dunkles Theme (vom Launcher gepflegt)
+
+setxkbmap de
+xrdb -merge "$HOME/.Xresources" 2>/dev/null
+xsetroot -cursor_name left_ptr
+xset s off -dpms                      # Fernseher nicht abdunkeln
+unclutter --timeout 3 --jitter 10 --ignore-scrolling &
+
+# Ton: PipeWire + WirePlumber + Pulse-Ersatz, jeweils nur einmal
+pipewire >"$TV/logs/pipewire.log" 2>&1 &
+sleep 1
+pgrep -u "$(id -u)" -x wireplumber    >/dev/null || wireplumber    >"$TV/logs/wireplumber.log" 2>&1 &
+pgrep -u "$(id -u)" -x pipewire-pulse >/dev/null || pipewire-pulse >"$TV/logs/pipewire-pulse.log" 2>&1 &
+sleep 1
+
+python3 "$TV/launcher.py" >"$TV/launcher.log" 2>&1 &
+"$TV/home.sh" &

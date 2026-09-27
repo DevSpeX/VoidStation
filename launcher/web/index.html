@@ -1,0 +1,1101 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TV-Start</title>
+<style>
+  /* Alle Masse haengen an --f (= Skalierung × Bildschirmhoehe/768) und --u (Kachelgroesse, per JS) */
+  :root {
+    --bg: #0e1012;
+    --text: #ecebe8;
+    --text-dim: rgba(236, 235, 232, 0.66);
+    --text-faint: rgba(236, 235, 232, 0.45);
+    --focus: #f2efe9;
+    --f: 1;
+    --u: 161px;
+    --rows: 3;
+    --gap: calc(10px * var(--f));
+    --pad-x: 6vw;
+    --ease: cubic-bezier(.1, .9, .2, 1);
+    font-family: "Noto Sans", "Segoe UI", "DejaVu Sans", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); user-select: none; }
+  body {
+    display: flex; flex-direction: column;
+    background:
+      radial-gradient(120vw 90vh at 15% 0%, #1b1f24 0%, transparent 60%),
+      radial-gradient(90vw 80vh at 100% 100%, #14171b 0%, transparent 55%),
+      var(--bg);
+  }
+  body.has-wall { background-size: cover; background-position: center; }
+  body.has-wall::before { content: ""; position: fixed; inset: 0; background: linear-gradient(180deg, rgba(10,11,13,.55), rgba(10,11,13,.85)); }
+  button, input { font: inherit; }
+
+  /* ---------- Kopfzeile ---------- */
+  header {
+    position: relative; z-index: 1; flex: none;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 2vw;
+    padding: calc(34px * var(--f)) var(--pad-x) calc(20px * var(--f));
+  }
+  h1 { margin: 0; font-weight: 300; font-size: calc(52px * var(--f)); line-height: 1; }
+  .who { display: flex; align-items: center; gap: calc(16px * var(--f)); }
+  .who .meta { text-align: right; line-height: 1.2; }
+  .who .name { font-size: calc(21px * var(--f)); font-weight: 300; }
+  .who .time { font-size: calc(15px * var(--f)); color: var(--text-dim); }
+  .round {
+    width: calc(44px * var(--f)); height: calc(44px * var(--f));
+    display: grid; place-items: center; cursor: pointer; flex: none;
+    border: 1px solid rgba(255,255,255,.22); border-radius: 50%;
+    background: transparent; color: var(--text); outline: none; transition: background .15s, border-color .15s;
+  }
+  .round svg { width: 46%; height: 46%; }
+  .round.focus { background: rgba(255,255,255,.12); border-color: var(--focus); box-shadow: 0 0 0 2px var(--focus); }
+
+  /* ---------- Kacheln ---------- */
+  .stage { position: relative; z-index: 1; flex: 1; min-height: 0; overflow: hidden; padding-bottom: var(--hint, 60px); }
+  .htitle { display: flex; align-items: center; gap: calc(18px * var(--f)); min-width: 0; }
+  .track { display: flex; gap: calc(var(--u) * .4); padding: 0 var(--pad-x); height: 100%; width: max-content; transition: transform .45s var(--ease); }
+  .group h2 { margin: 0 0 calc(14px * var(--f)); font-weight: 400; font-size: calc(18px * var(--f)); color: var(--text-dim); letter-spacing: .02em; white-space: nowrap; }
+  .grid { display: grid; grid-template-rows: repeat(var(--rows), var(--u)); grid-auto-columns: var(--u); grid-auto-flow: column dense; gap: var(--gap); }
+  .tile {
+    position: relative; overflow: hidden; cursor: pointer;
+    background: var(--c, #2a2e33); color: var(--text); outline: none; transform: translateZ(0);
+    transition: transform .18s var(--ease), box-shadow .18s, filter .18s;
+    opacity: 0; animation: tileIn .6s var(--ease) forwards;
+  }
+  .tile::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(160deg, rgba(255,255,255,.07), transparent 45%, rgba(0,0,0,.18)); }
+  .tile.medium { grid-column: span 1; }
+  .tile.wide   { grid-column: span 2; }
+  .tile.large  { grid-row: span 2; grid-column: span 2; }
+  .tile.focus { box-shadow: 0 0 0 calc(3px * var(--f)) var(--bg), 0 0 0 calc(6px * var(--f)) var(--focus); transform: scale(1.03); z-index: 2; }
+  .tile.pressed { transform: scale(.97); filter: brightness(.9); }
+  .tile .icon { position: absolute; left: 50%; top: 42%; width: 34%; height: 34%; transform: translate(-50%, -50%); opacity: .95; }
+  .tile.wide .icon { width: 18%; height: 36%; }
+  .tile .icon svg { width: 100%; height: 100%; display: block; }
+  .tile .label { position: absolute; left: 7%; bottom: 7%; right: 7%; font-size: calc(var(--u) * .105); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile .sub { position: absolute; right: 6%; top: 8%; font-size: calc(var(--u) * .08); color: rgba(255,255,255,.6); }
+  .tile.medium .sub { display: none; }
+  .tile img.cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .tile .run { position: absolute; left: 0; right: 0; bottom: 0; height: calc(4px * var(--f)); background: rgba(255,255,255,.8); transform: scaleX(0); transform-origin: left; transition: transform .3s var(--ease); }
+  .tile.running .run { transform: scaleX(1); }
+  .tile .x { position: absolute; left: 5%; top: 7%; width: calc(var(--u) * .17); height: calc(var(--u) * .17); display: none; place-items: center; border-radius: 50%; background: rgba(0,0,0,.5); font-size: calc(var(--u) * .09); z-index: 3; }
+  .tile.running.focus .x { display: grid; }
+  .tile.clock { cursor: default; }
+  .tile.clock .big { position: absolute; left: 7%; top: 12%; font-size: calc(var(--u) * .42); font-weight: 300; line-height: 1; }
+  .tile.clock .date { position: absolute; left: 7.5%; bottom: 9%; font-size: calc(var(--u) * .1); color: var(--text-dim); }
+  .tile.radio .now { position: absolute; left: 7%; right: 7%; top: 14%; display: none; }
+  .tile.radio.playing .now { display: block; }
+  .tile.radio.playing .icon { display: none; }
+  .tile.radio .now .st { font-size: calc(var(--u) * .14); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile.radio .now .ti { margin-top: 4px; font-size: calc(var(--u) * .095); color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .eq { display: flex; gap: 3px; align-items: flex-end; height: calc(var(--u) * .1); }
+  .eq i { width: 3px; background: currentColor; animation: eq 1s infinite ease-in-out; }
+  .eq i:nth-child(1) { animation-delay: -.2s } .eq i:nth-child(2) { animation-delay: -.6s } .eq i:nth-child(3) { animation-delay: -.4s } .eq i:nth-child(4) { animation-delay: -.8s }
+  @keyframes eq { 0%, 100% { height: 25%; } 50% { height: 100%; } }
+  .tile.radio .eq { position: absolute; right: 7%; bottom: 8%; display: none; }
+  .tile.radio.playing .eq { display: flex; }
+  @keyframes tileIn { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- Start-Animation ---------- */
+  .splash { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: var(--c); opacity: 0; pointer-events: none; transition: opacity .25s; }
+  .splash.show { opacity: 1; pointer-events: auto; }
+  .splash .inner { text-align: center; }
+  .splash svg { width: 16vh; height: 16vh; }
+  .splash .name { margin-top: 3vh; font-size: calc(26px * var(--f)); font-weight: 300; }
+  .dots { display: flex; gap: 10px; justify-content: center; margin-top: 5vh; height: 8px; }
+  .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--text); animation: dot 1.4s infinite ease-in-out; }
+  .dots i:nth-child(2) { animation-delay: .15s; } .dots i:nth-child(3) { animation-delay: .3s; }
+  @keyframes dot { 0%, 100% { opacity: .15; } 40% { opacity: 1; } }
+
+  /* ---------- Unterseiten (Radio, Einstellungen) ---------- */
+  .layer { position: fixed; inset: 0; z-index: 20; background: var(--bg); display: none; flex-direction: column; opacity: 0; transform: translateX(4vw); transition: opacity .3s var(--ease), transform .3s var(--ease); }
+  .layer.open { display: flex; }
+  .layer.shown { opacity: 1; transform: none; }
+  .bar { display: flex; align-items: center; flex-wrap: wrap; gap: calc(10px * var(--f)); padding: 0 var(--pad-x) calc(18px * var(--f)); flex: none; }
+  .pill {
+    display: inline-flex; align-items: center; gap: calc(8px * var(--f));
+    min-height: calc(40px * var(--f)); padding: 0 calc(16px * var(--f));
+    background: #22262b; color: var(--text); border: 2px solid transparent;
+    font-size: calc(15px * var(--f)); cursor: pointer; outline: none; white-space: nowrap;
+  }
+  .pill svg { width: calc(16px * var(--f)); height: calc(16px * var(--f)); }
+  .pill.focus { border-color: var(--focus); }
+  .pill.on { background: #4a5260; }
+  .pill.on::before { content: "✓"; }
+  .pill[disabled] { opacity: .35; }
+  .field {
+    width: calc(280px * var(--f)); max-width: 40vw; min-height: calc(40px * var(--f)); padding: 0 calc(12px * var(--f));
+    background: #1b1e22; color: var(--text); border: 2px solid #2c3035; outline: none; font-size: calc(15px * var(--f));
+  }
+  .field.focus, .field:focus { border-color: var(--focus); }
+  .field::placeholder { color: var(--text-faint); }
+  .vol { display: flex; align-items: center; gap: calc(8px * var(--f)); color: var(--text-dim); font-size: calc(14px * var(--f)); }
+  .vol .meter { width: calc(120px * var(--f)); height: calc(5px * var(--f)); background: #2a2e33; }
+  .vol .meter b { display: block; height: 100%; background: var(--text); width: 0; transition: width .2s; }
+  .nowline { color: var(--text-dim); font-size: calc(15px * var(--f)); text-align: right; max-width: 45vw; min-width: 0; }
+  .nowline strong { display: block; color: var(--text); font-weight: 400; font-size: calc(21px * var(--f)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nowline span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sgrid { display: grid; grid-template-rows: repeat(var(--srows), calc(var(--u) * .8)); grid-auto-columns: calc(var(--u) * .8); grid-auto-flow: column; gap: var(--gap); }
+  .station { --c: #22262b; }
+  .station .logo { position: absolute; left: 50%; top: 36%; transform: translate(-50%, -50%); width: 40%; height: 40%; display: grid; place-items: center; }
+  .station .logo img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px; }
+  .station .logo svg { width: 75%; height: 75%; opacity: .7; }
+  .station .label { font-size: calc(var(--u) * .085); bottom: 6%; white-space: normal; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .station.playing { --c: #3b2f4f; }
+  .station .star { position: absolute; right: 7%; top: 7%; font-size: calc(var(--u) * .08); color: rgba(255,255,255,.65); }
+  .chips { display: flex; flex-wrap: wrap; gap: var(--gap); max-width: 44vw; }
+  .empty { color: var(--text-faint); font-size: calc(15px * var(--f)); max-width: 34vw; line-height: 1.5; margin-bottom: calc(14px * var(--f)); }
+
+  /* Einstellungen: Spalten mit Zeilen */
+  .col { display: flex; flex-direction: column; gap: calc(12px * var(--f)); max-width: 40vw; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: calc(8px * var(--f)); }
+  .lbl { width: 100%; font-size: calc(14px * var(--f)); color: var(--text-faint); margin-top: calc(6px * var(--f)); }
+  .info { font-size: calc(16px * var(--f)); color: var(--text-dim); line-height: 1.5; }
+  .info b { color: var(--text); font-weight: 400; }
+  .wifi .sig { color: var(--text-faint); font-size: .85em; }
+
+  /* TV */
+  .chan { --c: #1f2429; }
+  .chan.playing { --c: #24414a; }
+  .chan .q { position: absolute; left: 7%; top: 7%; font-size: calc(var(--u) * .07); color: rgba(255,255,255,.55); }
+  .fchips { display: flex; flex-direction: column; gap: calc(10px * var(--f)); max-width: 42vw; }
+  .fchips .row { gap: calc(8px * var(--f)); }
+
+  /* AppCenter */
+  .agrid { display: grid; grid-template-rows: repeat(var(--arows, 2), calc(var(--u) * .95)); grid-auto-columns: calc(var(--u) * 1.9); grid-auto-flow: column; gap: var(--gap); }
+  .appcard { --c: #22262b; }
+  .appcard .aicon { position: absolute; left: 6%; top: 10%; width: calc(var(--u) * .26); height: calc(var(--u) * .26); display: grid; place-items: center; background: var(--ac); }
+  .appcard .aicon svg { width: 62%; height: 62%; }
+  .appcard .aname { position: absolute; left: calc(12% + var(--u) * .26); right: 6%; top: 10%; font-size: calc(var(--u) * .105); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .appcard .astate { position: absolute; left: calc(12% + var(--u) * .26); top: calc(10% + var(--u) * .13); font-size: calc(var(--u) * .07); color: var(--text-faint); }
+  .appcard.inst .astate { color: #9fd3a8; }
+  .appcard .adesc { position: absolute; left: 6%; right: 6%; bottom: 8%; font-size: calc(var(--u) * .072); color: var(--text-dim); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .jobband { position: fixed; left: 0; right: 0; bottom: 0; z-index: 35; background: #16191d; border-top: 1px solid #2a2e33; padding: calc(14px * var(--f)) var(--pad-x); display: none; }
+  .jobband.show { display: block; }
+  .jobband .jt { font-size: calc(17px * var(--f)); margin-bottom: 6px; display: flex; gap: 12px; align-items: center; }
+  .jobband pre { margin: 0; font: calc(12.5px * var(--f))/1.35 "DejaVu Sans Mono", monospace; color: var(--text-dim); white-space: pre-wrap; max-height: calc(110px * var(--f)); overflow: hidden; }
+  .spin { width: calc(14px * var(--f)); height: calc(14px * var(--f)); border: 2px solid var(--text-faint); border-top-color: var(--text); border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- Dialog ---------- */
+  .dialog { position: fixed; inset: 0; z-index: 30; display: none; align-items: center; background: rgba(6,7,8,.75); }
+  .dialog.open { display: flex; }
+  .dialog .band { width: 100%; padding: calc(36px * var(--f)) var(--pad-x); background: #1a1d21; border-top: 1px solid #2a2e33; border-bottom: 1px solid #2a2e33; }
+  .dialog h3 { margin: 0 0 8px; font-weight: 300; font-size: calc(34px * var(--f)); }
+  .dialog p { margin: 0 0 calc(24px * var(--f)); color: var(--text-dim); font-size: calc(16px * var(--f)); }
+  .dialog .btns { display: flex; gap: calc(12px * var(--f)); flex-wrap: wrap; }
+  .btn { min-width: calc(180px * var(--f)); padding: calc(12px * var(--f)) calc(20px * var(--f)); cursor: pointer; font-size: calc(17px * var(--f)); color: var(--text); background: #2a2e33; border: 2px solid transparent; outline: none; }
+  .btn.danger { background: #6e2b2b; }
+  .btn.focus { border-color: var(--focus); }
+
+  .hint { position: fixed; left: var(--pad-x); right: var(--pad-x); bottom: calc(14px * var(--f)); z-index: 25; font-size: calc(14px * var(--f)); color: var(--text-faint); display: flex; flex-wrap: wrap; gap: calc(6px * var(--f)) calc(24px * var(--f)); }
+  .hint b { font-weight: 600; color: rgba(236,235,232,.72); }
+  .toast { position: fixed; right: var(--pad-x); bottom: calc(52px * var(--f)); z-index: 50; background: #2a2e33; padding: calc(10px * var(--f)) calc(16px * var(--f)); font-size: calc(16px * var(--f)); max-width: 60vw; opacity: 0; transform: translateY(10px); transition: all .25s; }
+  .toast.show { opacity: 1; transform: none; }
+  .toast.err { background: #6e2b2b; }
+
+  @media (prefers-reduced-motion: reduce) { .tile { animation: none; opacity: 1; } .track, .tile, .splash, .layer { transition: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Start</h1>
+  <div class="who">
+    <div class="meta"><div class="name" id="user"></div><div class="time" id="hdrTime"></div></div>
+    <button class="round nav" id="power" aria-label="Ausschalten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg></button>
+  </div>
+</header>
+<div class="stage" id="home"><div class="track" id="track"></div></div>
+
+<!-- Radio -->
+<section class="layer" id="radio">
+  <header><div class="htitle"><button class="round rnav" data-act="back" aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Radio</h1></div><div class="nowline" id="rNow"></div></header>
+  <div class="bar">
+    <button class="pill rnav" id="rStop" data-act="stop"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>Stopp</button>
+    <button class="pill rnav" id="rFav" data-act="fav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg><span>Favorit</span></button>
+    <input class="field rnav" id="rSearch" type="text" placeholder="Sender suchen …" autocomplete="off" spellcheck="false">
+    <div class="vol"><button class="pill rnav" data-act="voldown">−</button><div class="meter"><b class="volbar"></b></div><button class="pill rnav" data-act="volup">+</button><span class="voltxt"></span></div>
+  </div>
+  <div class="stage"><div class="track" id="rTrack"></div></div>
+</section>
+
+<!-- Fernsehen -->
+<section class="layer" id="tv">
+  <header><div class="htitle"><button class="round tnav" data-act="back" aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Fernsehen</h1></div><div class="nowline" id="tNow"></div></header>
+  <div class="bar">
+    <input class="field tnav" id="tSearch" type="text" placeholder="Sender suchen …" autocomplete="off" spellcheck="false">
+    <button class="pill tnav" id="tStop" data-act="tvstop"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>Stopp</button>
+    <div class="vol"><button class="pill tnav" data-act="voldown">−</button><div class="meter"><b class="volbar"></b></div><button class="pill tnav" data-act="volup">+</button><span class="voltxt"></span></div>
+  </div>
+  <div class="stage"><div class="track" id="tTrack"></div></div>
+</section>
+
+<!-- AppCenter -->
+<section class="layer" id="apps">
+  <header><div class="htitle"><button class="round anav" data-act="back" aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1>AppCenter</h1></div><div class="nowline" id="aNow"></div></header>
+  <div class="bar">
+    <button class="pill anav" data-act="checkupd">Nach Updates suchen</button>
+    <button class="pill anav" data-act="doupd" id="aUpd">Alles aktualisieren</button>
+  </div>
+  <div class="stage"><div class="track" id="aTrack"></div></div>
+</section>
+<div class="jobband" id="job"><div class="jt"><div class="spin" id="jobSpin"></div><span id="jobTitle"></span></div><pre id="jobLog"></pre></div>
+
+<!-- App-Dialog -->
+<div class="dialog" id="adlg" role="dialog" aria-modal="true">
+  <div class="band"><h3 id="adTitle"></h3><p id="adText"></p><div class="btns" id="adBtns"></div></div>
+</div>
+
+<!-- Einstellungen -->
+<section class="layer" id="settings">
+  <header><div class="htitle"><button class="round snav" data-act="back" aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Einstellungen</h1></div><div class="nowline" id="sNet"></div></header>
+  <div class="stage"><div class="track" id="sTrack"></div></div>
+</section>
+
+<div class="hint" id="hint"></div>
+<div class="splash" id="splash"><div class="inner"><div id="splashIcon"></div><div class="name" id="splashName"></div><div class="dots"><i></i><i></i><i></i></div></div></div>
+
+<div class="dialog" id="dialog" role="dialog" aria-modal="true">
+  <div class="band">
+    <h3>Ausschalten</h3>
+    <p>Offene Programme werden vorher geschlossen.</p>
+    <div class="btns">
+      <button class="btn danger dnav" data-power="poweroff">Herunterfahren</button>
+      <button class="btn dnav" data-power="reboot">Neu starten</button>
+      <button class="btn dnav" data-close>Abbrechen</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================ Symbole */
+const ICONS = {
+  play:     '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><rect x="5" y="10" width="38" height="28" rx="7"/><path d="M20 17.5v13l11-6.5z" fill="currentColor"/></svg>',
+  film:     '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><rect x="6" y="9" width="36" height="30" rx="3"/><path d="M14 9v30M34 9v30M6 17h8M6 24h8M6 31h8M34 17h8M34 24h8M34 31h8"/></svg>',
+  handheld: '<svg viewBox="0 0 64 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M14 5h36c6 0 11 5 11 12v6c0 7-5 12-11 12H14C8 35 3 30 3 23v-6C3 10 8 5 14 5z"/><rect x="20" y="11" width="24" height="18" rx="2"/><path d="M10 20h6M13 17v6"/><circle cx="51" cy="18" r="1.8" fill="currentColor"/><circle cx="55" cy="23" r="1.8" fill="currentColor"/></svg>',
+  gamepad:  '<svg viewBox="0 0 64 40" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M18 6h28c8 0 13 8 15 20 1 7-6 10-10 5l-5-6H18l-5 6c-4 5-11 2-10-5C5 14 10 6 18 6z"/><path d="M15 16h8M19 12v8"/><circle cx="44" cy="14" r="1.8" fill="currentColor"/><circle cx="48" cy="19" r="1.8" fill="currentColor"/></svg>',
+  folder:   '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M5 13a3 3 0 0 1 3-3h10l4 5h18a3 3 0 0 1 3 3v17a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z"/></svg>',
+  terminal: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="9" width="38" height="30" rx="3"/><path d="M13 19l6 5-6 5M23 30h11"/></svg>',
+  globe:    '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="24" cy="24" r="17"/><path d="M7 24h34M24 7c5 5 7 11 7 17s-2 12-7 17c-5-5-7-11-7-17s2-12 7-17z"/></svg>',
+  music:    '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M18 34V11l20-4v23"/><circle cx="13" cy="34" r="5"/><circle cx="33" cy="30" r="5"/></svg>',
+  radio:    '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><rect x="5" y="16" width="38" height="24" rx="3"/><path d="M12 16l22-9"/><circle cx="31" cy="28" r="5.5"/><path d="M11 24h9M11 29h9M11 34h9"/></svg>',
+  tv:       '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><rect x="5" y="11" width="38" height="25" rx="3"/><path d="M17 42h14M24 36v6M18 4l6 7 6-7"/></svg>',
+  store:    '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><rect x="7" y="7" width="14" height="14" rx="2"/><rect x="27" y="7" width="14" height="14" rx="2"/><rect x="7" y="27" width="14" height="14" rx="2"/><path d="M34 27v14M27 34h14"/></svg>',
+  image:    '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><rect x="6" y="9" width="36" height="30" rx="3"/><circle cx="17" cy="19" r="3.5"/><path d="M6 33l11-9 8 7 6-5 11 8"/></svg>',
+  chart:    '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M6 40h36M10 34l8-10 7 6 12-15"/></svg>',
+  gear:     '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><circle cx="24" cy="24" r="6"/><path d="M24 5l3 5 6-2 1 6 6 1-2 6 5 3-5 3 2 6-6 1-1 6-6-2-3 5-3-5-6 2-1-6-6-1 2-6-5-3 5-3-2-6 6-1 1-6 6 2z"/></svg>'
+};
+
+const DEMO = {"title":"Start","user":"Paul","radio_suggestions":["MDR Sachsen-Anhalt","Deutschlandfunk","radioeins"],"groups":[
+  {"name":"Unterhaltung","tiles":[{"id":"youtube","label":"YouTube","sub":"Videos & Abos","size":"wide","color":"#6e2b2b","icon":"play"},{"id":"radio","label":"Radio","sub":"Sender & Favoriten","size":"wide","color":"#3b2f4f","icon":"radio","type":"radio"},{"id":"vlc","label":"VLC","size":"medium","color":"#74461f","icon":"film"}]},
+  {"name":"Spiele","tiles":[{"id":"gba","label":"Game Boy Advance","sub":"VisualBoyAdvance-M","size":"wide","color":"#2d3763","icon":"handheld"}]},
+  {"name":"System","tiles":[{"id":"clock","size":"wide","color":"#23272c","type":"clock"},{"id":"settings","label":"Einstellungen","size":"medium","color":"#3a3f46","icon":"gear","type":"settings"},{"id":"files","label":"Dateien","size":"medium","color":"#284843","icon":"folder"},{"id":"terminal","label":"Terminal","size":"medium","color":"#2f3238","icon":"terminal"}]}
+]};
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const offline = location.protocol === 'file:';
+let cfg = null, focusEl = null, running = [], radioState = { station: null, title: null };
+let favs = [], results = null, lastQuery = '', sett = null, scale = 1.75, wifiList = null, wifiPick = null;
+const lastFocus = {};
+
+/* ============================================================ API */
+async function api(path, body) {
+  if (offline) return {};
+  const r = await fetch(path, { method: 'POST', headers: { 'X-TV': '1', 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.status);
+  return j;
+}
+async function getJSON(path) {
+  const r = await fetch(path, { cache: 'no-store' });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.status);
+  return j;
+}
+
+/* ============================================================ Skalierung
+   f = Skalierung × Hoehe/768. Kacheln wachsen mit, die Zeilenzahl passt sich an (3 → 2 → 1). */
+function layout() {
+  const r = innerHeight / 768;
+  const f = scale * r;
+  const root = document.documentElement.style;
+  root.setProperty('--f', f);
+  root.setProperty('--hint', ($('#hint').offsetHeight + 22 * f) + 'px');
+  const stage = $('#home');
+  const h2 = stage.querySelector('.group h2');
+  const avail = stage.clientHeight - parseFloat(getComputedStyle(stage).paddingBottom) - (h2 ? h2.offsetHeight + parseFloat(getComputedStyle(h2).marginBottom) : 0);
+  const gap = 10 * f;
+  const want = 161 * r * (1 + (scale - 1) * 0.55);
+  let rows = 3, u = want;
+  for (rows = 3; rows >= 1; rows--) {
+    const fit = (avail - gap * (rows - 1)) / rows;
+    if (rows === 1 || fit >= want * 0.82) { u = Math.min(want, fit); break; }
+  }
+  root.setProperty('--u', Math.max(60, u) + 'px');
+  root.setProperty('--rows', rows);
+  root.setProperty('--srows', Math.max(1, Math.min(3, rows)));
+  if (focusEl) setFocus(focusEl, true);
+}
+
+/* ============================================================ Ebenen */
+function layer() {
+  if ($('#adlg').classList.contains('open')) return 'adlg';
+  if ($('#dialog').classList.contains('open')) return 'dialog';
+  if ($('#tv').classList.contains('open')) return 'tv';
+  if ($('#apps').classList.contains('open')) return 'apps';
+  if ($('#radio').classList.contains('open')) return 'radio';
+  if ($('#settings').classList.contains('open')) return 'settings';
+  return 'home';
+}
+const SCOPE = { home: '.nav', radio: '.rnav', settings: '.snav', dialog: '.dnav', tv: '.tnav', apps: '.anav', adlg: '.adnav' };
+function navItems() { return $$(SCOPE[layer()]).filter(e => !e.disabled && e.offsetParent !== null); }
+function updateHint() {
+  const h = {
+    home:     ['<b>Enter / A</b> öffnen', '<b>Entf / Y</b> schließen', '<b>Win / Guide</b> zur Startseite'],
+    radio:    ['<b>A</b> abspielen', '<b>F / X</b> Favorit', '<b>LB / RB</b> leiser/lauter', '<b>Esc / B</b> zurück'],
+    settings: ['<b>Enter / A</b> auswählen', '<b>Esc / B</b> zurück'],
+    tv:       ['<b>A</b> einschalten', '<b>F / X</b> Favorit', '<b>Win / Guide</b> Startseite', '<b>Esc / B</b> zurück'],
+    apps:     ['<b>A</b> installieren / öffnen', '<b>Esc / B</b> zurück'],
+    adlg:     ['<b>Esc / B</b> abbrechen'],
+    dialog:   ['<b>Esc / B</b> abbrechen']
+  }[layer()];
+  $('#hint').innerHTML = h.map(s => `<span>${s}</span>`).join('');
+  document.documentElement.style.setProperty('--hint', ($('#hint').offsetHeight + 22 * scale * innerHeight / 768) + 'px');
+}
+
+/* ============================================================ Startseite */
+async function load() {
+  try { cfg = offline ? DEMO : await getJSON('/tiles.json'); } catch { cfg = DEMO; }
+  $('#title').textContent = cfg.title || 'Start';
+  $('#user').textContent = cfg.user || '';
+  if (cfg.background) { document.body.classList.add('has-wall'); document.body.style.backgroundImage = `url("${cfg.background}")`; }
+  const track = $('#track');
+  track.innerHTML = '';
+  let n = 0;
+  for (const g of cfg.groups || []) {
+    const sec = document.createElement('section');
+    sec.className = 'group';
+    sec.innerHTML = `<h2>${esc(g.name)}</h2>`;
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    for (const t of g.tiles || []) {
+      const el = document.createElement('div');
+      const kind = t.type === 'clock' ? 'clock' : t.type === 'radio' ? 'radio nav' : t.type === 'tv' ? 'radio tvtile nav' : 'nav';
+      el.className = `tile ${kind} ${t.size || 'medium'}`;
+      el.style.setProperty('--c', t.color || '#2a2e33');
+      el.style.animationDelay = (n++ * 45) + 'ms';
+      el.dataset.id = t.id;
+      el._tile = t;
+      if (t.type === 'clock') el.innerHTML = '<div class="big"></div><div class="date"></div>';
+      else el.innerHTML =
+        (t.image ? `<img class="cover" src="${esc(t.image)}" alt="">` : `<div class="icon">${ICONS[t.icon] || ICONS.globe}</div>`) +
+        ((t.type === 'radio' || t.type === 'tv') ? '<div class="now"><div class="st"></div><div class="ti"></div></div><div class="eq"><i></i><i></i><i></i><i></i></div>' : '') +
+        (t.sub ? `<div class="sub">${esc(t.sub)}</div>` : '') +
+        `<div class="label">${esc(t.label)}</div>` +
+        (t.cmd || t.type === 'tv' || (offline && !t.type) ? '<div class="run"></div><div class="x" title="Schließen">✕</div>' : '');
+      grid.appendChild(el);
+    }
+    sec.appendChild(grid);
+    track.appendChild(sec);
+  }
+  tick();
+  updateHint();
+  layout();
+  const prevId = lastFocus.home?.dataset?.id;
+  const again = (prevId && track.querySelector(`.tile[data-id="${CSS.escape(prevId)}"]`)) || track.querySelector('.tile.nav');
+  if (layer() === 'home') setFocus(again, true); else lastFocus.home = again;
+  setRunning(running);
+  updateHint();
+}
+
+function tick() {
+  const d = new Date();
+  const hm = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  const date = d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
+  $('#hdrTime').textContent = hm;
+  $$('.tile.clock').forEach(c => { c.querySelector('.big').textContent = hm; c.querySelector('.date').textContent = date; });
+}
+setInterval(tick, 5000);
+
+/* ============================================================ Fokus & Navigation */
+function setFocus(el, instant) {
+  if (!el) return;
+  $$('.focus').forEach(e => e.classList.remove('focus'));
+  el.classList.add('focus');
+  focusEl = el;
+  lastFocus[layer()] = el;
+  const tr = el.closest('.track');
+  if (tr) keepVisible(tr, el, instant);
+}
+function keepVisible(track, el, instant) {
+  const box = track.parentElement.getBoundingClientRect();
+  const cur = Number(track.dataset.x || 0);
+  const r = el.getBoundingClientRect();
+  const margin = innerWidth * 0.06;
+  let x = cur;
+  if (r.right > box.right - margin) x = cur - (r.right - (box.right - margin));
+  if (r.left < box.left + margin) x = cur + ((box.left + margin) - r.left);
+  const max = Math.max(0, track.scrollWidth - innerWidth);
+  x = Math.max(-max, Math.min(0, x));
+  if (instant) { track.style.transition = 'none'; requestAnimationFrame(() => track.style.transition = ''); }
+  track.dataset.x = x;
+  track.style.transform = `translateX(${x}px)`;
+}
+function move(dir) {
+  const items = navItems();
+  if (!focusEl || !items.includes(focusEl)) return setFocus(items[0]);
+  const a = focusEl.getBoundingClientRect();
+  const ax = a.left + a.width / 2, ay = a.top + a.height / 2;
+  let best = null, bestScore = Infinity;
+  for (const el of items) {
+    if (el === focusEl) continue;
+    if (el.id === 'power' && dir !== 'up') continue;
+    const b = el.getBoundingClientRect();
+    const bx = b.left + b.width / 2, by = b.top + b.height / 2;
+    const dx = bx - ax, dy = by - ay;
+    let main, side;
+    if (dir === 'left')  { if (b.right > a.left + 1) continue; main = -dx; side = Math.abs(dy); }
+    if (dir === 'right') { if (b.left < a.right - 1) continue; main = dx;  side = Math.abs(dy); }
+    if (dir === 'up')    { if (b.bottom > a.top + 1) continue; main = -dy; side = Math.abs(dx); }
+    if (dir === 'down')  { if (b.top < a.bottom - 1) continue; main = dy;  side = Math.abs(dx); }
+    const score = main + side * 2.2;
+    if (score < bestScore) { bestScore = score; best = el; }
+  }
+  if (best) setFocus(best);
+}
+
+function activate(el = focusEl) {
+  if (!el) return;
+  const act = el.dataset.act;
+  if (el.id === 'power') return openDialog();
+  if (el.dataset.close !== undefined) return closeDialog();
+  if (el.dataset.power) return power(el.dataset.power);
+  if (act === 'back') return closeLayer();
+  if (act === 'stop') return radioStop();
+  if (act === 'fav') return toggleFav();
+  if (act === 'volup') return volume('up');
+  if (act === 'voldown') return volume('down');
+  if (act === 'mute') return volume('mute');
+  if (el.tagName === 'INPUT') return el.focus();
+  if (el.dataset.query) { $('#rSearch').value = el.dataset.query; return search(el.dataset.query); }
+  if (el._station) return radioPlay(el._station);
+  if (el._set) return el._set();
+  if (el._tile?.type === 'radio') return openLayer('radio');
+  if (el._tile?.type === 'settings') return openLayer('settings');
+  if (el._tile?.type === 'tv') return openLayer('tv');
+  if (el._tile?.type === 'apps') return openLayer('apps');
+  if (act === 'tvstop') return tvStop();
+  if (act === 'checkupd') return jobStart('check');
+  if (act === 'doupd') return confirmUpdate();
+  if (el._chan) return tvPlay(el._chan);
+  if (el._flt) return el._flt();
+  if (el._app) return appDialog(el._app);
+  if (el._ad) return el._ad();
+  if (el._tile) return launch(el._tile, el);
+}
+function back() {
+  const l = layer();
+  if (l === 'adlg') closeAdlg();
+  else if (l === 'dialog') closeDialog();
+  else if (l === 'tv' && tvQuery) { tvQuery = ''; $('#tSearch').value = ''; tvSearch(); }
+  else if (l === 'radio' && results) { results = null; $('#rSearch').value = ''; renderStations(); }
+  else if (l === 'settings' && wifiPick) { wifiPick = null; renderSettings(); }
+  else if (l !== 'home') closeLayer();
+}
+function secondary() {
+  const l = layer();
+  if (l === 'home' && focusEl?._tile) {
+    const t = focusEl._tile;
+    if (running.includes(t.id)) closeApp(t);
+    else if (t.cmd) toast(`${t.label} ist gerade nicht geöffnet`);
+    else toast('Diese Kachel lässt sich nicht schließen');
+  }
+  if (l === 'radio' && focusEl?._station) toggleFav(focusEl._station);
+  if (l === 'tv' && focusEl?._chan) tvFav(focusEl._chan);
+}
+
+/* ============================================================ Programme */
+let launching = false, splashTimer;
+async function launch(t, el) {
+  if (launching || (!t.cmd && !offline)) return;
+  const already = running.includes(t.id);
+  el.classList.add('pressed'); setTimeout(() => el.classList.remove('pressed'), 150);
+  if (!already) showSplash(t);
+  launching = true;
+  try { const r = await api('/api/launch/' + encodeURIComponent(t.id)); if (r.running) setRunning(r.running); }
+  catch { toast('Konnte ' + (t.label || 'Programm') + ' nicht starten', true); hideSplash(); }
+  setTimeout(() => { launching = false; }, 600);
+  // Wenn das Programm nach 4 s nicht (mehr) läuft, ist es beim Start abgestürzt
+  if (!already && !offline) setTimeoutdocument.fonts?.ready.then(() => layout());
+(async () => {
+    try { const s = await getJSON('/api/status'); setRunning(s.running || []);
+      if (!running.includes(t.id)) { hideSplash(); toast(`${t.label} hat sich sofort wieder beendet – Details in logs/${t.id}.log`, true); } } catch {}
+  }, 4000);
+}
+function showSplash(t) {
+  const sp = $('#splash');
+  sp.style.setProperty('--c', t.color || '#2a2e33');
+  $('#splashIcon').innerHTML = ICONS[t.icon] || '';
+  $('#splashName').textContent = t.label || '';
+  sp.classList.add('show');
+  clearTimeout(splashTimer);
+  splashTimer = setTimeout(hideSplash, offline ? 1400 : 12000);
+}
+function hideSplash() { clearTimeout(splashTimer); $('#splash').classList.remove('show'); }
+addEventListener('blur', () => setTimeout(hideSplash, 400));
+
+async function closeApp(t) {
+  try { const r = await api('/api/close/' + encodeURIComponent(t.id)); setRunning(r.running || []); toast((t.label || 'Programm') + ' geschlossen'); }
+  catch { toast('Schließen fehlgeschlagen', true); }
+}
+function setRunning(list) {
+  running = list;
+  $$('#track .tile').forEach(el => el.classList.toggle('running', running.includes(el.dataset.id)));
+}
+async function poll() {
+  if (offline) return;
+  try { const s = await getJSON('/api/status'); setRunning(s.running || []); setRadio(s.radio || {}); setTvNow(s.tv); } catch {}
+}
+setInterval(poll, 1500);
+
+/* ============================================================ Unterseiten */
+function openLayer(id) {
+  const el = $('#' + id);
+  el.classList.add('open');
+  requestAnimationFrame(() => el.classList.add('shown'));
+  if (id === 'radio') { renderStations(); refreshVolume(); }
+  if (id === 'settings') loadSettings();
+  if (id === 'tv') { tvOpen(); refreshVolume(); }
+  if (id === 'apps') loadApps();
+  const keep = lastFocus[id] && document.contains(lastFocus[id]) && lastFocus[id].offsetParent !== null ? lastFocus[id] : null;
+  const first = { radio: $('#rTrack .station.playing') || $('#rTrack .rnav'), settings: $('#sTrack .snav'), tv: $('#tTrack .chan'), apps: $('#aTrack .appcard') }[id];
+  setFocus(keep || first || $(`#${id} ${SCOPE[id]}`), true);
+  updateHint();
+}
+function closeLayer() {
+  const el = $$('.layer.open').pop();
+  if (!el) return;
+  el.classList.remove('shown');
+  document.activeElement?.blur();
+  setTimeout(() => { el.classList.remove('open'); setFocus(lastFocus.home || $('#track .tile.nav')); updateHint(); }, 200);
+}
+
+/* ============================================================ Radio */
+function stationTile(st, i) {
+  const el = document.createElement('div');
+  el.className = 'tile medium station rnav';
+  el.style.animationDelay = (i * 30) + 'ms';
+  el._station = st;
+  const isFav = favs.some(f => f.url === st.url);
+  el.innerHTML = `<div class="logo">${st.favicon ? `<img src="${esc(st.favicon)}" alt="" referrerpolicy="no-referrer">` : ICONS.radio}</div>` + (isFav ? '<div class="star">★</div>' : '') + `<div class="label">${esc(st.name)}</div>`;
+  const img = el.querySelector('img');
+  if (img) img.onerror = () => { img.parentElement.innerHTML = ICONS.radio; };
+  if (radioState.station && radioState.station.url === st.url) el.classList.add('playing');
+  return el;
+}
+function section(track, title, child) {
+  const s = document.createElement('section');
+  s.className = 'group';
+  s.innerHTML = `<h2>${esc(title)}</h2>`;
+  s.appendChild(child);
+  track.appendChild(s);
+  return s;
+}
+function renderStations() {
+  const tr = $('#rTrack');
+  const keepUrl = focusEl?._station?.url;
+  tr.innerHTML = ''; tr.dataset.x = 0; tr.style.transform = 'none';
+  if (results) {
+    const g = document.createElement('div');
+    g.className = results.length ? 'sgrid' : 'empty';
+    if (results.length) results.forEach((st, i) => g.appendChild(stationTile(st, i)));
+    else g.textContent = 'Nichts gefunden. Anderen Namen probieren?';
+    section(tr, `Ergebnisse für „${lastQuery}“`, g);
+  } else {
+    if (favs.length) { const g = document.createElement('div'); g.className = 'sgrid'; favs.forEach((st, i) => g.appendChild(stationTile(st, i))); section(tr, 'Favoriten', g); }
+    const chips = document.createElement('div');
+    chips.className = 'chips';
+    for (const q of cfg.radio_suggestions || []) { const b = document.createElement('button'); b.className = 'pill rnav'; b.dataset.query = q; b.textContent = q; chips.appendChild(b); }
+    const wrap = document.createElement('div');
+    if (!favs.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'Noch keine Favoriten. Suche einen Sender oder wähle einen Vorschlag, dann mit „Favorit“ merken.'; wrap.appendChild(e); }
+    wrap.appendChild(chips);
+    section(tr, favs.length ? 'Suchen' : 'Vorschläge', wrap);
+  }
+  if (keepUrl && layer() === 'radio') { const again = $$('#rTrack .station').find(e => e._station.url === keepUrl); if (again) setFocus(again, true); }
+  updateFavBtn();
+}
+async function loadFavs() { if (offline) return; try { favs = await getJSON('/api/radio/favs'); } catch { favs = []; } }
+async function search(q) {
+  q = q.trim(); if (!q) return;
+  lastQuery = q;
+  toast('Suche „' + q + '“ …');
+  try { results = offline ? [] : await getJSON('/api/radio/search?q=' + encodeURIComponent(q)); }
+  catch { return toast('Senderverzeichnis nicht erreichbar', true); }
+  $('#rSearch').blur(); $('#toast').classList.remove('show');
+  renderStations();
+  setFocus($('#rTrack .station') || $('#rSearch'), true);
+}
+async function radioPlay(st) { try { setRadio(await api('/api/radio/play', st)); toast('Spielt: ' + st.name); } catch { toast('Sender lässt sich nicht abspielen', true); } }
+async function radioStop() { try { setRadio(await api('/api/radio/stop')); } catch {} }
+async function toggleFav(st) {
+  st = st || focusEl?._station || radioState.station;
+  if (!st) return toast('Erst einen Sender auswählen');
+  const isFav = favs.some(f => f.url === st.url);
+  try { favs = await api(isFav ? '/api/radio/unfav' : '/api/radio/fav', st); toast(isFav ? 'Aus Favoriten entfernt' : 'Zu Favoriten hinzugefügt'); renderStations(); }
+  catch { toast('Speichern fehlgeschlagen', true); }
+}
+function updateFavBtn() {
+  const st = radioState.station;
+  $('#rFav span').textContent = st && favs.some(f => f.url === st.url) ? 'Favorit entfernen' : 'Favorit';
+  $('#rStop').disabled = !st;
+}
+function setRadio(s) {
+  const prev = radioState.station?.url;
+  radioState = { station: s.station || null, title: s.title || null };
+  const st = radioState.station;
+  const tile = $('#track .tile.radio:not(.tvtile)');
+  if (tile) { tile.classList.toggle('playing', !!st); tile.querySelector('.st').textContent = st ? st.name : ''; tile.querySelector('.ti').textContent = st ? (radioState.title || 'Live') : ''; }
+  $('#rNow').innerHTML = st ? `<strong>${esc(st.name)}</strong><span>${esc(radioState.title || 'Live')}</span>` : '<strong>Kein Sender</strong><span>Favorit wählen oder Sender suchen</span>';
+  if (prev !== st?.url) $$('#rTrack .station').forEach(e => e.classList.toggle('playing', !!st && e._station.url === st.url));
+  updateFavBtn();
+}
+async function volume(action) { try { showVol(await api('/api/volume/' + action)); } catch {} }
+async function refreshVolume() { if (offline) return showVol({ level: 45 }); try { showVol(await getJSON('/api/volume')); } catch {} }
+function showVol(v) {
+  if (!v || v.level === undefined) { $$('.voltxt').forEach(e => e.textContent = 'kein Ton-Dienst'); return; }
+  $$('.volbar').forEach(e => e.style.width = Math.min(100, v.level) + '%');
+  $$('.voltxt').forEach(e => e.textContent = v.muted ? 'stumm' : v.level + ' %');
+}
+
+/* ============================================================ Einstellungen */
+const DEMO_SETT = { scale: 1.75, scales: [1, 1.25, 1.5, 1.75, 2, 2.25], cursor: { theme: 'Bibata-Modern-Ice', size: 48, themes: [{ id: 'Bibata-Modern-Ice', label: 'Hell' }, { id: 'Bibata-Modern-Classic', label: 'Dunkel' }], sizes: [32, 48, 64, 80, 96] }, displays: [{ name: 'HDMI-2', current: '1360x768', modes: ['1920x1080', '1360x768', '1280x720', '1024x768'] }],
+  audio: { ok: true, outputs: [{ card: 'c', profile: 'output:hdmi-stereo', label: 'Digital Stereo (HDMI)', active: true }, { card: 'c', profile: 'output:analog-stereo', label: 'Analog Stereo', active: false }] },
+  volume: { level: 45, muted: false }, net: { hostname: 'void', addresses: [{ iface: 'enp1s0', ip: '192.168.178.49' }] } };
+
+async function loadSettings() {
+  try { sett = offline ? DEMO_SETT : await getJSON('/api/settings'); } catch { toast('Einstellungen nicht ladbar', true); return; }
+  renderSettings();
+}
+function pill(label, fn, on, extra) {
+  const b = document.createElement('button');
+  b.className = 'pill snav' + (on ? ' on' : '') + (extra ? ' ' + extra : '');
+  b.innerHTML = label;
+  b._set = fn;
+  return b;
+}
+function col(track, title) {
+  const c = document.createElement('div');
+  c.className = 'col';
+  section(track, title, c);
+  return c;
+}
+function row(parent, label) {
+  if (label) { const l = document.createElement('div'); l.className = 'lbl'; l.textContent = label; parent.appendChild(l); }
+  const r = document.createElement('div'); r.className = 'row'; parent.appendChild(r); return r;
+}
+function renderSettings() {
+  if (!sett) return;
+  const tr = $('#sTrack');
+  const keepKey = focusEl?.dataset.key;
+  tr.innerHTML = ''; tr.dataset.x = 0; tr.style.transform = 'none';
+
+  // Anzeige
+  const a = col(tr, 'Skalierung');
+  const rs = row(a);
+  for (const s of sett.scales) {
+    const b = pill(String(s).replace('.', ',') + '×', () => setScale(s), Math.abs(s - scale) < 0.01);
+    b.dataset.key = 'scale' + s; rs.appendChild(b);
+  }
+  if (sett.cursor) {
+    const mc = col(tr, 'Mauszeiger');
+    const rt = row(mc, 'Stil');
+    for (const t of sett.cursor.themes) { const b = pill(esc(t.label), () => setCursor({ theme: t.id }), t.id === sett.cursor.theme); b.dataset.key = 'ct' + t.id; rt.appendChild(b); }
+    const rz = row(mc, 'Größe');
+    for (const z of sett.cursor.sizes) { const b = pill(String(z), () => setCursor({ size: z }), z === sett.cursor.size); b.dataset.key = 'cs' + z; rz.appendChild(b); }
+  }
+  for (const d of sett.displays || []) {
+    const rr = row(col(tr, `Auflösung · ${d.name}`));
+    const modes = d.modes.filter(m => { const [w, h] = m.split('x').map(Number); return w >= 1024 && h >= 576; }).slice(0, 6);
+    for (const m of modes) { const b = pill(m.replace('x', '×'), () => setResolution(m), m === d.current); b.dataset.key = 'res' + m; rr.appendChild(b); }
+  }
+
+  // Ton
+  const t = col(tr, 'Tonausgang');
+  const ro = row(t);
+  if (!sett.audio?.ok) {
+    const e = document.createElement('div'); e.className = 'info'; e.textContent = 'Kein Ton-Dienst erreichbar (PipeWire läuft nicht).'; ro.appendChild(e);
+  } else for (const o of sett.audio.outputs) {
+    const b = pill(esc(o.label), () => setOutput(o), o.active); b.dataset.key = 'out' + o.profile; ro.appendChild(b);
+  }
+  const rv = row(col(tr, 'Lautstärke'));
+  const v = document.createElement('div'); v.className = 'vol';
+  const dn = pill('−', () => volume('down')); dn.dataset.key = 'vd';
+  const up = pill('+', () => volume('up')); up.dataset.key = 'vu';
+  const mu = pill('Stumm', () => volume('mute')); mu.dataset.key = 'vm';
+  const meter = document.createElement('div'); meter.className = 'meter'; meter.innerHTML = '<b class="volbar"></b>';
+  const txt = document.createElement('span'); txt.className = 'voltxt';
+  v.append(dn, meter, up, txt); rv.append(v, mu);
+
+  // Netzwerk
+  const n = col(tr, 'Netzwerk');
+  const info = document.createElement('div'); info.className = 'info';
+  info.innerHTML = `Rechnername: <b>${esc(sett.net.hostname)}</b><br>` + (sett.net.addresses.length ? sett.net.addresses.map(x => `${esc(x.iface)}: <b>${esc(x.ip)}</b>`).join('<br>') : 'Keine Verbindung');
+  n.appendChild(info);
+  const wc = col(tr, 'WLAN');
+  const rw = row(wc);
+  if (wifiPick) {
+    const inp = document.createElement('input');
+    inp.className = 'field snav'; inp.type = 'password'; inp.placeholder = `Passwort für „${wifiPick.ssid}“`; inp.id = 'wifiPw'; inp.dataset.key = 'pw';
+    rw.appendChild(inp);
+    const go = pill('Verbinden', () => wifiConnect(wifiPick.ssid, $('#wifiPw').value)); go.dataset.key = 'go';
+    const cancel = pill('Abbrechen', () => { wifiPick = null; renderSettings(); }); cancel.dataset.key = 'cancel';
+    rw.append(go, cancel);
+  } else {
+    const scan = pill(wifiList ? 'Neu suchen' : 'Netze suchen', wifiScan); scan.dataset.key = 'scan'; rw.appendChild(scan);
+    if (wifiList) {
+      const rl = row(wc);
+      rl.classList.add('wifi');
+      for (const w of wifiList.slice(0, 8)) {
+        const b = pill(`${w.secure ? '🔒 ' : ''}${esc(w.ssid)} <span class="sig">${w.signal}%</span>`, () => w.secure && !w.active ? (wifiPick = w, renderSettings(), setFocus($('#wifiPw'))) : wifiConnect(w.ssid, ''), w.active);
+        b.dataset.key = 'w' + w.ssid; rl.appendChild(b);
+      }
+    }
+  }
+  $('#sNet').innerHTML = sett.net.addresses.length ? `<strong>${esc(sett.net.addresses[0].ip)}</strong><span>${esc(sett.net.hostname)}</span>` : '<strong>Offline</strong>';
+
+  // Freigabe
+  if (sett.share) {
+    const fc = col(tr, 'Freigabe');
+    const fi = document.createElement('div'); fi.className = 'info';
+    const ip = sett.net.addresses[0]?.ip;
+    fi.innerHTML = sett.share.samba
+      ? `Im Windows-Explorer eingeben:<br><b>\\\\${esc(sett.net.hostname)}\\share</b>` + (ip ? `<br>oder <b>\\\\${esc(ip)}\\share</b>` : '') + `<br>Anmelden mit Benutzer <b>${esc(sett.share.user || '')}</b> und dem Freigabe-Passwort.`
+      : 'Freigabe ist nicht aktiv (Samba läuft nicht).';
+    fc.appendChild(fi);
+  }
+
+  // System
+  const s = col(tr, 'System');
+  const rsys = row(s);
+  const rl = pill('Startseite neu laden', () => location.reload()); rl.dataset.key = 'reload';
+  const rb = pill('Neu starten', () => power('reboot')); rb.dataset.key = 'reboot';
+  const po = pill('Herunterfahren', () => power('poweroff')); po.dataset.key = 'off';
+  rsys.append(rl, rb, po);
+
+  showVol(sett.volume);
+  if (layer() === 'settings') {
+    const again = keepKey && $(`#sTrack [data-key="${CSS.escape(keepKey)}"]`);
+    setFocus(again || $('#sTrack .snav.on') || $('#sTrack .snav'), true);
+  }
+}
+async function setScale(s) {
+  scale = s;
+  try { if (!offline) sett = await api('/api/settings/scale', { scale: s }); } catch { return toast('Speichern fehlgeschlagen', true); }
+  layout(); renderSettings();
+  toast('Skalierung ' + String(s).replace('.', ',') + '× – gilt für neu geöffnete Programme');
+}
+async function setCursor(c) {
+  try { sett = await api('/api/settings/cursor', c); } catch (e) { return toast('Fehlgeschlagen: ' + e.message, true); }
+  renderSettings();
+  toast('Mauszeiger geändert – Startseite lädt kurz neu');
+}
+async function setResolution(m) {
+  try { sett = await api('/api/settings/resolution', { mode: m }); toast('Auflösung ' + m.replace('x', '×')); } catch (e) { return toast('Fehlgeschlagen: ' + e.message, true); }
+  setTimeout(() => { layout(); renderSettings(); }, 800);
+}
+async function setOutput(o) {
+  try { sett = await api('/api/audio/output', { card: o.card, profile: o.profile }); toast('Ausgang: ' + o.label); renderSettings(); } catch (e) { toast('Fehlgeschlagen: ' + e.message, true); }
+}
+async function wifiScan() {
+  toast('Suche WLAN-Netze …');
+  try { wifiList = offline ? [{ ssid: 'FRITZ!Box 7530', signal: 72, secure: true, active: false }] : await getJSON('/api/wifi/scan'); $('#toast').classList.remove('show'); }
+  catch (e) { return toast('WLAN-Suche fehlgeschlagen: ' + e.message, true); }
+  renderSettings();
+}
+async function wifiConnect(ssid, pw) {
+  toast(`Verbinde mit „${ssid}“ …`);
+  try { sett = await api('/api/wifi/connect', { ssid, password: pw }); wifiPick = null; toast(`Verbunden mit „${ssid}“`); renderSettings(); }
+  catch (e) { toast('Verbindung fehlgeschlagen: ' + e.message, true); }
+}
+
+/* ============================================================ Fernsehen */
+let tvQuery = '', tvCountry = 'DE', tvCat = '', tvFavs = [], tvResults = [], tvStatus = null, tvNow = null, tvMore = false;
+const regionName = (() => { try { const d = new Intl.DisplayNames(['de'], { type: 'region' }); return c => { try { return d.of(c.toUpperCase()); } catch { return c; } }; } catch { return c => c; } })();
+const TV_CATS = [['', 'Alle Themen'], ['news', 'Nachrichten'], ['general', 'Allgemein'], ['entertainment', 'Unterhaltung'], ['movies', 'Filme'], ['series', 'Serien'], ['documentary', 'Doku'], ['kids', 'Kinder'], ['music', 'Musik'], ['sports', 'Sport'], ['culture', 'Kultur']];
+
+async function tvOpen() {
+  try { tvStatus = await getJSON('/api/tv/status'); tvFavs = await getJSON('/api/tv/favs'); } catch { tvStatus = { state: 'error' }; }
+  setTvNow(tvStatus?.now);
+  if (tvStatus.state === 'loading' || tvStatus.state === 'idle') {
+    renderTv('Senderverzeichnis wird geladen … (beim ersten Mal ca. 20–60 Sekunden)');
+    const iv = setIntervaldocument.fonts?.ready.then(() => layout());
+(async () => {
+      if (layer() !== 'tv') return clearInterval(iv);
+      try { tvStatus = await getJSON('/api/tv/status'); } catch {}
+      if (tvStatus.state === 'ready') { clearInterval(iv); tvSearch(); }
+      if (tvStatus.state === 'error') { clearInterval(iv); renderTv('Senderverzeichnis nicht erreichbar: ' + (tvStatus.error || '')); }
+    }, 1500);
+  } else if (tvStatus.state === 'error') renderTv('Senderverzeichnis nicht erreichbar: ' + (tvStatus.error || ''));
+  else tvSearch();
+}
+async function tvSearch() {
+  const qs = new URLSearchParams({ q: tvQuery, country: tvQuery ? (tvCountry === '*' ? '' : tvCountry) : (tvCountry === '*' ? '' : tvCountry), cat: tvCat });
+  try { tvResults = offline ? [] : await getJSON('/api/tv/search?' + qs); } catch { tvResults = []; }
+  $('#tSearch').blur();
+  renderTv();
+  if (layer() === 'tv') setFocus($('#tTrack .chan') || $('#tSearch'), true);
+}
+function chanTile(ch, i) {
+  const el = document.createElement('div');
+  el.className = 'tile medium station chan tnav';
+  el.style.animationDelay = (i * 20) + 'ms';
+  el._chan = ch;
+  const fav = tvFavs.some(f => f.key === ch.key);
+  el.innerHTML = `<div class="logo">${ch.logo ? `<img src="${esc(ch.logo)}" alt="" referrerpolicy="no-referrer" loading="lazy">` : ICONS.tv}</div>` +
+    (ch.quality ? `<div class="q">${esc(ch.quality)}</div>` : '') + (fav ? '<div class="star">★</div>' : '') +
+    `<div class="label">${esc(ch.name)}</div>`;
+  const img = el.querySelector('img'); if (img) img.onerror = () => { img.parentElement.innerHTML = ICONS.tv; };
+  if (tvNow && tvNow.key === ch.key) el.classList.add('playing');
+  return el;
+}
+function fpill(label, on, fn, cls) {
+  const b = document.createElement('button'); b.className = 'pill tnav' + (on ? ' on' : '') + (cls ? ' ' + cls : ''); b.textContent = label; b._flt = fn; return b;
+}
+function renderTv(msg) {
+  const tr = $('#tTrack');
+  const keep = focusEl?._chan?.key || focusEl?.dataset?.fk;
+  tr.innerHTML = ''; tr.dataset.x = 0; tr.style.transform = 'none';
+  // Filter
+  const f = document.createElement('div'); f.className = 'fchips';
+  const rc = document.createElement('div'); rc.className = 'row';
+  const top = ['DE', 'AT', 'CH'];
+  const more = (tvStatus?.countries || []).map(c => c.code).filter(c => !top.includes(c)).slice(0, 16);
+  for (const c of [...top, ...(tvMore ? more : [])]) { const b = fpill(regionName(c), tvCountry === c, () => { tvCountry = c; tvSearch(); }); b.dataset.fk = 'c' + c; rc.appendChild(b); }
+  const all = fpill('Alle Länder', tvCountry === '*', () => { tvCountry = '*'; tvSearch(); }); all.dataset.fk = 'c*'; rc.appendChild(all);
+  const mb = fpill(tvMore ? 'Weniger' : 'Weitere Länder …', false, () => { tvMore = !tvMore; renderTv(); }); mb.dataset.fk = 'more'; rc.appendChild(mb);
+  const rt = document.createElement('div'); rt.className = 'row';
+  for (const [k, lab] of TV_CATS) { const b = fpill(lab, tvCat === k, () => { tvCat = k; tvSearch(); }); b.dataset.fk = 't' + k; rt.appendChild(b); }
+  f.append(rc, rt);
+  section(tr, 'Filter', f);
+  if (tvFavs.length && !tvQuery) {
+    const g = document.createElement('div'); g.className = 'sgrid';
+    tvFavs.forEach((ch, i) => g.appendChild(chanTile(ch, i)));
+    section(tr, 'Favoriten', g);
+  }
+  if (msg) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = msg; section(tr, 'Sender', e); }
+  else {
+    const g = document.createElement('div');
+    g.className = tvResults.length ? 'sgrid' : 'empty';
+    if (tvResults.length) tvResults.forEach((ch, i) => g.appendChild(chanTile(ch, i)));
+    else g.textContent = 'Keine Sender gefunden.';
+    const where = tvCountry === '*' ? 'alle Länder' : regionName(tvCountry);
+    section(tr, tvQuery ? `„${tvQuery}“ · ${where}` : `Sender · ${where}`, g);
+  }
+  $('#tStop').disabled = !tvNow;
+  if (layer() === 'tv' && keep) {
+    const again = $$('#tTrack .tnav').find(e => (e._chan && e._chan.key === keep) || e.dataset.fk === keep);
+    if (again) setFocus(again, true);
+  }
+}
+async function tvPlay(ch) {
+  toast('Schalte auf ' + ch.name + ' …');
+  try { const s = await api('/api/tv/play', { key: ch.key }); setTvNow(s.now); }
+  catch (e) { toast('Sender lässt sich nicht starten', true); }
+}
+async function tvStop() { try { await api('/api/tv/stop'); setTvNow(null); } catch {} }
+async function tvFav(ch) {
+  const isFav = tvFavs.some(f => f.key === ch.key);
+  try { tvFavs = await api(isFav ? '/api/tv/unfav' : '/api/tv/fav', { key: ch.key }); toast(isFav ? 'Aus Favoriten entfernt' : 'Zu Favoriten hinzugefügt'); renderTv(); }
+  catch { toast('Speichern fehlgeschlagen', true); }
+}
+function setTvNow(now) {
+  const prev = tvNow?.key;
+  tvNow = now || null;
+  const tile = $('#track .tile.tvtile');
+  if (tile) { tile.classList.toggle('playing', !!tvNow); tile.querySelector('.st').textContent = tvNow ? tvNow.name : ''; tile.querySelector('.ti').textContent = tvNow ? (tvNow.country ? regionName(tvNow.country) : 'Live') : ''; }
+  $('#tNow').innerHTML = tvNow ? `<strong>${esc(tvNow.name)}</strong><span>läuft · Win/Guide wechselt zurück</span>` : `<strong>${tvStatus?.count ? tvStatus.count.toLocaleString('de-DE') + ' Sender' : 'Fernsehen'}</strong><span>frei empfangbare Livestreams</span>`;
+  if (prev !== tvNow?.key) $$('#tTrack .chan').forEach(e => e.classList.toggle('playing', !!tvNow && e._chan.key === tvNow.key));
+  if ($('#tStop')) $('#tStop').disabled = !tvNow;
+}
+
+/* ============================================================ AppCenter */
+let appsData = null, jobTimer = null, updCount = null;
+async function loadApps() {
+  try { appsData = offline ? { categories: ['Spiele'], apps: [], job: null } : await getJSON('/api/apps'); } catch { return toast('AppCenter nicht ladbar', true); }
+  renderApps();
+  if (appsData.job && appsData.job.state === 'running') watchJob();
+}
+function renderApps() {
+  const tr = $('#aTrack');
+  const keep = focusEl?._app?.id;
+  tr.innerHTML = ''; tr.dataset.x = 0; tr.style.transform = 'none';
+  const arows = Math.max(1, Math.min(3, Number(getComputedStyle(document.documentElement).getPropertyValue('--rows')) || 2));
+  document.documentElement.style.setProperty('--arows', arows);
+  for (const cat of appsData.categories) {
+    const list = appsData.apps.filter(a => a.cat === cat);
+    if (!list.length) continue;
+    const g = document.createElement('div'); g.className = 'agrid';
+    list.forEach((a, i) => {
+      const el = document.createElement('div');
+      el.className = 'tile appcard anav' + (a.installed ? ' inst' : '');
+      el.style.animationDelay = (i * 30) + 'ms';
+      el.style.setProperty('--ac', a.color);
+      el._app = a;
+      el.innerHTML = `<div class="aicon">${ICONS[a.icon] || ICONS.globe}</div><div class="aname">${esc(a.name)}</div>` +
+        `<div class="astate">${a.installed ? '✓ installiert' : (a.type === 'web' ? 'Web-App' : a.type === 'flatpak' ? 'Flatpak' : a.type === 'appimage' ? 'AppImage' : 'Paket')}</div>` +
+        `<div class="adesc">${esc(a.desc)}</div>`;
+      g.appendChild(el);
+    });
+    section(tr, cat, g);
+  }
+  $('#aNow').innerHTML = updCount === null ? '<strong>Optionale Programme</strong><span>Kacheln werden automatisch angelegt</span>'
+    : `<strong>${updCount ? updCount + ' Updates verfügbar' : 'System ist aktuell'}</strong><span>Stand: gerade eben</span>`;
+  if (layer() === 'apps') { const again = keep && $$('#aTrack .appcard').find(e => e._app.id === keep); setFocus(again || $('#aTrack .appcard') || $('#apps .anav'), true); }
+}
+function adlg(title, text, buttons) {
+  $('#adTitle').textContent = title; $('#adText').textContent = text;
+  const b = $('#adBtns'); b.innerHTML = '';
+  for (const [label, fn, cls] of buttons) { const x = document.createElement('button'); x.className = 'btn adnav' + (cls ? ' ' + cls : ''); x.textContent = label; x._ad = () => { closeAdlg(); fn && fn(); }; b.appendChild(x); }
+  $('#adlg').classList.add('open'); setFocus(b.querySelector('.adnav')); updateHint();
+}
+function closeAdlg() { $('#adlg').classList.remove('open'); const l = layer(); setFocus(lastFocus[l] || $(`#${l} ${SCOPE[l]}`)); updateHint(); }
+function appDialog(a) {
+  if (JOBS_BUSY()) return toast('Bitte warten, es läuft noch ein Auftrag');
+  if (a.installed) {
+    const tile = cfg.groups.flatMap(g => g.tiles).find(t => t.id === a.id);
+    adlg(a.name, a.desc, [
+      ...(tile ? [['Öffnen', () => { closeLayer(); setTimeout(() => launch(tile, $(`#track [data-id="${a.id}"]`) || document.body), 250); }]] : []),
+      ['Entfernen', () => jobStart('remove', a), 'danger'], ['Abbrechen']]);
+  } else adlg(a.name + ' installieren?', a.desc + (a.type === 'flatpak' ? ' (Flatpak, der erste Download dauert länger.)' : ''), [['Installieren', () => jobStart('install', a)], ['Abbrechen']]);
+}
+function confirmUpdate() {
+  if (JOBS_BUSY()) return;
+  adlg('Alles aktualisieren?', 'System, Flatpaks und AppImages werden aktualisiert. Das kann einige Minuten dauern; danach ist evtl. ein Neustart sinnvoll.', [['Jetzt aktualisieren', () => jobStart('update')], ['Abbrechen']]);
+}
+let jobState = null;
+const JOBS_BUSY = () => jobState && jobState.state === 'running';
+async function jobStart(action, a) {
+  try { jobState = await api('/api/apps/' + action, a ? { id: a.id } : undefined); } catch (e) { return toast(e.message, true); }
+  watchJob();
+}
+function watchJob() {
+  const band = $('#job'); band.classList.add('show');
+  clearInterval(jobTimer);
+  const tick = async () => {
+    try { jobState = await getJSON('/api/apps/job'); } catch { return; }
+    const verb = { install: 'Installiere', remove: 'Entferne', update: 'Aktualisiere', check: 'Prüfe Updates für' }[jobState.action] || '';
+    $('#jobTitle').textContent = `${verb} ${jobState.name}` + (jobState.state === 'running' ? ' …' : jobState.state === 'done' ? ' – fertig' : ' – fehlgeschlagen');
+    $('#jobSpin').style.display = jobState.state === 'running' ? '' : 'none';
+    $('#jobLog').textContent = (jobState.log || []).slice(-6).join('\n');
+    if (jobState.state !== 'running') {
+      clearInterval(jobTimer);
+      if (jobState.action === 'check' && jobState.result) updCount = jobState.result.updates;
+      toast(jobState.state === 'done' ? `${jobState.name}: fertig${jobState.result && typeof jobState.result === 'string' ? ' – ' + jobState.result : ''}` : `${jobState.name}: fehlgeschlagen – Details im Protokoll`, jobState.state !== 'done');
+      setTimeout(() => band.classList.remove('show'), jobState.state === 'done' ? 2500 : 9000);
+      await load();                                   // Kacheln neu aufbauen
+      if (layer() === 'apps') loadApps();
+    }
+  };
+  tick(); jobTimer = setInterval(tick, 1000);
+}
+
+/* ============================================================ Ausschalten, Toast */
+function openDialog() { $('#dialog').classList.add('open'); setFocus($('.dnav[data-close]')); updateHint(); }
+function closeDialog() { $('#dialog').classList.remove('open'); const l = layer(); setFocus(lastFocus[l] || $('#power')); updateHint(); }
+async function power(action) {
+  if (layer() === 'dialog') closeDialog();
+  toast(action === 'reboot' ? 'Neustart …' : 'Fährt herunter …');
+  try { await api('/api/power/' + action); } catch { toast('Fehlgeschlagen', true); }
+}
+let toastT;
+function toast(msg, err) {
+  const t = $('#toast');
+  t.textContent = msg; t.classList.toggle('err', !!err); t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), err ? 5000 : 2800);
+}
+
+/* ============================================================ Eingabe: Tastatur */
+const KEYMAP = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
+addEventListener('keydown', e => {
+  const inp = document.activeElement?.tagName === 'INPUT' ? document.activeElement : null;
+  if (inp) {
+    if (e.key === 'Enter') { e.preventDefault(); if (inp.id === 'rSearch') search(inp.value); else if (inp.id === 'tSearch') { tvQuery = inp.value.trim(); tvSearch(); } else if (inp.id === 'wifiPw') wifiConnect(wifiPick.ssid, inp.value); }
+    else if (e.key === 'Escape') { e.preventDefault(); inp.blur(); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); inp.blur(); move(KEYMAP[e.key]); }
+    return;
+  }
+  if (KEYMAP[e.key]) { e.preventDefault(); move(KEYMAP[e.key]); }
+  else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
+  else if (e.key === 'Escape' || e.key === 'Backspace') { e.preventDefault(); back(); }
+  else if (e.key === 'Delete' || e.key === 'Del' || e.key === 'f' || e.key === 'F' || e.key === 'y' || e.key === 'Y') { e.preventDefault(); secondary(); }
+  else if (e.key === '+' || e.key === 'AudioVolumeUp') volume('up');
+  else if (e.key === '-' || e.key === 'AudioVolumeDown') volume('down');
+});
+
+/* ============================================================ Eingabe: Maus */
+document.addEventListener('mouseover', e => { const el = e.target.closest(SCOPE[layer()]); if (el && el !== focusEl) setFocus(el); });
+document.addEventListener('click', e => {
+  const x = e.target.closest('.x');
+  if (x) { e.stopPropagation(); return closeApp(x.closest('.tile')._tile); }
+  const el = e.target.closest(SCOPE[layer()]);
+  if (el) { setFocus(el); activate(el); }
+  else if (layer() === 'dialog' && e.target.id === 'dialog') closeDialog();
+});
+document.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  const t = e.target.closest('.tile');
+  if (layer() === 'home' && t?._tile && running.includes(t._tile.id)) closeApp(t._tile); else back();
+});
+addEventListener('wheel', e => { if (layer() !== 'dialog') move((e.deltaY || e.deltaX) > 0 ? 'right' : 'left'); }, { passive: true });
+
+/* ============================================================ Eingabe: Gamepad */
+const pad = { held: {}, next: {} };
+function padLoop(ts) {
+  requestAnimationFrame(padLoop);
+  if (document.hidden || !document.hasFocus()) { pad.held = {}; return; }
+  const gps = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
+  const want = { left: 0, right: 0, up: 0, down: 0, a: 0, b: 0, x: 0, y: 0, start: 0, lb: 0, rb: 0 };
+  for (const g of gps) {
+    const bt = i => g.buttons[i] && g.buttons[i].pressed;
+    const ax = g.axes[0] || 0, ay = g.axes[1] || 0;
+    want.left ||= bt(14) || ax < -0.55; want.right ||= bt(15) || ax > 0.55;
+    want.up ||= bt(12) || ay < -0.55;   want.down ||= bt(13) || ay > 0.55;
+    want.a ||= bt(0); want.b ||= bt(1); want.x ||= bt(2); want.y ||= bt(3);
+    want.lb ||= bt(4); want.rb ||= bt(5); want.start ||= bt(9);
+  }
+  for (const k of Object.keys(want)) {
+    if (!want[k]) { pad.held[k] = false; continue; }
+    const rep = ['left', 'right', 'up', 'down', 'lb', 'rb'].includes(k);
+    if (!pad.held[k]) { pad.held[k] = true; pad.next[k] = ts + 380; fire(k); }
+    else if (rep && ts >= pad.next[k]) { pad.next[k] = ts + 140; fire(k); }
+  }
+}
+function fire(k) {
+  const inInput = document.activeElement?.tagName === 'INPUT';
+  if (inInput && k !== 'b') return;
+  if (k === 'a') activate();
+  else if (k === 'b') inInput ? document.activeElement.blur() : back();
+  else if (k === 'y' || k === 'x') secondary();
+  else if (k === 'lb') volume('down');
+  else if (k === 'rb') volume('up');
+  else if (k === 'start') layer() === 'dialog' ? closeDialog() : openDialog();
+  else move(k);
+}
+addEventListener('gamepadconnected', e => toast('Controller verbunden: ' + e.gamepad.id.split('(')[0].trim()));
+addEventListener('focus', () => { hideSplash(); poll(); });
+addEventListener('resize', layout);
+
+document.fonts?.ready.then(() => layout());
+(async () => {
+  try { if (!offline) scale = (await getJSON('/api/settings')).scale || 1.75; } catch {}
+  document.documentElement.style.setProperty('--f', scale * innerHeight / 768);
+  await loadFavs(); await load(); poll(); requestAnimationFrame(padLoop);
+})();
+</script>
+</body>
+</html>

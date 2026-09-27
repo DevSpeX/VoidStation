@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- TV-Start: schlanke Openbox-Konfiguration, Openbox bleibt unsichtbar -->
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+  <resistance><strength>10</strength><screen_edge_strength>20</screen_edge_strength></resistance>
+  <focus>
+    <focusNew>yes</focusNew>
+    <followMouse>no</followMouse>
+    <focusLast>yes</focusLast>
+    <underMouse>no</underMouse>
+  </focus>
+  <placement><policy>Smart</policy><center>yes</center></placement>
+  <theme>
+    <name>Clearlooks</name>
+    <titleLayout>LC</titleLayout>
+    <keepBorder>no</keepBorder>
+    <animateIconify>no</animateIconify>
+  </theme>
+  <desktops><number>1</number><firstdesk>1</firstdesk><popupTime>0</popupTime></desktops>
+  <resize><drawContents>yes</drawContents></resize>
+  <margins><top>0</top><bottom>0</bottom><left>0</left><right>0</right></margins>
+
+  <keyboard>
+    <chainQuitKey>C-g</chainQuitKey>
+    <!-- Win-Taste: zurueck zur Startseite -->
+    <keybind key="Super_L"><action name="Execute"><command>sh -c '$HOME/.local/share/tvstart/tvctl home'</command></action></keybind>
+    <keybind key="Super_R"><action name="Execute"><command>sh -c '$HOME/.local/share/tvstart/tvctl home'</command></action></keybind>
+    <keybind key="XF86HomePage"><action name="Execute"><command>sh -c '$HOME/.local/share/tvstart/tvctl home'</command></action></keybind>
+    <!-- Fenster schliessen -->
+    <keybind key="A-F4"><action name="Close"/></keybind>
+    <!-- Notfall-Terminal -->
+    <keybind key="C-A-t"><action name="Execute"><command>xterm</command></action></keybind>
+    <!-- Zwischen offenen Fenstern wechseln -->
+    <keybind key="A-Tab"><action name="NextWindow"><dialog>none</dialog></action></keybind>
+    <!-- Lautstaerke -->
+    <keybind key="XF86AudioRaiseVolume"><action name="Execute"><command>wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+</command></action></keybind>
+    <keybind key="XF86AudioLowerVolume"><action name="Execute"><command>wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-</command></action></keybind>
+    <keybind key="XF86AudioMute"><action name="Execute"><command>wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle</command></action></keybind>
+  </keyboard>
+
+  <mouse>
+    <dragThreshold>8</dragThreshold>
+    <doubleClickTime>300</doubleClickTime>
+    <context name="Client">
+      <mousebind button="Left" action="Press"><action name="Focus"/><action name="Raise"/></mousebind>
+      <mousebind button="Middle" action="Press"><action name="Focus"/><action name="Raise"/></mousebind>
+      <mousebind button="Right" action="Press"><action name="Focus"/><action name="Raise"/></mousebind>
+    </context>
+    <!-- Kein Rechtsklick-Menue auf dem Desktop -->
+  </mouse>
+
+  <applications>
+    <!-- Alle Programme ohne Rahmen und maximiert: wirkt wie eine Konsole -->
+    <application class="*" type="normal">
+      <decor>no</decor>
+      <maximized>yes</maximized>
+      <focus>yes</focus>
+    </application>
+  </applications>
+</openbox_config>

@@ -1,0 +1,138 @@
+{
+  "title": "Start",
+  "user": "Paul",
+  "background": "",
+  "radio_suggestions": [
+    "MDR Sachsen-Anhalt",
+    "MDR Jump",
+    "Radio Brocken",
+    "Deutschlandfunk",
+    "radioeins",
+    "Klassik Radio"
+  ],
+  "groups": [
+    {
+      "name": "Unterhaltung",
+      "tiles": [
+        {
+          "id": "youtube",
+          "label": "YouTube",
+          "sub": "Videos & Abos",
+          "size": "wide",
+          "color": "#6e2b2b",
+          "icon": "play",
+          "cmd": [
+            "firefox",
+            "--kiosk",
+            "--no-remote",
+            "--profile",
+            "~/.local/share/tvstart/profiles/youtube",
+            "https://www.youtube.com"
+          ]
+        },
+        {
+          "id": "tv",
+          "label": "Fernsehen",
+          "sub": "Sender aus aller Welt",
+          "size": "wide",
+          "color": "#24414a",
+          "icon": "tv",
+          "type": "tv"
+        },
+        {
+          "id": "radio",
+          "label": "Radio",
+          "sub": "Sender & Favoriten",
+          "size": "wide",
+          "color": "#3b2f4f",
+          "icon": "radio",
+          "type": "radio"
+        },
+        {
+          "id": "vlc",
+          "label": "VLC",
+          "sub": "Filme & Musik",
+          "size": "medium",
+          "color": "#74461f",
+          "icon": "film",
+          "cmd": [
+            "vlc"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Spiele",
+      "tiles": [
+        {
+          "id": "gba",
+          "label": "Game Boy Advance",
+          "sub": "mGBA",
+          "size": "wide",
+          "color": "#2d3763",
+          "icon": "handheld",
+          "cmd": [
+            "mgba-qt"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "System",
+      "tiles": [
+        {
+          "id": "clock",
+          "size": "wide",
+          "color": "#23272c",
+          "type": "clock"
+        },
+        {
+          "id": "settings",
+          "label": "Einstellungen",
+          "size": "medium",
+          "color": "#3a3f46",
+          "icon": "gear",
+          "type": "settings"
+        },
+        {
+          "id": "appcenter",
+          "label": "AppCenter",
+          "sub": "Apps & Updates",
+          "size": "medium",
+          "color": "#39414d",
+          "icon": "store",
+          "type": "apps"
+        },
+        {
+          "id": "files",
+          "label": "Dateien",
+          "size": "medium",
+          "color": "#284843",
+          "icon": "folder",
+          "cmd": [
+            "pcmanfm",
+            "~/share"
+          ]
+        },
+        {
+          "id": "terminal",
+          "label": "Terminal",
+          "size": "medium",
+          "color": "#2f3238",
+          "icon": "terminal",
+          "cmd": [
+            "xterm",
+            "-fa",
+            "Monospace",
+            "-fs",
+            "14",
+            "-bg",
+            "#111316",
+            "-fg",
+            "#dcdcdc"
+          ]
+        }
+      ]
+    }
+  ]
+}

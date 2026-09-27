@@ -1,0 +1,31 @@
+#!/bin/sh
+# tvstart-pkg – kleiner Root-Helfer fuer das AppCenter.
+# Darf per sudo ohne Passwort laufen, installiert/entfernt aber NUR Pakete
+# aus der Freigabeliste und fuehrt System-Updates aus.
+ALLOW=/usr/local/share/tvstart/allowed-packages
+export LC_ALL=C
+
+case "$1" in
+  install|remove)
+    pkg="$2"
+    case "$pkg" in *[!A-Za-z0-9._+-]*|"") echo "ungueltiger Paketname"; exit 2 ;; esac
+    grep -qx "$pkg" "$ALLOW" 2>/dev/null || { echo "nicht freigegeben: $pkg"; exit 2; }
+    if [ "$1" = install ]; then
+      exec xbps-install -Sy "$pkg"
+    else
+      exec xbps-remove -Ry "$pkg"
+    fi
+    ;;
+  update)
+    xbps-install -Syu xbps || true        # xbps muss sich ggf. zuerst selbst aktualisieren
+    exec xbps-install -Syu
+    ;;
+  check)
+    xbps-install -S >/dev/null 2>&1
+    exec xbps-install -un
+    ;;
+  *)
+    echo "Benutzung: tvstart-pkg install|remove <paket> | update | check"
+    exit 2
+    ;;
+esac
