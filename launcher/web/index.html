@@ -339,7 +339,37 @@ function layout() {
   root.setProperty('--u', Math.max(60, u) + 'px');
   root.setProperty('--rows', rows);
   root.setProperty('--srows', Math.max(1, Math.min(3, rows)));
+  fitGrids();
   if (focusEl) setFocus(focusEl, true);
+}
+// Zeilenzahl der Raster in Radio/TV/AppCenter an den Platz ueber der Hinweiszeile anpassen
+function fitGrid(track, sel, max) {
+  const g = track && track.querySelector(sel);
+  if (!g) return;
+  track.style.removeProperty('--u');                 // erst mit normaler Kachelgroesse messen
+  const gt = g.getBoundingClientRect().top;
+  const hintEl = $('#hint');
+  const limit = hintEl.getBoundingClientRect().top + (parseFloat(getComputedStyle(hintEl).paddingTop) || 0);
+  if (!gt || limit <= gt) return;                    // Ebene gerade unsichtbar
+  const cs = getComputedStyle(g);
+  const cell = parseFloat(cs.gridTemplateRows.split(' ')[0]);
+  const gap = parseFloat(cs.rowGap) || 0;
+  if (!cell) return;
+  const avail = limit - gt - 4;
+  let n = Math.min(max, Math.floor((avail + gap) / (cell + gap))), k = 1;
+  if (n < max) {                                     // eine Reihe mehr, wenn die Kacheln dafuer hoechstens 15 % kleiner werden
+    const k2 = (avail - n * gap) / ((n + 1) * cell);
+    if (k2 >= 0.85) { n += 1; k = Math.min(1, k2); }
+  }
+  if (n < 1) { n = 1; k = avail / cell; }            // selbst eine Reihe zu hoch: Kacheln hier kleiner
+  track.style.setProperty(sel === '.agrid' ? '--arows' : '--srows', n);
+  const u = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--u')) || 0;
+  if (k < 1 && u) track.style.setProperty('--u', (u * k) + 'px');
+}
+function fitGrids() {
+  fitGrid($('#aTrack'), '.agrid', 3);
+  fitGrid($('#tTrack'), '.sgrid', 3);
+  fitGrid($('#rTrack'), '.sgrid', 3);
 }
 
 /* ============================================================ Ebenen */
@@ -531,8 +561,7 @@ async function launch(t, el) {
   catch { toast('Konnte ' + (t.label || 'Programm') + ' nicht starten', true); hideSplash(); }
   setTimeout(() => { launching = false; }, 600);
   // Wenn das Programm nach 4 s nicht (mehr) läuft, ist es beim Start abgestürzt
-  if (!already && !offline) setTimeoutdocument.fonts?.ready.then(() => layout());
-(async () => {
+  if (!already && !offline) setTimeout(async () => {
     try { const s = await getJSON('/api/status'); setRunning(s.running || []);
       if (!running.includes(t.id)) { hideSplash(); toast(`${t.label} hat sich sofort wieder beendet – Details in logs/${t.id}.log`, true); } } catch {}
   }, 4000);
@@ -626,6 +655,7 @@ function renderStations() {
     wrap.appendChild(chips);
     section(tr, favs.length ? 'Suchen' : 'Vorschläge', wrap);
   }
+  fitGrid(tr, '.sgrid', 3);
   if (keepUrl && layer() === 'radio') { const again = $$('#rTrack .station').find(e => e._station.url === keepUrl); if (again) setFocus(again, true); }
   updateFavBtn();
 }
@@ -833,8 +863,7 @@ async function tvOpen() {
   setTvNow(tvStatus?.now);
   if (tvStatus.state === 'loading' || tvStatus.state === 'idle') {
     renderTv('Senderverzeichnis wird geladen … (beim ersten Mal ca. 20–60 Sekunden)');
-    const iv = setIntervaldocument.fonts?.ready.then(() => layout());
-(async () => {
+    const iv = setInterval(async () => {
       if (layer() !== 'tv') return clearInterval(iv);
       try { tvStatus = await getJSON('/api/tv/status'); } catch {}
       if (tvStatus.state === 'ready') { clearInterval(iv); tvSearch(); }
@@ -897,6 +926,7 @@ function renderTv(msg) {
     section(tr, tvQuery ? `„${tvQuery}“ · ${where}` : `Sender · ${where}`, g);
   }
   $('#tStop').disabled = !tvNow;
+  fitGrid(tr, '.sgrid', 3);
   if (layer() === 'tv' && keep) {
     const again = $$('#tTrack .tnav').find(e => (e._chan && e._chan.key === keep) || e.dataset.fk === keep);
     if (again) setFocus(again, true);
@@ -953,6 +983,7 @@ function renderApps() {
     });
     section(tr, cat, g);
   }
+  fitGrid(tr, '.agrid', 3);
   $('#aNow').innerHTML = updCount === null ? '<strong>Optionale Programme</strong><span>Kacheln werden automatisch angelegt</span>'
     : `<strong>${updCount ? updCount + ' Updates verfügbar' : 'System ist aktuell'}</strong><span>Stand: gerade eben</span>`;
   if (layer() === 'apps') { const again = keep && $$('#aTrack .appcard').find(e => e._app.id === keep); setFocus(again || $('#aTrack .appcard') || $('#apps .anav'), true); }

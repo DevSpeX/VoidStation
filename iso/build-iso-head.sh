@@ -1,7 +1,7 @@
 #!/bin/bash
 # =====================================================================
 #  VoidStation: eigenen Installations-Stick (ISO) bauen
-#  Laeuft auf einem Void-System (z. B. dem Esprimo):
+#  Laeuft auf einem Void-System (z. B. einer bestehenden VoidStation):
 #      sudo bash build-iso.sh
 #  Ergebnis: ~/share/ISO/voidstation-JJJJMMTT.iso  (auch unter \\<host>\share\ISO)
 # =====================================================================

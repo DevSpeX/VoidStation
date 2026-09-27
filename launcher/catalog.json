@@ -50,7 +50,7 @@
       "id": "ppsspp",
       "name": "PPSSPP",
       "cat": "Spiele",
-      "desc": "PlayStation Portable. Läuft auf dem Esprimo bei vielen Spielen flüssig.",
+      "desc": "PlayStation Portable. Läuft auch auf älteren Rechnern bei vielen Spielen flüssig.",
       "source": {
         "type": "xbps",
         "pkg": "ppsspp"
@@ -150,7 +150,7 @@
       "id": "dolphin",
       "name": "Dolphin",
       "cat": "Spiele",
-      "desc": "GameCube und Wii. Anspruchsvoll – auf dem Esprimo laufen nur leichtere Spiele flüssig.",
+      "desc": "GameCube und Wii. Anspruchsvoll – auf schwachen Rechnern laufen nur leichtere Spiele flüssig.",
       "source": {
         "type": "xbps",
         "pkg": "dolphin-emu"

@@ -7,6 +7,12 @@ Läuft auf Openbox mit einer schlanken WebKitGTK-Startseite (etwa 250 MB RAM).
 Emulatoren, AppCenter für optionale Apps (xbps, Flatpak, AppImage, Web), Einstellungen (Skalierung, Auflösung,
 Tonausgang, WLAN, Mauszeiger), Samba-Freigabe `\\<rechner>\share`, mehrere Apps parallel mit Umschalten.
 
+![Startseite](docs/screenshots/1-start.webp)
+
+| Fernsehen | AppCenter | Radio |
+|---|---|---|
+| ![Fernsehen](docs/screenshots/2-fernsehen.webp) | ![AppCenter](docs/screenshots/3-appcenter.webp) | ![Radio](docs/screenshots/4-radio.webp) |
+
 ## Neuinstallation (ganze SSD, von der offiziellen Void-ISO)
 
 1. Offizielle Void-Base-ISO (x86_64, glibc) auf einen Stick oder Ventoy-Stick kopieren. Im BIOS Secure Boot ausschalten und im UEFI-Modus vom Stick booten.
@@ -56,6 +62,8 @@ Sie enthält `voidstation-install`, `nmtui` für WLAN, SSH mit root/voidlinux un
 | `dist/` | **fertige Skripte**, erzeugt mit `./build.sh` |
 
 Nach Änderungen am Code: `./build.sh`, dann `dist/` mit einchecken.
+Screenshots neu erzeugen (mit Beispieldaten, ohne Void): `python3 tools/screenshots.py`
+(braucht `pip install playwright pillow` und `playwright install chromium`).
 
 ## Auf dem Gerät
 

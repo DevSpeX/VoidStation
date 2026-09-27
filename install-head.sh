@@ -1,6 +1,6 @@
 #!/bin/bash
 # =====================================================================
-#  VoidStation fuer Void Linux – Kacheloberflaeche fuer den Esprimo
+#  VoidStation fuer Void Linux – Kacheloberflaeche fuer den Fernseher
 #  Aufruf (per SSH als paul):   sudo bash install.sh
 #  Optional anderer Benutzer:   sudo VSUSER=name bash install.sh
 #  Optional EFISTUB (direkt booten, GRUB bleibt als Rueckfall):
