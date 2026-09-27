@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """
 VoidStation Shell
---------------
+-----------------
 Schlankes Vollbildfenster fuer die Startseite (WebKitGTK statt Firefox).
 Zeigt http://127.0.0.1:8765/ an, wartet beim Start auf den Launcher,
 laedt bei Fehlern selbst neu und hat kein Kontextmenue, keine Adressleiste.
+WebKit-Daten liegen unter ~/.local/share/voidstation/webkit und
+~/.cache/voidstation/webkit (nicht lose in ~/.local/share).
 """
+import os
 import sys
 import time
 
@@ -19,7 +22,12 @@ gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, GLib, Gtk, WebKit2  # noqa: E402
 
 URL = "http://127.0.0.1:8765/"
-TITLE = "VoidStation"                      # muss zum Fenstertitel passen, den der Launcher sucht
+TITLE = "VoidStation"                   # muss zum Fenstertitel passen, den der Launcher sucht
+
+DATA_HOME = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+CACHE_HOME = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
+WK_DATA = os.path.join(DATA_HOME, "voidstation", "webkit")
+WK_CACHE = os.path.join(CACHE_HOME, "voidstation", "webkit")
 
 
 class Shell(Gtk.Window):
@@ -27,7 +35,10 @@ class Shell(Gtk.Window):
         super().__init__(title=TITLE)
         self.set_decorated(False)
 
-        ctx = WebKit2.WebContext.get_default()
+        os.makedirs(WK_DATA, exist_ok=True)
+        os.makedirs(WK_CACHE, exist_ok=True)
+        mgr = WebKit2.WebsiteDataManager(base_data_directory=WK_DATA, base_cache_directory=WK_CACHE)
+        ctx = WebKit2.WebContext.new_with_website_data_manager(mgr)
         ctx.set_cache_model(WebKit2.CacheModel.DOCUMENT_VIEWER)   # wenig Speicher, keine Seitenhistorie
         ctx.set_spell_checking_enabled(False)
 
@@ -92,5 +103,7 @@ def _rgba(hex_color):
 
 
 if __name__ == "__main__":
+    GLib.set_prgname("voidstation")         # Fensterklasse und Standard-Ordnernamen
+    GLib.set_application_name("VoidStation")
     Shell()
     Gtk.main()

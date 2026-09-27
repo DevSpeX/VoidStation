@@ -44,6 +44,11 @@ fi
 
 [ -d "$TV" ] || { echo "Keine VoidStation-Installation unter $TV gefunden."; exit 1; }
 
+# Alte WebKit-Ordner der Startseite (lagen lose in ~/.local/share und ~/.cache), jetzt unter .../voidstation/webkit
+for d in tvstart-shell.py voidstation-shell.py; do
+  rm -rf "$HOMEDIR/.local/share/$d" "$HOMEDIR/.cache/$d"
+done
+
 say "1/8  Pakete"
 MISSING=""
 for p in elogind xrdb pulseaudio-utils mpv mgba-qt samba flatpak adwaita-qt adwaita-qt6 gnome-themes-extra xsetroot python3-gobject libwebkit2gtk41; do
