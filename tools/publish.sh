@@ -100,7 +100,7 @@ if [ -n "$b" ]; then
   say "Bundle: $(basename "$b")"
   git bundle verify -q "$b" >/dev/null 2>&1 || die "Bundle passt nicht zu diesem Repo (fehlende Vorgaenger-Commits)."
   before="$(git rev-parse HEAD)"
-  if ! git pull -q --no-rebase --no-edit "$b" main; then
+  if ! { git fetch -q "$b" main && git merge -q --no-edit -m "Bundle $(basename "$b") uebernommen" FETCH_HEAD; }; then
     git merge --abort 2>/dev/null || true
     die "Bundle liess sich nicht einspielen (Konflikt) – nichts veraendert."
   fi
