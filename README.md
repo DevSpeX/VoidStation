@@ -65,10 +65,11 @@ Gebaut und signiert wird auf dem Rechner des Herausgebers mit `tools/publish.sh`
 
 ```sh
 git config --global credential.helper store      # einmalig: GitHub-Zugang (Token) merken
-bash tools/publish.sh --init-key                 # einmalig: Signaturschlüssel anlegen (Sicherungskopie!)
-bash tools/publish.sh                            # Bundle aus ~/share/Updates übernehmen, bauen, signieren,
+echo "alias vspub='bash ~/VoidStation/tools/publish.sh'" >> ~/.bashrc   # einmalig, dann neu anmelden
+vspub --init-key                                 # einmalig: Signaturschlüssel anlegen (Sicherungskopie!)
+vspub                                            # Bundle aus ~/share/Updates übernehmen, bauen, signieren,
                                                  # nach main (Test-Kanal) pushen
-bash tools/publish.sh --release                  # Test-Stand für alle freigeben (stable)
+vspub --release                                  # Test-Stand für alle freigeben (stable)
 ```
 
 Neue Versionen bekommen einen Eintrag oben in `CHANGELOG.md` (`## 0.4.1 – JJJJ-MM-TT` plus Stichpunkte).
