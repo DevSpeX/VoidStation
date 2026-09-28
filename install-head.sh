@@ -60,7 +60,7 @@ say "3/8  Dateien entpacken nach $TV"
 mkdir -p "$TV"
 [ -f "$TV/tiles.json" ] && cp "$TV/tiles.json" /tmp/tiles.json.keep
 sed -n '/^__PAYLOAD_BELOW__$/,$p' "$0" | tail -n +2 | base64 -d | tar -xz -C "$TV"
-chmod +x "$TV/launcher.py" "$TV/home.sh" "$TV/vsctl" "$TV/voidstation-shell.py"
+chmod +x "$TV/launcher.py" "$TV/home.sh" "$TV/vsctl" "$TV/voidstation-shell.py" "$TV/xstart"
 echo "__VS_VERSION__" > "$TV/VERSION"
 echo '__VS_VERSION_B64__' | base64 -d > "$TV/version.json" 2>/dev/null || true
 
@@ -91,6 +91,7 @@ EOF
 
 touch "$HOMEDIR/.bash_profile"
 sed -i 's/tvstart-runtime/voidstation-runtime/g; s/# TVSTART:/# VOIDSTATION:/' "$HOMEDIR/.bash_profile"
+sed -i 's|^  exec startx -- -nolisten tcp vt1 >"$HOME/.xsession-errors" 2>&1$|  exec "$HOME/.local/share/voidstation/xstart"|' "$HOMEDIR/.bash_profile" 2>/dev/null || true
 if ! grep -q 'VOIDSTATION' "$HOMEDIR/.bash_profile"; then
 cat >> "$HOMEDIR/.bash_profile" <<'EOF'
 
@@ -99,7 +100,7 @@ if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
   # Eigener Laufzeitordner fuer die TV-Sitzung (unabhaengig von elogind)
   export XDG_RUNTIME_DIR="/tmp/voidstation-runtime-$(id -u)"
   rm -rf "$XDG_RUNTIME_DIR"; mkdir -m 0700 "$XDG_RUNTIME_DIR"
-  exec startx -- -nolisten tcp vt1 >"$HOME/.xsession-errors" 2>&1
+  exec "$HOME/.local/share/voidstation/xstart"
 fi
 EOF
 fi
@@ -302,6 +303,10 @@ if [ -n "$SIGNERS" ]; then
   chmod 644 /usr/local/share/voidstation/allowed_signers
   echo "Signaturpruefung fuer Updates aktiv"
 fi
+
+# ---------------------------------------------------------------------
+say "X-Server: XLibre (Rueckfall auf X.Org, falls nicht verfuegbar)"
+sh /usr/local/sbin/voidstation-pkg xserver auto || warn "XLibre nicht eingerichtet – es bleibt vorerst bei X.Org"
 
 say "Extra: Freigabe-Ordner $SHARE"
 for d in ROMs/gba ROMs/nes ROMs/snes ROMs/psx ROMs/psp ROMs/nds ROMs/gamecube ROMs/dreamcast \

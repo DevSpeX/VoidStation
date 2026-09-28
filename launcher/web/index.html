@@ -878,6 +878,12 @@ function renderSettings() {
   const rvs = row(s);
   const vu = pill('VoidStation aktualisieren', selfUpdate); vu.dataset.key = 'selfupd';
   rvs.appendChild(vu);
+  if (sett.xserver) {
+    const rx = row(s, 'Grafik-Server');
+    for (const [id, lab] of [['xlibre', 'XLibre'], ['xorg', 'X.Org']]) {
+      const b = pill(lab, () => setXserver(id), sett.xserver.active === id); b.dataset.key = 'xs' + id; rx.appendChild(b);
+    }
+  }
   const rch = row(s, 'Update-Kanal');
   const cur = (vsState && vsState.channel) || 'stable';
   for (const [id, lab] of [['stable', 'Stabil'], ['main', 'Test']]) {
@@ -903,6 +909,18 @@ function showVs() {
   const ch = vsState ? ` · Kanal ${esc(vsState.channel_label)}` : '';
   el.innerHTML = `VoidStation ${esc(ver)}${ch}<br>${st}`;
 }
+function setXserver(id) {
+  if (JOBS_BUSY()) return toast('Bitte warten, es läuft noch ein Auftrag');
+  if (sett.xserver && sett.xserver.active === id) return toast((id === 'xlibre' ? 'XLibre' : 'X.Org') + ' ist bereits aktiv');
+  const txt = id === 'xlibre'
+    ? 'XLibre ist ein weiterentwickelter Fork von X.Org. Startet die Oberfläche damit zweimal nicht, schaltet VoidStation automatisch auf X.Org zurück.'
+    : 'Zurück zum klassischen X.Org-Server. VoidStation bleibt dann auch bei Updates bei X.Org.';
+  adlg(id === 'xlibre' ? 'Zu XLibre wechseln?' : 'Zu X.Org wechseln?', txt + '\n\nDanach ist ein Neustart nötig.',
+    [['Wechseln', async () => {
+      try { jobState = await api('/api/xserver', { target: id }); } catch (e) { return toast(e.message, true); }
+      watchJob();
+    }], ['Abbrechen']]);
+}
 async function setChannel(ch) {
   if (ch === 'main' && !(vsState && vsState.channel === 'main')) toast('Test-Kanal: neue Versionen vor allen anderen – können Fehler enthalten');
   try { vsState = await api('/api/selfupdate/channel', { channel: ch }); } catch (e) { return toast('Fehlgeschlagen: ' + e.message, true); }
@@ -925,9 +943,11 @@ async function selfUpdate() {
     (news ? `\n\nNeu:\n${news}` : '') + '\n\nEigene Kacheln, Favoriten und Einstellungen bleiben erhalten. Danach ist ein Neustart nötig.',
     [['Jetzt aktualisieren', () => jobStart('selfupdate')], ['Abbrechen']]);
 }
-function rebootPrompt() {
-  adlg('Aktualisiert', 'VoidStation wurde aktualisiert. Zum Übernehmen jetzt neu starten?',
-    [['Jetzt neu starten', () => power('reboot')], ['Später']]);
+function rebootPrompt(action) {
+  const [title, text] = action === 'xserver'
+    ? ['Grafik-Server gewechselt', 'Der neue Grafik-Server ist installiert. Zum Übernehmen jetzt neu starten?']
+    : ['Aktualisiert', 'VoidStation wurde aktualisiert. Zum Übernehmen jetzt neu starten?'];
+  adlg(title, text, [['Jetzt neu starten', () => power('reboot')], ['Später']]);
 }
 
 async function setScale(s) {
@@ -1126,7 +1146,7 @@ function watchJob() {
   clearInterval(jobTimer);
   const tick = async () => {
     try { jobState = await getJSON('/api/apps/job'); } catch { return; }
-    const verb = { install: 'Installiere', remove: 'Entferne', update: 'Aktualisiere', check: 'Prüfe Updates für', selfupdate: 'Aktualisiere' }[jobState.action] || '';
+    const verb = { install: 'Installiere', remove: 'Entferne', update: 'Aktualisiere', check: 'Prüfe Updates für', selfupdate: 'Aktualisiere', xserver: 'Wechsle zu' }[jobState.action] || '';
     $('#jobTitle').textContent = `${verb} ${jobState.name}` + (jobState.state === 'running' ? ' …' : jobState.state === 'done' ? ' – fertig' : ' – fehlgeschlagen');
     $('#jobSpin').style.display = jobState.state === 'running' ? '' : 'none';
     $('#jobLog').textContent = (jobState.log || []).slice(-6).join('\n');
@@ -1137,8 +1157,8 @@ function watchJob() {
       setTimeout(() => band.classList.remove('show'), jobState.state === 'done' ? 2500 : 9000);
       await load();                                   // Kacheln neu aufbauen
       if (layer() === 'apps') loadApps();
-      if (layer() === 'settings') refreshVs(true);
-      if (jobState.state === 'done' && jobState.reboot) setTimeout(rebootPrompt, 400);
+      if (layer() === 'settings') { refreshVs(true); loadSettings(); }
+      if (jobState.state === 'done' && jobState.reboot) { const act = jobState.action; setTimeout(() => rebootPrompt(act), 400); }
       else if (jobState.state === 'done' && jobState.action === 'install' && typeof jobState.result === 'string') setTimeout(() => adlg(`${jobState.name} ist installiert`, jobState.result, [['OK']]), 400);
     }
   };

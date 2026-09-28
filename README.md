@@ -6,6 +6,9 @@ Läuft auf Openbox mit einer schlanken WebKitGTK-Startseite (etwa 250 MB RAM).
 **Funktionen:** YouTube (Firefox im Kiosk-Modus), Radio mit Suche und Favoriten, TV-Sender aus aller Welt (iptv-org),
 Emulatoren, AppCenter für optionale Apps (xbps, Flatpak, AppImage, Web), Einstellungen (Skalierung, Auflösung,
 Tonausgang, WLAN, Mauszeiger), Samba-Freigabe `\\<rechner>\share`, mehrere Apps parallel mit Umschalten.
+Grafik-Server ist [XLibre](https://github.com/X11Libre/xserver) (Pakete von [xlibre-void](https://github.com/xlibre-void/xlibre));
+startet die Oberfläche damit zweimal nicht, schaltet VoidStation automatisch auf X.Org zurück.
+Manuell: Einstellungen → System → Grafik-Server, oder `sudo /usr/local/sbin/voidstation-pkg xserver xlibre|xorg|status`.
 
 ![Startseite](docs/screenshots/1-start.webp)
 
