@@ -3,11 +3,12 @@
 #  VoidStation veroeffentlichen – laeuft auf dem Rechner des Herausgebers
 #  (dort liegt der private Signaturschluessel).
 #
-#    bash ~/VoidStation/tools/publish.sh --init-key   einmalig: Signaturschluessel anlegen
-#    bash ~/VoidStation/tools/publish.sh              Bundle einspielen, bauen, signieren,
-#                                                      nach "main" (Test-Kanal) pushen
-#    bash ~/VoidStation/tools/publish.sh --release    aktuellen Test-Stand fuer alle
-#                                                      freigeben ("stable")
+#    vspub --init-key   einmalig: Signaturschluessel anlegen
+#    vspub              Bundle einspielen, bauen, signieren, nach "main" (Test-Kanal) pushen
+#    vspub --release    aktuellen Test-Stand fuer alle freigeben ("stable")
+#
+#  vspub ist ein Alias – einmalig in ~/.bashrc eintragen:
+#     alias vspub='bash ~/VoidStation/tools/publish.sh'
 #
 #  Bundles: am Windows-PC nach \\<rechner>\share\Updates kopieren.
 #
@@ -73,7 +74,7 @@ Fertig. WICHTIG – Sicherungskopie des privaten Schluessels anlegen, z. B. auf 
    pscp $(whoami)@<IP>:.ssh/voidstation-release  .
 Ohne diesen Schluessel koennen Geraete keine Updates mehr annehmen.
 
-Weiter mit:  bash tools/publish.sh
+Weiter mit:  vspub
 EOF
   exit 0 ;;
 
@@ -81,9 +82,9 @@ EOF
 --release)
   say "Test-Stand fuer alle freigeben"
   git fetch -q origin
-  [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || die "Lokaler Stand weicht von GitHub ab – erst  bash tools/publish.sh"
-  [ -s "$PUB" ] || die "Kein Signaturschluessel im Repo – erst  bash tools/publish.sh --init-key"
-  verify_dist || die "dist/ ist nicht korrekt signiert – erst  bash tools/publish.sh"
+  [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || die "Lokaler Stand weicht von GitHub ab – erst  vspub"
+  [ -s "$PUB" ] || die "Kein Signaturschluessel im Repo – erst  vspub --init-key"
+  verify_dist || die "dist/ ist nicht korrekt signiert – erst  vspub"
   ver="$(python3 -c 'import json;print(json.load(open("dist/version.json"))["version"])')"
   if git rev-parse -q --verify origin/stable >/dev/null; then
     echo "Stabil bisher: $(git log -1 --format='%h %s' origin/stable)"
@@ -104,7 +105,7 @@ EOF
 esac
 
 # ---- Normaler Lauf: Bundle einspielen, bauen, signieren, veroeffentlichen
-[ -e "$KEY" ] || die "Kein Signaturschluessel ($KEY) – einmalig:  bash tools/publish.sh --init-key"
+[ -e "$KEY" ] || die "Kein Signaturschluessel ($KEY) – einmalig:  vspub --init-key"
 mkdir -p "$INBOX/erledigt"
 git fetch -q origin || true
 
@@ -127,16 +128,29 @@ fi
 say "Bauen"
 mkdir -p keys
 if ! cmp -s "$KEY.pub" "$PUB" 2>/dev/null; then cp "$KEY.pub" "$PUB"; echo "oeffentlicher Schluessel ins Repo uebernommen"; fi
+# build.sh leert dist/ – Signaturen retten; der Bau ist reproduzierbar, bei
+# unveraendertem Stand passen sie danach weiter (dann keine Passphrase noetig)
+sigs="$(mktemp -d)"
+cp dist/*.sig "$sigs/" 2>/dev/null || true
 ./build.sh | sed -n '/^Version:/p'
+cp "$sigs"/*.sig dist/ 2>/dev/null || true
+rm -rf "$sigs"
 
 say "Signieren"
 if verify_dist >/dev/null 2>&1; then
   echo "Signaturen sind aktuell."
 else
+  # Schluessel einmal in einen kurzlebigen ssh-agent laden -> Passphrase nur einmal
+  signkey="$KEY"
+  if command -v ssh-agent >/dev/null 2>&1 && eval "$(ssh-agent -s)" >/dev/null; then
+    trap 'ssh-agent -k >/dev/null 2>&1' EXIT
+    if ssh-add -q -t 300 "$KEY"; then signkey="$KEY.pub"; else ssh-agent -k >/dev/null 2>&1; trap - EXIT; fi
+  fi
   for f in dist/update.sh dist/install.sh dist/voidstation-install.sh; do
     rm -f "$f.sig"
-    ssh-keygen -q -Y sign -f "$KEY" -n voidstation "$f"
+    ssh-keygen -q -Y sign -f "$signkey" -n voidstation "$f"
   done
+  if [ "$signkey" = "$KEY.pub" ]; then ssh-agent -k >/dev/null 2>&1; trap - EXIT; fi
   verify_dist || die "Signaturpruefung nach dem Signieren fehlgeschlagen."
   echo "signiert und geprueft"
 fi
@@ -168,5 +182,5 @@ cat <<EOF
 
 Veroeffentlicht: Version $ver im Test-Kanal (main).
 Testen:    Geraet auf Kanal "Test" -> Einstellungen -> VoidStation aktualisieren
-Freigabe:  bash tools/publish.sh --release
+Freigabe:  vspub --release
 EOF
