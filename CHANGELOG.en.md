@@ -3,6 +3,12 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.6.1 – 2026-09-28
+- Programs like VLC, the file manager and YouTube start in the selected language
+- Arrows at the top right show that there is more to the left or right; one dot per group
+- Jump group by group: LT / RT on the controller, Page Up / Page Down on the keyboard
+- Update notice at the bottom right with a yellow warning triangle – open it with U or Select on the controller
+
 ## 0.6.0 – 2026-09-28
 - Language: German or English, switch under Settings → Language · Sprache
 - “What's new” is shown in the selected language

@@ -172,7 +172,9 @@ class AppManager:
         logdir = BASE / "logs"
         logdir.mkdir(exist_ok=True)
         out = open(logdir / f"{tid}.log", "w")   # Ausgaben je Programm, hilft bei Abstuerzen
-        proc = subprocess.Popen(args, cwd=str(Path.home()), stdin=subprocess.DEVNULL,
+        if Path(args[0]).name == "firefox":
+            firefox_lang(args, ui_lang())
+        proc = subprocess.Popen(args, cwd=str(Path.home()), stdin=subprocess.DEVNULL, env=app_env(),
                                 stdout=out, stderr=subprocess.STDOUT, start_new_session=True)
         out.close()
         with self.lock:
@@ -404,6 +406,64 @@ def ui_lang(s=None):
         return lang
     env = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or ""
     return "en" if env.startswith("en") else "de"
+
+
+# Sprache fuer gestartete Programme: VLC, PCManFM und andere GTK-/Qt-Programme folgen LANG/LANGUAGE,
+# Firefox (YouTube) bekommt Oberflaechen- und Webseiten-Sprache ueber sein Profil
+LOCALES = {"de": "de_DE.UTF-8", "en": "en_US.UTF-8"}
+LANGUAGE_ENV = {"de": "de_DE:de", "en": "en_US:en"}
+FIREFOX_LANG = {"de": ("de", "de-DE, de, en-US, en"), "en": ("en-US", "en-US, en")}
+_LOCALES_AVAIL = None
+
+
+def locale_available(name):
+    global _LOCALES_AVAIL
+    norm = lambda v: v.strip().lower().replace("utf-8", "utf8")
+    if _LOCALES_AVAIL is None:
+        try:
+            out = subprocess.run(["locale", "-a"], capture_output=True, text=True, timeout=5).stdout
+        except (OSError, subprocess.SubprocessError):
+            out = ""
+        _LOCALES_AVAIL = {norm(l) for l in out.split()}
+    return norm(name) in _LOCALES_AVAIL
+
+
+def app_env():
+    """Umgebung fuer Programme aus den Kacheln: Sprache der Oberflaeche. Fehlt das Locale (z. B. en_US nicht
+    erzeugt), bleibt LANG wie es ist und nur LANGUAGE waehlt die Uebersetzung (gettext, Qt)."""
+    lang = ui_lang()
+    env = dict(os.environ)
+    for k in ("LC_ALL", "LC_MESSAGES"):
+        env.pop(k, None)
+    if locale_available(LOCALES[lang]):
+        env["LANG"] = LOCALES[lang]
+    env["LANGUAGE"] = LANGUAGE_ENV[lang]
+    return env
+
+
+def firefox_lang(args, lang):
+    """Firefox mit --profile: intl.locale.requested (Menues) und intl.accept_languages (Webseiten, z. B. YouTube)
+    vor jedem Start auf die Sprache der Oberflaeche setzen."""
+    try:
+        uj = Path(args[args.index("--profile") + 1]) / "user.js"
+        old = uj.read_text(encoding="utf-8")
+    except (ValueError, IndexError, OSError):
+        return
+    req, acc = FIREFOX_LANG[lang]
+    want = {"intl.locale.requested": req, "intl.accept_languages": acc}
+    out, seen = [], set()
+    for line in old.splitlines():
+        m = re.match(r'\s*user_pref\("([^"]+)"', line)
+        if m and m.group(1) in want:
+            if m.group(1) in seen:
+                continue
+            seen.add(m.group(1))
+            line = f'user_pref("{m.group(1)}", "{want[m.group(1)]}");'
+        out.append(line)
+    out += [f'user_pref("{k}", "{v}");' for k, v in want.items() if k not in seen]
+    new = "\n".join(out) + "\n"
+    if new != old:
+        uj.write_text(new, encoding="utf-8")
 
 
 def settings_save(s):

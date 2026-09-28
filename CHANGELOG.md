@@ -4,6 +4,12 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.6.1 – 2026-09-28
+- Programme wie VLC, Dateimanager und YouTube starten in der gewählten Sprache
+- Pfeile oben rechts zeigen, dass es links oder rechts weitergeht; ein Punkt je Gruppe
+- Gruppenweise blättern: LT / RT am Controller, Bild ↑ / Bild ↓ auf der Tastatur
+- Update-Hinweis unten rechts mit gelbem Warndreieck – öffnen mit U oder Select am Controller
+
 ## 0.6.0 – 2026-09-28
 - Sprache: Deutsch oder Englisch, umschaltbar unter Einstellungen → Sprache · Language
 - „Was ist neu“ erscheint in der gewählten Sprache

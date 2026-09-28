@@ -84,6 +84,23 @@ Ist ein Remote `codeberg` eingerichtet, pflegt `publish.sh` ihn als Spiegel mit 
 Auf einem Void-System: `sudo bash dist/build-iso.sh`. Die ISO landet unter `~/share/ISO/`.
 Sie enthält `voidstation-install`, `nmtui` für WLAN, SSH mit root/voidlinux und die eigenen Radio- und TV-Favoriten.
 
+## Bedienung
+
+| | Controller | Tastatur | Maus |
+|---|---|---|---|
+| Bewegen | Steuerkreuz / linker Stick | Pfeiltasten | zeigen, Mausrad blättert |
+| Öffnen / Auswählen | A | Enter | Klick |
+| Zurück | B | Esc / Rücktaste | Rechtsklick |
+| Programm schließen, Favorit | X / Y | Entf, F, Y | ✕ auf der Kachel |
+| Gruppe vor / zurück | RT / LT | Bild ↓ / Bild ↑ | Pfeile oben rechts |
+| Leiser / lauter | LB / RB | − / + | |
+| Update öffnen (wenn unten rechts angezeigt) | Select | U | Klick auf den Hinweis |
+| Ausschalten | Start | – | ⏻ oben rechts |
+| Zurück zur Startseite (aus jedem Programm) | Guide / Home | Win | |
+
+Die Pfeile oben rechts erscheinen, sobald eine Seite breiter als der Bildschirm ist; der helle Punkt zeigt die aktuelle Gruppe.
+Ist ein VoidStation-Update verfügbar, steht unten rechts ein gelber Hinweis.
+
 ## Sprachen
 
 Alle Texte der Oberfläche stehen in `launcher/web/i18n/de.json` und `en.json` (Schlüssel → Text, `{name}` = Platzhalter).
@@ -91,6 +108,8 @@ Im Code: `T('schlüssel', { name })` für Texte, `L(text)` für Kachel-, Gruppen
 Neue Texte gehören immer in **beide** Dateien – `build.sh` bricht ab, wenn in `en.json` ein Schlüssel oder Platzhalter fehlt.
 
 - Sprache wählen: Einstellungen → Sprache · Language. Ohne Wahl gilt `LANG` der Sitzung (`en_US…` → Englisch, sonst Deutsch).
+- Programme aus den Kacheln starten mit `LANG`/`LANGUAGE` der gewählten Sprache (VLC, PCManFM, GTK/Qt); Firefox-Profile bekommen
+  vor jedem Start `intl.locale.requested` und `intl.accept_languages`. Programme mit eigener Spracheinstellung (Steam, Kodi) bleiben dabei.
 - Kacheln: Deutsche Standardnamen (z. B. „Fernsehen“) übersetzt `labels` in `en.json`; eigene Namen bleiben, wie sie sind.
   Eigene Kacheln können auch zweisprachig sein: `"label": {"de": "Fernsehen", "en": "TV"}`.
 - AppCenter: Beschreibungen über `app.<id>.desc` in `en.json`, sonst gilt der Text aus `catalog.json`.

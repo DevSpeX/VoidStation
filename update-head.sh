@@ -56,6 +56,17 @@ for p in curl elogind xrdb pulseaudio-utils mpv mgba-qt samba flatpak adwaita-qt
 done
 if [ -n "$MISSING" ]; then xbps-install -Sy $MISSING || warn "Paketinstallation fehlgeschlagen"; else echo "alles da"; fi
 
+# Sprachen der Oberflaeche: deutsches und englisches Locale erzeugen (VLC, Dateimanager usw. folgen der UI-Sprache)
+if [ -f /etc/default/libc-locales ]; then
+  LCH=0
+  for l in de_DE en_US; do
+    if ! grep -q "^$l.UTF-8 UTF-8" /etc/default/libc-locales && grep -q "^#[[:space:]]*$l.UTF-8 UTF-8" /etc/default/libc-locales; then
+      sed -i "s/^#[[:space:]]*\($l.UTF-8 UTF-8\)/\1/" /etc/default/libc-locales; LCH=1
+    fi
+  done
+  if [ "$LCH" = 1 ]; then xbps-reconfigure -f glibc-locales >/dev/null 2>&1 && echo "Locales de_DE und en_US erzeugt" || warn "Locales konnten nicht erzeugt werden"; fi
+fi
+
 say "2/8  Programmdateien (eigene Kacheln, Favoriten, Einstellungen bleiben)"
 KEEP="$(mktemp -d)"
 for f in tiles.json radio.json tvfavs.json settings.json; do [ -f "$TV/$f" ] && cp "$TV/$f" "$KEEP/"; done

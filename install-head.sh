@@ -55,6 +55,17 @@ for p in $PKGS; do
 done
 if [ -n "$MISSING" ]; then xbps-install -Sy $MISSING; else echo "alles schon installiert"; fi
 
+# Sprachen der Oberflaeche: deutsches und englisches Locale erzeugen (VLC, Dateimanager usw. folgen der UI-Sprache)
+if [ -f /etc/default/libc-locales ]; then
+  LCH=0
+  for l in de_DE en_US; do
+    if ! grep -q "^$l.UTF-8 UTF-8" /etc/default/libc-locales && grep -q "^#[[:space:]]*$l.UTF-8 UTF-8" /etc/default/libc-locales; then
+      sed -i "s/^#[[:space:]]*\($l.UTF-8 UTF-8\)/\1/" /etc/default/libc-locales; LCH=1
+    fi
+  done
+  if [ "$LCH" = 1 ]; then xbps-reconfigure -f glibc-locales >/dev/null 2>&1 && echo "Locales de_DE und en_US erzeugt" || warn "Locales konnten nicht erzeugt werden"; fi
+fi
+
 # ---------------------------------------------------------------------
 say "3/8  Dateien entpacken nach $TV"
 mkdir -p "$TV"

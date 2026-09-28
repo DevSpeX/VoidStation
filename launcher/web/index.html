@@ -43,11 +43,17 @@
   h1 { margin: 0; font-weight: 300; font-size: calc(52px * var(--f)); line-height: 1; }
   .who { display: flex; align-items: center; gap: calc(16px * var(--f)); }
   .who .meta { text-align: right; line-height: 1.2; }
-  .updbadge { display: flex; align-items: center; gap: calc(8px * var(--f)); padding: calc(8px * var(--f)) calc(16px * var(--f));
-    border: none; border-radius: 999px; background: #2f6d4f; color: var(--text); font: inherit; font-size: calc(14px * var(--f)); cursor: pointer; }
-  .updbadge svg { width: calc(18px * var(--f)); height: calc(18px * var(--f)); }
-  .updbadge.focus { outline: 3px solid var(--text); outline-offset: 3px; }
-  .updbadge[hidden] { display: none; }
+  /* Blaetter-Anzeige oben rechts: Pfeile (klickbar) + ein Punkt je Gruppe */
+  .scrollind { display: flex; align-items: center; gap: calc(8px * var(--f)); flex: none; margin-left: auto; }
+  .scrollind[hidden] { display: none; }
+  .scrollind .sarr { width: calc(34px * var(--f)); height: calc(34px * var(--f)); display: grid; place-items: center; padding: 0; cursor: pointer;
+    border: 1px solid rgba(255,255,255,.22); border-radius: 50%; background: transparent; color: var(--text); transition: opacity .2s, background .15s; }
+  .scrollind .sarr svg { width: 46%; height: 46%; }
+  .scrollind .sarr.off { opacity: .22; cursor: default; }
+  .scrollind .sarr:not(.off):hover { background: rgba(255,255,255,.12); }
+  .scrollind .gdots { display: flex; gap: calc(6px * var(--f)); align-items: center; }
+  .scrollind .gdots i { width: calc(7px * var(--f)); height: calc(7px * var(--f)); border-radius: 50%; background: rgba(255,255,255,.25); transition: background .2s, transform .2s; }
+  .scrollind .gdots i.on { background: var(--text); transform: scale(1.3); }
   #adText { white-space: pre-line; }
   .who .name { font-size: calc(21px * var(--f)); font-weight: 300; }
   .who .time { font-size: calc(15px * var(--f)); color: var(--text-dim); }
@@ -202,11 +208,19 @@
   .btn.danger { background: #6e2b2b; }
   .btn.focus { border-color: var(--focus); }
 
-  .hint { position: fixed; left: var(--pad-x); right: var(--pad-x); bottom: calc(14px * var(--f)); z-index: 25; font-size: calc(14px * var(--f)); color: var(--text-faint); display: flex; flex-wrap: wrap; gap: calc(6px * var(--f)) calc(24px * var(--f)); }
+  .hint { position: fixed; left: var(--pad-x); right: var(--pad-x); bottom: calc(14px * var(--f)); z-index: 25; font-size: calc(14px * var(--f)); color: var(--text-faint); display: flex; flex-wrap: wrap; align-items: center; gap: calc(6px * var(--f)) calc(24px * var(--f)); }
   .hint b { font-weight: 600; color: rgba(236,235,232,.72); }
   .toast { position: fixed; right: var(--pad-x); bottom: calc(52px * var(--f)); z-index: 50; background: #2a2e33; padding: calc(10px * var(--f)) calc(16px * var(--f)); font-size: calc(16px * var(--f)); max-width: 60vw; opacity: 0; transform: translateY(10px); transition: all .25s; }
   .toast.show { opacity: 1; transform: none; }
   .toast.err { background: #6e2b2b; }
+
+  /* Update-Hinweis unten rechts in der Hinweiszeile */
+  .hint .updnote { margin-left: auto; display: inline-flex; align-items: center; gap: calc(9px * var(--f)); padding: calc(5px * var(--f)) calc(12px * var(--f));
+    border: 1px solid rgba(242,193,78,.55); background: rgba(242,193,78,.1); color: #f5d27a; cursor: pointer; font: inherit; font-size: calc(14px * var(--f)); }
+  .hint .updnote:hover { background: rgba(242,193,78,.18); }
+  .hint .updnote svg { width: calc(18px * var(--f)); height: calc(18px * var(--f)); flex: none; }
+  .hint .updnote b { color: #f5d27a; font-weight: 600; }
+  .hint .updnote .k { color: rgba(236,235,232,.72); }
 
   @media (prefers-reduced-motion: reduce) { .tile { animation: none; opacity: 1; } .track, .tile, .splash, .layer { transition: none; } }
 </style>
@@ -215,7 +229,7 @@
 <header>
   <h1 id="title">Start</h1>
   <div class="who">
-    <button class="updbadge nav" id="updBadge" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span id="updBadgeTxt">Update</span></button>
+    <div class="scrollind" id="scrollInd" hidden><button class="sarr off" data-dir="-1" aria-label="Vorige Gruppe" data-i18n-aria="scroll.prev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><span class="gdots"></span><button class="sarr" data-dir="1" aria-label="Nächste Gruppe" data-i18n-aria="scroll.next"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button></div>
     <div class="meta"><div class="name" id="user"></div><div class="time" id="hdrTime"></div></div>
     <button class="round nav" id="power" aria-label="Ausschalten" data-i18n-aria="home.power"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg></button>
   </div>
@@ -393,6 +407,7 @@ function layout() {
   root.setProperty('--srows', Math.max(1, Math.min(3, rows)));
   fitGrids();
   if (focusEl) setFocus(focusEl, true);
+  updScroll();
 }
 // Zeilenzahl der Raster in Radio/TV/AppCenter an den Platz ueber der Hinweiszeile anpassen
 function fitGrid(track, sel, max) {
@@ -446,9 +461,18 @@ function updateHint() {
     adlg:     [T('hint.cancel')],
     dialog:   [T('hint.cancel')]
   }[layer()];
-  $('#hint').innerHTML = h.map(s => `<span>${s}</span>`).join('');
+  const tr = curTrack();
+  if (tr && tr.scrollWidth - innerWidth > 4) h.splice(h.length - (layer() === 'home' ? 0 : 1), 0, T('hint.pages'));
+  const note = updInfo && TRACKS[layer()]
+    ? `<button class="updnote" id="updNote"><svg viewBox="0 0 24 24"><path d="M12 2.5L1.5 21h21z" fill="#f2c14e"/><path d="M12 9v5.5M12 17.7v.1" stroke="#1a1d21" stroke-width="2.3" stroke-linecap="round"/></svg>` +
+      `<b>${esc(updInfo.version ? T('upd.note', { version: updInfo.version }) : T('upd.badgeGeneric'))}</b><span class="k">${esc(T('upd.noteKey'))}</span></button>` : '';
+  $('#hint').innerHTML = h.map(s => `<span>${s}</span>`).join('') + note;
   document.documentElement.style.setProperty('--hint', ($('#hint').offsetHeight + 22 * scale * innerHeight / 768) + 'px');
+  // Hinweiszeile hoeher/niedriger geworden (z. B. Update-Hinweis bricht in eine zweite Zeile um): Kacheln neu einpassen
+  const hh = $('#hint').offsetHeight;
+  if (hintH !== null && hh !== hintH) { hintH = hh; layout(); } else hintH = hh;
 }
+let hintH = null;
 
 /* ============================================================ Startseite */
 async function load() {
@@ -516,6 +540,44 @@ function setFocus(el, instant) {
   lastFocus[layer()] = el;
   const tr = el.closest('.track');
   if (tr) keepVisible(tr, el, instant);
+  updScroll();
+}
+/* ---- Blaettern: Pfeile oben rechts, Gruppenspruenge mit LT/RT bzw. Bild auf/ab */
+const TRACKS = { home: '#track', radio: '#rTrack', tv: '#tTrack', apps: '#aTrack', settings: '#sTrack' };
+function curTrack() { const sel = TRACKS[layer()]; return sel ? $(sel) : null; }
+let lastScrollable = null;
+function updScroll() {
+  const ind = $('#scrollInd'); if (!ind) return;
+  const l = layer(), tr = curTrack();
+  const host = !tr ? null : l === 'home' ? $('body > header .who') : $(`#${l} header`);
+  const max = tr ? Math.max(0, tr.scrollWidth - innerWidth) : 0;
+  if (!host || max < 4) ind.hidden = true;
+  else {
+    if (ind.parentElement !== host) { if (l === 'home') host.prepend(ind); else host.insertBefore(ind, host.querySelector('.nowline')); }
+    ind.hidden = false;
+    const x = Number(tr.dataset.x || 0);
+    const [pl, pr] = ind.querySelectorAll('.sarr');
+    pl.classList.toggle('off', x > -2);
+    pr.classList.toggle('off', x < -max + 2);
+    const groups = [...tr.querySelectorAll(':scope > section.group')];
+    const cur = focusEl && focusEl.closest('section.group');
+    ind.querySelector('.gdots').innerHTML = groups.length > 1 && groups.length <= 12 ? groups.map(g => `<i${g === cur ? ' class="on"' : ''}></i>`).join('') : '';
+  }
+  const sc = !!tr && max >= 4;
+  if (sc !== lastScrollable) { lastScrollable = sc; updateHint(); }
+}
+function jumpGroup(dir) {
+  if (splashTile) return;
+  const tr = curTrack(); if (!tr) return;
+  const sel = SCOPE[layer()];
+  const groups = [...tr.querySelectorAll(':scope > section.group')].filter(g => g.querySelector(sel));
+  if (!groups.length) return;
+  const cur = focusEl && focusEl.closest('section.group');
+  let i = groups.indexOf(cur);
+  i = i < 0 ? (dir > 0 ? 0 : groups.length - 1) : Math.max(0, Math.min(groups.length - 1, i + dir));
+  if (groups[i] === cur) return;
+  const first = [...groups[i].querySelectorAll(sel)].find(e => !e.disabled && e.offsetParent !== null);
+  if (first) setFocus(first);
 }
 function keepVisible(track, el, instant) {
   const box = track.parentElement.getBoundingClientRect();
@@ -530,6 +592,7 @@ function keepVisible(track, el, instant) {
   if (instant) { track.style.transition = 'none'; requestAnimationFrame(() => track.style.transition = ''); }
   track.dataset.x = x;
   track.style.transform = `translateX(${x}px)`;
+  updScroll();
 }
 function move(dir) {
   if (splashTile) return;
@@ -559,7 +622,6 @@ function activate(el = focusEl) {
   if (!el || splashTile) return;
   const act = el.dataset.act;
   if (el.id === 'power') return openDialog();
-  if (el.id === 'updBadge') { openLayer('settings'); return setTimeout(selfUpdate, 400); }
   if (el.dataset.close !== undefined) return closeDialog();
   if (el.dataset.power) return power(el.dataset.power);
   if (act === 'back') return closeLayer();
@@ -676,15 +738,19 @@ async function poll() {
   if (offline) return;
   try { const s = await getJSON('/api/status'); setRunning(s.running || []); setRadio(s.radio || {}); setTvNow(s.tv); showUpdBadge(s.update); } catch {}
 }
-let updToasted = null;
+// Update verfuegbar: gelber Hinweis unten rechts, oeffnen mit Klick, U oder Select am Controller
+let updToasted = null, updInfo = null;
 function showUpdBadge(u) {
-  const b = $('#updBadge'); if (!b) return;
   const on = !!(u && u.available);
-  if (b.hidden === on) b.hidden = !on;
-  if (on) {
-    $('#updBadgeTxt').textContent = u.version ? T('upd.badge', { version: u.version }) : T('upd.badgeGeneric');
-    if (updToasted !== u.version && layer() === 'home') { updToasted = u.version; toast(T('upd.toast')); }
-  }
+  const changed = !!updInfo !== on || (on && updInfo.version !== u.version);
+  updInfo = on ? u : null;
+  if (changed) updateHint();
+  if (on && updToasted !== u.version && layer() === 'home') { updToasted = u.version; toast(T('upd.toast')); }
+}
+function openUpdate() {
+  if (!updInfo || !TRACKS[layer()] || splashTile) return;
+  if (layer() !== 'settings') { $$('.layer.open').forEach(e => e.classList.remove('open', 'shown')); openLayer('settings'); }
+  setTimeout(selfUpdate, 400);
 }
 setInterval(poll, 1500);
 
@@ -832,10 +898,12 @@ function renderSettings() {
   tr.innerHTML = ''; tr.dataset.x = 0; tr.style.transform = 'none';
 
   // Sprache
-  const lr = row(col(tr, T('settings.language')));
+  const lc = col(tr, T('settings.language'));
+  const lr = row(lc);
   for (const l of sett.langs || [{ id: 'de', label: 'Deutsch' }, { id: 'en', label: 'English' }]) {
     const b = pill(esc(l.label), () => setLang(l.id), l.id === LANG); b.dataset.key = 'lang' + l.id; lr.appendChild(b);
   }
+  const li = document.createElement('div'); li.className = 'info'; li.textContent = T('settings.langApps'); lc.appendChild(li);
 
   // Anzeige
   const a = col(tr, T('settings.scale'));
@@ -1250,6 +1318,9 @@ addEventListener('keydown', e => {
   else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
   else if (e.key === 'Escape' || e.key === 'Backspace') { e.preventDefault(); back(); }
   else if (e.key === 'Delete' || e.key === 'Del' || e.key === 'f' || e.key === 'F' || e.key === 'y' || e.key === 'Y') { e.preventDefault(); secondary(); }
+  else if (e.key === 'PageDown') { e.preventDefault(); jumpGroup(1); }
+  else if (e.key === 'PageUp') { e.preventDefault(); jumpGroup(-1); }
+  else if (e.key === 'u' || e.key === 'U') openUpdate();
   else if (e.key === '+' || e.key === 'AudioVolumeUp') volume('up');
   else if (e.key === '-' || e.key === 'AudioVolumeDown') volume('down');
 });
@@ -1257,6 +1328,9 @@ addEventListener('keydown', e => {
 /* ============================================================ Eingabe: Maus */
 document.addEventListener('mouseover', e => { const el = e.target.closest(SCOPE[layer()]); if (el && el !== focusEl) setFocus(el); });
 document.addEventListener('click', e => {
+  const sa = e.target.closest('.sarr');
+  if (sa) { e.stopPropagation(); return jumpGroup(Number(sa.dataset.dir)); }
+  if (e.target.closest('#updNote')) return openUpdate();
   const x = e.target.closest('.x');
   if (x) { e.stopPropagation(); return closeApp(x.closest('.tile')._tile); }
   const el = e.target.closest(SCOPE[layer()]);
@@ -1276,18 +1350,18 @@ function padLoop(ts) {
   requestAnimationFrame(padLoop);
   if (document.hidden || !document.hasFocus()) { pad.held = {}; return; }
   const gps = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
-  const want = { left: 0, right: 0, up: 0, down: 0, a: 0, b: 0, x: 0, y: 0, start: 0, lb: 0, rb: 0 };
+  const want = { left: 0, right: 0, up: 0, down: 0, a: 0, b: 0, x: 0, y: 0, start: 0, select: 0, lb: 0, rb: 0, lt: 0, rt: 0 };
   for (const g of gps) {
     const bt = i => g.buttons[i] && g.buttons[i].pressed;
     const ax = g.axes[0] || 0, ay = g.axes[1] || 0;
     want.left ||= bt(14) || ax < -0.55; want.right ||= bt(15) || ax > 0.55;
     want.up ||= bt(12) || ay < -0.55;   want.down ||= bt(13) || ay > 0.55;
     want.a ||= bt(0); want.b ||= bt(1); want.x ||= bt(2); want.y ||= bt(3);
-    want.lb ||= bt(4); want.rb ||= bt(5); want.start ||= bt(9);
+    want.lb ||= bt(4); want.rb ||= bt(5); want.lt ||= bt(6); want.rt ||= bt(7); want.select ||= bt(8); want.start ||= bt(9);
   }
   for (const k of Object.keys(want)) {
     if (!want[k]) { pad.held[k] = false; continue; }
-    const rep = ['left', 'right', 'up', 'down', 'lb', 'rb'].includes(k);
+    const rep = ['left', 'right', 'up', 'down', 'lb', 'rb', 'lt', 'rt'].includes(k);
     if (!pad.held[k]) { pad.held[k] = true; pad.next[k] = ts + 380; fire(k); }
     else if (rep && ts >= pad.next[k]) { pad.next[k] = ts + 140; fire(k); }
   }
@@ -1300,6 +1374,9 @@ function fire(k) {
   else if (k === 'y' || k === 'x') secondary();
   else if (k === 'lb') volume('down');
   else if (k === 'rb') volume('up');
+  else if (k === 'lt') jumpGroup(-1);
+  else if (k === 'rt') jumpGroup(1);
+  else if (k === 'select') openUpdate();
   else if (k === 'start') layer() === 'dialog' ? closeDialog() : openDialog();
   else move(k);
 }
