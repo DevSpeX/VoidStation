@@ -275,8 +275,16 @@ install -d -o root -g root -m 755 /usr/local/share/voidstation
 python3 - "$TV/catalog.json" > /usr/local/share/voidstation/allowed-packages <<'PYEOF'
 import json, sys
 c = json.load(open(sys.argv[1], encoding="utf-8"))
-pk = sorted({a["source"]["pkg"] for a in c["apps"] if a["source"]["type"] == "xbps"}
-            | {p for a in c["apps"] for p in a["source"].get("host_pkgs", [])} | {"flatpak"})
+pk = {"flatpak"}
+for a in c["apps"]:
+    s = a["source"]
+    if s["type"] == "xbps":
+        pk.add(s["pkg"])
+    for k in ("repos", "deps", "optional", "host_pkgs"):
+        pk.update(s.get(k, []))
+    for v in s.get("gpu_deps", {}).values():
+        pk.update(v)
+pk = sorted(pk)
 print("\n".join(pk))
 PYEOF
 chmod 644 /usr/local/share/voidstation/allowed-packages

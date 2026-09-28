@@ -13,6 +13,14 @@ ALLOW=/usr/local/share/voidstation/allowed-packages
 URLFILE=/usr/local/share/voidstation/update-url
 export LC_ALL=C
 
+check_pkgs() {
+  [ $# -gt 0 ] || { echo "kein Paket angegeben"; return 2; }
+  for pkg in "$@"; do
+    case "$pkg" in *[!A-Za-z0-9._+-]*|"") echo "ungueltiger Paketname: $pkg"; return 2 ;; esac
+    grep -qx "$pkg" "$ALLOW" 2>/dev/null || { echo "nicht freigegeben: $pkg"; return 2; }
+  done
+}
+
 selfupdate() {
   url="$(head -n1 "$URLFILE" 2>/dev/null)"
   case "$url" in https://*) ;; *) echo "keine gueltige Update-Adresse in $URLFILE"; return 2 ;; esac
@@ -34,16 +42,23 @@ selfupdate() {
 }
 
 main() {
-  case "$1" in
-    install|remove)
-      pkg="$2"
-      case "$pkg" in *[!A-Za-z0-9._+-]*|"") echo "ungueltiger Paketname"; return 2 ;; esac
-      grep -qx "$pkg" "$ALLOW" 2>/dev/null || { echo "nicht freigegeben: $pkg"; return 2; }
-      if [ "$1" = install ]; then
-        xbps-install -Sy "$pkg"
-      else
-        xbps-remove -Ry "$pkg"
-      fi
+  cmd="$1"; [ $# -gt 0 ] && shift
+  case "$cmd" in
+    install)
+      check_pkgs "$@" || return $?
+      xbps-install -Sy "$@"
+      ;;
+    remove)
+      check_pkgs "$@" || return $?
+      xbps-remove -Ry "$@" || return $?
+      xbps-remove -oy || true               # nicht mehr benoetigte Abhaengigkeiten aufraeumen
+      ;;
+    markauto)                               # als "automatisch installiert" markieren (fuer spaeteres Aufraeumen)
+      check_pkgs "$@" || return $?
+      xbps-pkgdb -m auto "$@"
+      ;;
+    sync)
+      xbps-install -S
       ;;
     update)
       xbps-install -Syu xbps || true        # xbps muss sich ggf. zuerst selbst aktualisieren
@@ -57,7 +72,7 @@ main() {
       selfupdate
       ;;
     *)
-      echo "Benutzung: voidstation-pkg install|remove <paket> | update | check | selfupdate"
+      echo "Benutzung: voidstation-pkg install|remove|markauto <paket>... | sync | update | check | selfupdate"
       return 2
       ;;
   esac

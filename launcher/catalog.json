@@ -10,21 +10,45 @@
       "id": "steam",
       "name": "Steam + Proton-GE",
       "cat": "Spiele",
-      "desc": "Steam im Big-Picture-Modus für den Fernseher, dazu Proton-GE für Windows-Spiele und die Controller-Regeln. Großer Download (ca. 2–3 GB); anspruchsvolle Spiele brauchen einen kräftigen Rechner.",
+      "desc": "Steam im Big-Picture-Modus für den Fernseher, nativ aus dem Void-Repo (nonfree + multilib, 32-Bit-Grafiktreiber passend zur GPU), dazu das aktuelle Proton-GE für Windows-Spiele.",
       "source": {
-        "type": "flatpak",
-        "ref": "com.valvesoftware.Steam",
-        "extras": [
-          "com.valvesoftware.Steam.CompatibilityTool.Proton-GE"
+        "type": "xbps",
+        "pkg": "steam",
+        "repos": [
+          "void-repo-nonfree",
+          "void-repo-multilib",
+          "void-repo-multilib-nonfree"
         ],
-        "host_pkgs": [
-          "steam-udev-rules"
+        "deps": [
+          "libgcc-32bit",
+          "libstdc++-32bit",
+          "libdrm-32bit",
+          "libglvnd-32bit",
+          "libva-32bit",
+          "mesa-dri-32bit",
+          "vulkan-loader",
+          "vulkan-loader-32bit"
+        ],
+        "optional": [
+          "libpulseaudio-32bit",
+          "alsa-pipewire-32bit"
+        ],
+        "gpu_deps": {
+          "intel": [
+            "mesa-vulkan-intel",
+            "mesa-vulkan-intel-32bit"
+          ],
+          "amd": [
+            "mesa-vulkan-radeon",
+            "mesa-vulkan-radeon-32bit"
+          ]
+        },
+        "addons": [
+          "proton-ge"
         ]
       },
       "cmd": [
-        "flatpak",
-        "run",
-        "com.valvesoftware.Steam",
+        "steam",
         "-gamepadui"
       ],
       "tile": {
@@ -34,7 +58,7 @@
         "icon": "gamepad",
         "sub": "Big Picture"
       },
-      "note": "Beim ersten Start aktualisiert sich Steam selbst. Für Windows-Spiele einmalig in Steam: Einstellungen → Kompatibilität → Proton-GE wählen."
+      "note": "Beim ersten Start lädt Steam sich selbst herunter (ca. 300 MB). Für Windows-Spiele einmalig in Steam: Einstellungen → Kompatibilität → GE-Proton wählen."
     },
     {
       "id": "retroarch",

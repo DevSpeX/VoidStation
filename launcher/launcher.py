@@ -23,6 +23,7 @@ import signal
 import socket
 import subprocess
 import sys
+import tarfile
 import threading
 import time
 import urllib.parse
@@ -863,6 +864,61 @@ def tile_remove(app_id):
     config_save(c)
 
 
+def gpu_vendors():
+    """Verbaute Grafik: 'intel', 'amd', 'nvidia' (aus /sys, ohne Zusatzprogramme)."""
+    names = {"0x8086": "intel", "0x1002": "amd", "0x10de": "nvidia"}
+    found = []
+    for d in Path("/sys/bus/pci/devices").glob("*"):
+        try:
+            if not (d / "class").read_text().startswith("0x03"):
+                continue
+            v = names.get((d / "vendor").read_text().strip())
+        except OSError:
+            continue
+        if v and v not in found:
+            found.append(v)
+    return found
+
+
+def xbps_installed(pkg):
+    r = run(["xbps-query", pkg])
+    return bool(r and r.returncode == 0)
+
+
+def xbps_available(pkg):
+    r = run(["xbps-query", "-R", pkg])
+    return bool(r and r.returncode == 0)
+
+
+# Proton-GE (offizielle Releases von GloriousEggroll) fuer natives Steam
+PROTON_DIR = Path.home() / ".local/share/Steam/compatibilitytools.d"
+PROTON_API = "https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest"
+
+
+def proton_latest():
+    req = urllib.request.Request(PROTON_API, headers={**UA, "Accept": "application/vnd.github+json"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.load(r)
+
+
+PROTON_STATE = PROTON_DIR / ".voidstation.json"      # welche Versionen VoidStation selbst installiert hat
+
+
+def proton_state():
+    try:
+        return [e for e in json.loads(PROTON_STATE.read_text()) if e.get("tag") and e.get("dir")]
+    except (OSError, ValueError, AttributeError):
+        return []
+
+
+def proton_state_save(entries):
+    PROTON_STATE.write_text(json.dumps(entries))
+
+
+def proton_installed():
+    return [e["tag"] for e in proton_state() if (PROTON_DIR / e["dir"]).is_dir()]
+
+
 class Jobs:
     """Genau ein Installations-/Update-Auftrag gleichzeitig, mit Protokoll fuer die Oberflaeche."""
 
@@ -933,6 +989,8 @@ class Jobs:
                 for app in catalog()["apps"]:
                     if app["source"]["type"] == "appimage" and app_installed(app):
                         self._appimage(app)
+                    if "proton-ge" in app["source"].get("addons", []) and app_installed(app):
+                        self._proton_ge()
                 reboot = False
                 if vs_update_status(force=True)["available"]:
                     reboot = self._selfupdate()
@@ -952,6 +1010,14 @@ class Jobs:
                     f = run(["flatpak", "remote-ls", "--user", "--updates", "--columns=application"])
                     if f and f.returncode == 0:
                         n += len([l for l in f.stdout.splitlines() if l.strip()])
+                if any("proton-ge" in a["source"].get("addons", []) and app_installed(a) for a in catalog()["apps"]):
+                    try:
+                        tag = proton_latest()["tag_name"]
+                        if tag not in proton_installed():
+                            self._log(f"Proton-GE: neue Version {tag}")
+                            n += 1
+                    except Exception as e:  # noqa: BLE001
+                        self._log(f"Proton-GE: {e}")
                 vs = vs_update_status(force=True)
                 if vs["available"]:
                     self._log(f"VoidStation: neue Version {vs['remote']} (installiert: {vs['local']})")
@@ -964,7 +1030,7 @@ class Jobs:
     def _install(self, a):
         s = a["source"]
         if s["type"] == "xbps":
-            return self._run(["sudo", "-n", PKG_HELPER, "install", s["pkg"]]) == 0
+            return self._xbps_install(s)
         if s["type"] == "flatpak":
             if not shutil_which("flatpak"):
                 self._log("Flatpak fehlt – wird installiert …")
@@ -994,10 +1060,116 @@ class Jobs:
             return True
         return False
 
+    def _xbps_install(self, s):
+        # 1. Zusatz-Repos (z. B. nonfree, multilib), danach Paketlisten neu laden
+        repos = [r for r in s.get("repos", []) if not xbps_installed(r)]
+        if repos:
+            if self._run(["sudo", "-n", PKG_HELPER, "install", *repos]) != 0:
+                return False
+            self._run(["sudo", "-n", PKG_HELPER, "sync"])
+        # 2. Abhaengigkeiten: fest, passend zur GPU, optional (nur was es im Repo gibt)
+        gpus = gpu_vendors()
+        self._log("Grafik: " + (", ".join(gpus) or "unbekannt"))
+        want = list(s.get("deps", []))
+        for v in gpus:
+            want += s.get("gpu_deps", {}).get(v, [])
+        want += s.get("optional", [])
+        deps = []
+        for p in dict.fromkeys(want):
+            if xbps_installed(p):
+                continue
+            if xbps_available(p):
+                deps.append(p)
+            else:
+                self._log(f"Hinweis: {p} gibt es im Repo nicht – uebersprungen")
+        # 3. Alles in einem Durchgang installieren
+        if self._run(["sudo", "-n", PKG_HELPER, "install", *deps, s["pkg"]]) != 0:
+            return False
+        # Neu hinzugekommene Abhaengigkeiten als automatisch markieren -> beim Entfernen wieder weg
+        if deps:
+            self._run(["sudo", "-n", PKG_HELPER, "markauto", *deps])
+        for addon in s.get("addons", []):
+            if addon == "proton-ge" and not self._proton_ge():
+                self._log("Hinweis: Proton-GE spaeter ueber 'Alles aktualisieren' nachholen")
+        return True
+
+    def _proton_ge(self):
+        """Neueste Proton-GE-Version laden (SHA512 geprueft); die zwei neuesten eigenen behalten."""
+        tmp, tops = None, []
+        try:
+            rel = proton_latest()
+            tag = rel["tag_name"]
+            mine = proton_state()
+            if any(e["tag"] == tag and (PROTON_DIR / e["dir"]).is_dir() for e in mine):
+                self._log(f"Proton-GE {tag} ist aktuell")
+                return True
+            assets = {x["name"]: x["browser_download_url"] for x in rel.get("assets", [])}
+            tars = [n for n in assets if n.endswith("-x86_64.tar.gz")] or \
+                   [n for n in assets if n.endswith(".tar.gz") and "aarch64" not in n]
+            if not tars:
+                self._log("Proton-GE: kein passendes Archiv im Release gefunden")
+                return False
+            tar_name = tars[0]
+            sum_url = assets.get(tar_name[:-len(".tar.gz")] + ".sha512sum")
+            if not sum_url:
+                self._log("Proton-GE: Pruefsumme fehlt im Release – abgebrochen")
+                return False
+            with urllib.request.urlopen(urllib.request.Request(sum_url, headers=UA), timeout=30) as r:
+                want = r.read().decode().split()[0].lower()
+            PROTON_DIR.mkdir(parents=True, exist_ok=True)
+            tmp = PROTON_DIR / f".{tar_name}.part"
+            self._log(f"Lade {tar_name} …")
+            h = hashlib.sha512()
+            req = urllib.request.Request(assets[tar_name], headers=UA)
+            with urllib.request.urlopen(req, timeout=60) as r, open(tmp, "wb") as f:
+                total = int(r.headers.get("Content-Length") or 0)
+                done, last = 0, 0
+                while True:
+                    chunk = r.read(1 << 20)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    h.update(chunk)
+                    done += len(chunk)
+                    if total and done * 10 // total > last:
+                        last = done * 10 // total
+                        self._log(f"… {last * 10} %")
+            if h.hexdigest() != want:
+                tmp.unlink(missing_ok=True)
+                self._log("Proton-GE: Pruefsumme stimmt nicht – verworfen")
+                return False
+            self._log("Pruefsumme ok, entpacke …")
+            with tarfile.open(tmp) as t:
+                tops = sorted({m.name.split("/", 1)[0] for m in t.getmembers() if m.name and not m.name.startswith("/")})
+                kw = {"filter": "data"} if hasattr(tarfile, "data_filter") else {}
+                t.extractall(PROTON_DIR, **kw)
+            tmp.unlink(missing_ok=True)
+            top = next((d for d in tops if (PROTON_DIR / d / "compatibilitytool.vdf").exists()), tops[0] if tops else tag)
+            mine = [{"tag": tag, "dir": top}] + [e for e in mine if e["dir"] != top]
+            for e in mine[2:]:
+                shutil.rmtree(PROTON_DIR / e["dir"], ignore_errors=True)
+                self._log(f"alte Version entfernt: {e['dir']}")
+            proton_state_save(mine[:2])
+            self._log(f"Proton-GE {tag} installiert ({top})")
+            return True
+        except Exception as e:  # noqa: BLE001
+            self._log(f"Proton-GE: {e}")
+            # halbe Downloads/Entpack-Reste wegraeumen (nichts anfassen, was schon vorher da war)
+            if tmp:
+                tmp.unlink(missing_ok=True)
+            keep = {x["dir"] for x in proton_state()}
+            for d in tops:
+                if d not in keep and d and d not in (".", ".."):
+                    shutil.rmtree(PROTON_DIR / d, ignore_errors=True)
+            return False
+
     def _remove(self, a):
         s = a["source"]
         if s["type"] == "xbps":
-            return self._run(["sudo", "-n", PKG_HELPER, "remove", s["pkg"]]) == 0
+            ok = self._run(["sudo", "-n", PKG_HELPER, "remove", s["pkg"]]) == 0
+            if ok and "proton-ge" in s.get("addons", []):
+                self._log("Spiele, Spielstaende und Proton-GE unter ~/.local/share/Steam bleiben erhalten")
+            return ok
         if s["type"] == "flatpak":
             for ext in s.get("extras", []):
                 self._run(["flatpak", "uninstall", "--user", "-y", "--noninteractive", ext])
