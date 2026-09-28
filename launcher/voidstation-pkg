@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
 # voidstation-pkg – kleiner Root-Helfer fuer das AppCenter.
 # Darf per sudo ohne Passwort laufen, installiert/entfernt aber NUR Pakete
 # aus der Freigabeliste, fuehrt System-Updates aus und aktualisiert
@@ -11,6 +12,8 @@
 
 ALLOW=/usr/local/share/voidstation/allowed-packages
 URLFILE=/usr/local/share/voidstation/update-url
+CHANNELFILE=/usr/local/share/voidstation/channel
+SIGNERS=/usr/local/share/voidstation/allowed_signers
 export LC_ALL=C
 
 check_pkgs() {
@@ -21,8 +24,14 @@ check_pkgs() {
   done
 }
 
+update_url() {
+  ch="$(head -n1 "$CHANNELFILE" 2>/dev/null)"
+  case "$ch" in stable|main) ;; *) ch=stable ;; esac
+  head -n1 "$URLFILE" 2>/dev/null | sed "s/{channel}/$ch/"
+}
+
 selfupdate() {
-  url="$(head -n1 "$URLFILE" 2>/dev/null)"
+  url="$(update_url)"
   case "$url" in https://*) ;; *) echo "keine gueltige Update-Adresse in $URLFILE"; return 2 ;; esac
   user="${SUDO_USER:-}"
   case "$user" in ""|root|*[!a-z0-9_-]*) echo "Selbst-Update nur per sudo von einem normalen Benutzer"; return 2 ;; esac
@@ -34,6 +43,19 @@ selfupdate() {
   fi
   if [ "$(head -c 11 "$tmp/update.sh")" != '#!/bin/bash' ] || ! grep -q '^__PAYLOAD_BELOW__$' "$tmp/update.sh"; then
     echo "Unerwarteter Inhalt – Update abgebrochen"; rm -rf "$tmp"; return 1
+  fi
+  if [ -s "$SIGNERS" ]; then
+    # Nur Updates mit gueltiger Signatur des Herausgebers werden ausgefuehrt
+    if ! curl -fsSL --proto '=https' --tlsv1.2 --retry 2 -o "$tmp/update.sh.sig" "$url/update.sh.sig"; then
+      echo "Signatur fehlt – Update abgelehnt"; rm -rf "$tmp"; return 1
+    fi
+    if ! ssh-keygen -Y verify -f "$SIGNERS" -I voidstation-release -n voidstation \
+         -s "$tmp/update.sh.sig" < "$tmp/update.sh" >/dev/null 2>&1; then
+      echo "Signatur UNGUELTIG – Update abgelehnt"; rm -rf "$tmp"; return 1
+    fi
+    echo "Signatur geprueft: ok"
+  else
+    echo "Hinweis: noch kein Signaturschluessel hinterlegt – Update ohne Signaturpruefung"
   fi
   VSUSER="$user" SUDO_USER="$user" VOIDSTATION_NONINTERACTIVE=1 bash "$tmp/update.sh" </dev/null
   rc=$?
@@ -71,8 +93,12 @@ main() {
     selfupdate)
       selfupdate
       ;;
+    channel)                                # Update-Kanal waehlen: stable (Standard) oder main (Test)
+      case "$1" in stable|main) echo "$1" > "$CHANNELFILE"; chmod 644 "$CHANNELFILE"; echo "Kanal: $1" ;;
+        *) echo "Kanal muss stable oder main sein"; return 2 ;; esac
+      ;;
     *)
-      echo "Benutzung: voidstation-pkg install|remove|markauto <paket>... | sync | update | check | selfupdate"
+      echo "Benutzung: voidstation-pkg install|remove|markauto <paket>... | sync | update | check | selfupdate | channel stable|main"
       return 2
       ;;
   esac

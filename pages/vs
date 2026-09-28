@@ -1,6 +1,6 @@
 #!/bin/sh
 # VoidStation: laedt den aktuellen Installer von Codeberg und startet ihn
-U=https://codeberg.org/goldhahn/VoidStation/raw/branch/main/dist/voidstation-install.sh
+U=https://codeberg.org/goldhahn/VoidStation/raw/branch/stable/dist/voidstation-install.sh
 cd /tmp || exit 1
 rm -f voidstation-install.sh
 xbps-fetch -o voidstation-install.sh "$U" || { echo "Download fehlgeschlagen - Internet ok?"; exit 1; }

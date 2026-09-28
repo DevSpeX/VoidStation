@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """
 VoidStation Launcher
 -----------------
@@ -26,6 +27,7 @@ import sys
 import tarfile
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -1239,32 +1241,105 @@ class Jobs:
 #  VoidStation selbst aktualisieren (Quelle: /usr/local/share/voidstation/update-url)
 # ---------------------------------------------------------------------------
 URLFILE = Path("/usr/local/share/voidstation/update-url")
-_VCACHE = {"t": 0.0, "remote": None, "error": None}
+CHANNELFILE = Path("/usr/local/share/voidstation/channel")
+CHANNELS = {"stable": "Stabil", "main": "Test"}
+_VCACHE = {"t": 0.0, "remote": None, "error": None, "key": None}
+
+
+def vs_channel():
+    try:
+        ch = CHANNELFILE.read_text().split()[0]
+    except (OSError, IndexError):
+        ch = "stable"
+    return ch if ch in CHANNELS else "stable"
+
+
+def vs_update_base():
+    tmpl = URLFILE.read_text().split()[0].rstrip("/")
+    return tmpl.replace("{channel}", vs_channel())
 
 
 def vs_version():
+    """Installierte Version: {"version": "0.4.0", "build": "…", "history": […]} (aeltere Stände: nur build)."""
     try:
-        return (BASE / "VERSION").read_text().strip() or None
+        d = json.loads((BASE / "version.json").read_text(encoding="utf-8"))
+        if d.get("build"):
+            return d
+    except (OSError, ValueError):
+        pass
+    try:
+        b = (BASE / "VERSION").read_text().strip()
+        return {"version": None, "build": b or None}
     except OSError:
-        return None
+        return {"version": None, "build": None}
+
+
+def _fetch_remote(base):
+    def get(name):
+        req = urllib.request.Request(f"{base}/{name}", headers=UA)
+        with urllib.request.urlopen(req, timeout=8) as r:
+            return r.read(200_000).decode("utf-8", "replace")
+    try:
+        d = json.loads(get("version.json"))
+        if not re.fullmatch(r"[0-9a-f]{6,64}", str(d.get("build", ""))):
+            raise ValueError("version.json ohne gueltige Build-Kennung")
+        return d
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            raise
+    b = get("version.txt").strip()                # aeltere Veroeffentlichungen
+    if not re.fullmatch(r"[0-9a-f]{6,64}", b):
+        raise ValueError("unerwartete Antwort vom Server")
+    return {"version": None, "build": b, "history": []}
 
 
 def vs_update_status(force=False):
-    """Vergleicht die eigene Version mit dist/version.txt im Repo (hoechstens alle 10 min)."""
-    if force or time.time() - _VCACHE["t"] > 600:
+    """Vergleicht die eigene Version mit dem Update-Kanal (hoechstens alle 10 min neu)."""
+    try:
+        base = vs_update_base()
+    except (OSError, IndexError):
+        base = None
+    if base and (force or time.time() - _VCACHE["t"] > 600 or _VCACHE["key"] != base):
         try:
-            base = URLFILE.read_text().split()[0].rstrip("/")
-            req = urllib.request.Request(base + "/version.txt", headers=UA)
-            with urllib.request.urlopen(req, timeout=8) as r:
-                remote = r.read(80).decode("ascii", "replace").strip()
-            if not re.fullmatch(r"[0-9a-f]{6,64}", remote):
-                raise ValueError("unerwartete Antwort vom Server")
-            _VCACHE.update(t=time.time(), remote=remote, error=None)
+            _VCACHE.update(remote=_fetch_remote(base), error=None)
         except Exception as e:  # noqa: BLE001
-            _VCACHE.update(t=time.time(), error=str(e))
+            _VCACHE.update(error=str(e))
+            if _VCACHE["key"] != base:
+                _VCACHE["remote"] = None
+        _VCACHE.update(t=time.time(), key=base)
+    return vs_state()
+
+
+def vs_state():
+    """Stand aus dem Zwischenspeicher, ohne Netzwerk (fuer /api/status)."""
     local, remote = vs_version(), _VCACHE["remote"]
-    return {"local": local, "remote": remote, "error": _VCACHE["error"],
-            "available": bool(remote) and remote != local}
+    available = bool(remote and remote.get("build") and remote["build"] != local.get("build"))
+    changes = []
+    if available:
+        seen = {e.get("version") for e in (local.get("history") or [])}
+        for e in remote.get("history") or []:
+            if e.get("version") in seen:
+                break
+            changes.append(e)
+    ch = vs_channel()
+    return {"local": local.get("version") or local.get("build"), "local_build": local.get("build"),
+            "remote": (remote.get("version") or remote.get("build")) if remote else None,
+            "remote_build": remote.get("build") if remote else None,
+            "available": available, "changes": changes[:5], "error": _VCACHE["error"],
+            "channel": ch, "channel_label": CHANNELS[ch], "checked": _VCACHE["t"] or None}
+
+
+def vs_background_check():
+    """Prueft kurz nach dem Start und dann alle 6 Stunden auf Updates."""
+    time.sleep(90)
+    while True:
+        try:
+            st = vs_update_status(force=True)
+            log("Update-Pruefung:", "verfuegbar " + str(st["remote"]) if st["available"] else "aktuell",
+                f"(Kanal {st['channel']})", st["error"] or "")
+        except Exception as e:  # noqa: BLE001
+            log("Update-Pruefung fehlgeschlagen:", e)
+        time.sleep(6 * 3600)
 
 
 def shutil_which(name):
@@ -1335,7 +1410,9 @@ class Handler(BaseHTTPRequestHandler):
         path = url.path
         if path == "/api/status":
             running = APPS.running()
+            vs = vs_state()
             return self._json(200, {"running": running, "starting": APPS.starting(), "radio": RADIO.status(),
+                                    "update": {"available": vs["available"], "version": vs["remote"]},
                                     "tv": TV.now if "tv" in running else None})
         if path == "/api/tv/status":
             TV.ensure()
@@ -1443,6 +1520,14 @@ class Handler(BaseHTTPRequestHandler):
                     favs.append(e)
                 tvfavs_save(favs)
                 return self._json(200, [IPTV.public(f) for f in favs])
+            if parts == ["api", "selfupdate", "channel"]:
+                ch = str(self._body().get("channel", ""))
+                if ch not in CHANNELS:
+                    return self._json(400, {"error": "unbekannter Kanal"})
+                r = subprocess.run(["sudo", "-n", PKG_HELPER, "channel", ch], capture_output=True, text=True, timeout=20)
+                if r.returncode != 0:
+                    return self._json(500, {"error": (r.stdout + r.stderr).strip() or "fehlgeschlagen"})
+                return self._json(200, vs_update_status(force=True))
             if parts[:2] == ["api", "apps"] and len(parts) == 3:
                 act = parts[2]
                 try:
@@ -1565,6 +1650,7 @@ def main():
     apply_appearance(s)
     apply_resolution(s.get("resolution"))
     threading.Thread(target=gamepad_watcher, daemon=True).start()
+    threading.Thread(target=vs_background_check, daemon=True).start()
     httpd = ThreadingHTTPServer((HOST, PORT), Handler)
     log(f"laeuft auf http://{HOST}:{PORT}/")
     try:

@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <html lang="de">
 <head>
 <meta charset="utf-8">
@@ -42,6 +43,12 @@
   h1 { margin: 0; font-weight: 300; font-size: calc(52px * var(--f)); line-height: 1; }
   .who { display: flex; align-items: center; gap: calc(16px * var(--f)); }
   .who .meta { text-align: right; line-height: 1.2; }
+  .updbadge { display: flex; align-items: center; gap: calc(8px * var(--f)); padding: calc(8px * var(--f)) calc(16px * var(--f));
+    border: none; border-radius: 999px; background: #2f6d4f; color: var(--text); font: inherit; font-size: calc(14px * var(--f)); cursor: pointer; }
+  .updbadge svg { width: calc(18px * var(--f)); height: calc(18px * var(--f)); }
+  .updbadge.focus { outline: 3px solid var(--text); outline-offset: 3px; }
+  .updbadge[hidden] { display: none; }
+  #adText { white-space: pre-line; }
   .who .name { font-size: calc(21px * var(--f)); font-weight: 300; }
   .who .time { font-size: calc(15px * var(--f)); color: var(--text-dim); }
   .round {
@@ -207,6 +214,7 @@
 <header>
   <h1 id="title">Start</h1>
   <div class="who">
+    <button class="updbadge nav" id="updBadge" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span id="updBadgeTxt">Update</span></button>
     <div class="meta"><div class="name" id="user"></div><div class="time" id="hdrTime"></div></div>
     <button class="round nav" id="power" aria-label="Ausschalten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg></button>
   </div>
@@ -508,6 +516,7 @@ function activate(el = focusEl) {
   if (!el || splashTile) return;
   const act = el.dataset.act;
   if (el.id === 'power') return openDialog();
+  if (el.id === 'updBadge') { openLayer('settings'); return setTimeout(selfUpdate, 400); }
   if (el.dataset.close !== undefined) return closeDialog();
   if (el.dataset.power) return power(el.dataset.power);
   if (act === 'back') return closeLayer();
@@ -622,7 +631,17 @@ function setRunning(list) {
 }
 async function poll() {
   if (offline) return;
-  try { const s = await getJSON('/api/status'); setRunning(s.running || []); setRadio(s.radio || {}); setTvNow(s.tv); } catch {}
+  try { const s = await getJSON('/api/status'); setRunning(s.running || []); setRadio(s.radio || {}); setTvNow(s.tv); showUpdBadge(s.update); } catch {}
+}
+let updToasted = null;
+function showUpdBadge(u) {
+  const b = $('#updBadge'); if (!b) return;
+  const on = !!(u && u.available);
+  if (b.hidden === on) b.hidden = !on;
+  if (on) {
+    $('#updBadgeTxt').textContent = u.version ? `Update ${u.version}` : 'Update verfügbar';
+    if (updToasted !== u.version && layer() === 'home') { updToasted = u.version; toast('VoidStation-Update verfügbar – oben rechts auswählen'); }
+  }
 }
 setInterval(poll, 1500);
 
@@ -859,6 +878,11 @@ function renderSettings() {
   const rvs = row(s);
   const vu = pill('VoidStation aktualisieren', selfUpdate); vu.dataset.key = 'selfupd';
   rvs.appendChild(vu);
+  const rch = row(s, 'Update-Kanal');
+  const cur = (vsState && vsState.channel) || 'stable';
+  for (const [id, lab] of [['stable', 'Stabil'], ['main', 'Test']]) {
+    const b = pill(lab, () => setChannel(id), cur === id); b.dataset.key = 'ch' + id; rch.appendChild(b);
+  }
   showVs();
 
   showVol(sett.volume);
@@ -871,16 +895,23 @@ function renderSettings() {
 let vsState = null;
 function showVs() {
   const el = $('#vsInfo'); if (!el) return;
-  const ver = (vsState && vsState.local) || (sett && sett.version) || '–';
+  const sv = sett && sett.version;
+  const ver = (vsState && vsState.local) || (sv && (sv.version || sv.build)) || '–';
   let st = 'suche nach Updates …';
-  if (vsState) st = vsState.available ? `<b>Update verfügbar</b> (${esc(vsState.remote)})`
+  if (vsState) st = vsState.available ? `<b>Update auf ${esc(vsState.remote)} verfügbar</b>`
     : vsState.remote ? 'ist aktuell' : 'Update-Server nicht erreichbar';
-  el.innerHTML = `VoidStation · Version ${esc(ver)}<br>${st}`;
+  const ch = vsState ? ` · Kanal ${esc(vsState.channel_label)}` : '';
+  el.innerHTML = `VoidStation ${esc(ver)}${ch}<br>${st}`;
+}
+async function setChannel(ch) {
+  if (ch === 'main' && !(vsState && vsState.channel === 'main')) toast('Test-Kanal: neue Versionen vor allen anderen – können Fehler enthalten');
+  try { vsState = await api('/api/selfupdate/channel', { channel: ch }); } catch (e) { return toast('Fehlgeschlagen: ' + e.message, true); }
+  renderSettings();
 }
 async function refreshVs(force) {
   if (offline) return;
   try { vsState = await getJSON('/api/selfupdate' + (force ? '?force=1' : '')); } catch { vsState = { local: null, remote: null, available: false }; }
-  showVs();
+  if (layer() === 'settings' && $('#vsInfo')) renderSettings(); else showVs();
 }
 async function selfUpdate() {
   if (JOBS_BUSY()) return toast('Bitte warten, es läuft noch ein Auftrag');
@@ -889,7 +920,9 @@ async function selfUpdate() {
   $('#toast').classList.remove('show');
   if (!vsState || !vsState.remote) return toast('Update-Server nicht erreichbar', true);
   if (!vsState.available) return toast('VoidStation ist auf dem neuesten Stand');
-  adlg('VoidStation aktualisieren?', `Neue Version ${vsState.remote} (installiert: ${vsState.local || '–'}). Eigene Kacheln, Favoriten und Einstellungen bleiben erhalten. Danach ist ein Neustart nötig.`,
+  const news = (vsState.changes || []).map(e => `${e.version}:\n` + e.changes.map(c => '• ' + c).join('\n')).join('\n\n');
+  adlg('VoidStation aktualisieren?', `Version ${vsState.remote} (installiert: ${vsState.local || '–'}, Kanal ${vsState.channel_label}).` +
+    (news ? `\n\nNeu:\n${news}` : '') + '\n\nEigene Kacheln, Favoriten und Einstellungen bleiben erhalten. Danach ist ein Neustart nötig.',
     [['Jetzt aktualisieren', () => jobStart('selfupdate')], ['Abbrechen']]);
 }
 function rebootPrompt() {

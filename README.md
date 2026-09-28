@@ -27,7 +27,7 @@ bash vs
 `vs` ist ein kleiner Starter (siehe `pages/vs`, veröffentlicht über das Repo `goldhahn/pages`):
 Er lädt jedes Mal den aktuellen `dist/voidstation-install.sh` aus diesem Repo und startet ihn.
 Lange Variante ohne Starter:
-`xbps-fetch https://codeberg.org/goldhahn/VoidStation/raw/branch/main/dist/voidstation-install.sh`
+`xbps-fetch https://codeberg.org/goldhahn/VoidStation/raw/branch/stable/dist/voidstation-install.sh`
 
 Das Skript fragt Ziel-SSD, Rechnername, Name und Passwort ab. **Es löscht die komplette SSD.**
 Danach installiert es Void, VoidStation, EFISTUB (GRUB als Rückfall) und die Samba-Freigabe.
@@ -44,13 +44,33 @@ sudo bash update.sh               # Aktualisieren, eigene Kacheln/Favoriten blei
 ## Updates
 
 **Am Fernseher:** Einstellungen → *VoidStation aktualisieren* (oder im AppCenter *Alles aktualisieren*).
-Das Gerät vergleicht seine Version mit `dist/version.txt` in diesem Repo, lädt bei Bedarf `dist/update.sh`
-und bietet danach einen Neustart an. Eigene Kacheln, Favoriten und Einstellungen bleiben erhalten.
-Die Update-Quelle steht in der Datei `update-url` (für Forks anpassen, dann `./build.sh`).
+Die Geräte prüfen kurz nach dem Start und dann alle 6 Stunden selbst und zeigen oben rechts einen Hinweis,
+wenn eine neue Version bereitsteht. Der Update-Dialog zeigt, was neu ist. Eigene Kacheln, Favoriten und
+Einstellungen bleiben erhalten.
 
-**Veröffentlichen:** Änderungen landen per Git im Repo. Ein Git-Bundle lässt sich direkt auf dem Gerät einspielen:
-Bundle nach `\\<rechner>\share\Updates` kopieren, dann `bash ~/VoidStation/tools/publish.sh`
-(einmalig vorher `git config --global credential.helper store`, damit git sich das Codeberg-Token merkt).
+**Kanäle:** *Stabil* (Zweig `stable`, Standard) oder *Test* (Zweig `main`, neue Versionen zuerst) –
+umschaltbar unter Einstellungen → System → Update-Kanal.
+
+**Signaturen:** Updates laufen als root, deshalb installieren Geräte nur Updates, die mit dem Schlüssel des
+Herausgebers signiert sind (`ssh-keygen -Y`, Namensraum `voidstation`). Der öffentliche Schlüssel liegt in
+`keys/voidstation-release.pub` und wird bei der Installation hinterlegt. Die allererste Installation vertraut
+HTTPS und diesem Repo.
+
+## Veröffentlichen (Herausgeber)
+
+Gebaut und signiert wird auf dem Rechner des Herausgebers mit `tools/publish.sh` – dort liegt der private Schlüssel.
+
+```sh
+git config --global credential.helper store      # einmalig: Codeberg-Zugang merken
+bash tools/publish.sh --init-key                 # einmalig: Signaturschlüssel anlegen (Sicherungskopie!)
+bash tools/publish.sh                            # Bundle aus ~/share/Updates übernehmen, bauen, signieren,
+                                                 # nach main (Test-Kanal) pushen
+bash tools/publish.sh --release                  # Test-Stand für alle freigeben (stable)
+```
+
+Neue Versionen bekommen einen Eintrag oben in `CHANGELOG.md` (`## 0.4.1 – JJJJ-MM-TT` plus Stichpunkte).
+`dist/` wird nur von `publish.sh` erzeugt und nicht von Hand geändert.
+Forks tragen ihre eigene Adresse in `update-url` ein und legen einen eigenen Schlüssel an.
 
 ## Eigene Live-ISO bauen (optional, für Installation ohne Internet-Download des Skripts)
 
@@ -71,10 +91,12 @@ Sie enthält `voidstation-install`, `nmtui` für WLAN, SSH mit root/voidlinux un
 | `install-head.sh`, `update-head.sh` | Kopf der Installations- und Update-Skripte (Payload wird angehängt) |
 | `iso/` | Neuinstallation (`voidstation-install`) und ISO-Bau |
 | `tools/` | `publish.sh` (Bundle einspielen und pushen), `screenshots.py` (README-Bilder) |
-| `update-url` | Update-Quelle der Geräte |
+| `update-url` | Update-Quelle der Geräte (`{channel}` = stable/main) |
+| `CHANGELOG.md` | Versionsnummer und Änderungen (erscheinen im Update-Dialog) |
+| `keys/` | öffentlicher Signaturschlüssel |
 | `dist/` | **fertige Skripte**, erzeugt mit `./build.sh` |
 
-Nach Änderungen am Code: `./build.sh`, dann `dist/` mit einchecken.
+Zum Ausprobieren ohne Veröffentlichung: `OUT=/tmp/vs ./build.sh`.
 Screenshots neu erzeugen (mit Beispieldaten, ohne Void): `python3 tools/screenshots.py`
 (braucht `pip install playwright pillow` und `playwright install chromium`).
 
@@ -83,3 +105,8 @@ Screenshots neu erzeugen (mit Beispieldaten, ohne Void): `python3 tools/screensh
 - Kacheln anpassen: `~/.local/share/voidstation/tiles.json`
 - Logs: `~/.local/share/voidstation/logs/`
 - Startseite wieder über Firefox statt WebKit: `touch ~/.local/share/voidstation/use-firefox`
+
+## Lizenz
+
+VoidStation steht unter der GNU General Public License v3.0 oder später (GPL-3.0-or-later), siehe [LICENSE](LICENSE).
+Mitinstallierte Fremdsoftware (Void-Pakete, Bibata-Mauszeiger, Proton-GE, …) behält ihre eigenen Lizenzen.

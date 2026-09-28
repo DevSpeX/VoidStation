@@ -64,6 +64,7 @@ for f in tiles.json radio.json tvfavs.json settings.json; do [ -f "$KEEP/$f" ] &
 rm -rf "$KEEP"
 chmod +x "$TV/launcher.py" "$TV/home.sh" "$TV/vsctl" "$TV/voidstation-shell.py"
 echo "__VS_VERSION__" > "$TV/VERSION"
+echo '__VS_VERSION_B64__' | base64 -d > "$TV/version.json" 2>/dev/null || true
 cp "$TV/openbox/"{rc.xml,menu.xml,autostart} "$HOMEDIR/.config/openbox/"
 
 python3 - "$TV/tiles.json" <<'PYEOF'
@@ -118,6 +119,16 @@ chmod 644 /usr/local/share/voidstation/allowed-packages
 echo "$(wc -l < /usr/local/share/voidstation/allowed-packages) Pakete freigegeben"
 printf '%s\n' "__VS_UPDATE_URL__" > /usr/local/share/voidstation/update-url
 chmod 644 /usr/local/share/voidstation/update-url
+# Update-Kanal (stable = fuer alle, main = Test); bestehende Wahl bleibt
+[ -s /usr/local/share/voidstation/channel ] || echo stable > /usr/local/share/voidstation/channel
+chmod 644 /usr/local/share/voidstation/channel
+# Signaturschluessel: danach werden nur noch signierte Updates installiert
+SIGNERS="$(echo '__VS_SIGNERS_B64__' | base64 -d 2>/dev/null || true)"
+if [ -n "$SIGNERS" ]; then
+  printf '%s\n' "$SIGNERS" > /usr/local/share/voidstation/allowed_signers
+  chmod 644 /usr/local/share/voidstation/allowed_signers
+  echo "Signaturpruefung fuer Updates aktiv"
+fi
 
 say "4/8  Rechte ohne Passwort: Ausschalten, WLAN, AppCenter"
 rm -f /etc/sudoers.d/voidstation /etc/sudoers.d/tvstart /etc/sudoers.d/zz-tvstart

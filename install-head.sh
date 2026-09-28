@@ -62,6 +62,7 @@ mkdir -p "$TV"
 sed -n '/^__PAYLOAD_BELOW__$/,$p' "$0" | tail -n +2 | base64 -d | tar -xz -C "$TV"
 chmod +x "$TV/launcher.py" "$TV/home.sh" "$TV/vsctl" "$TV/voidstation-shell.py"
 echo "__VS_VERSION__" > "$TV/VERSION"
+echo '__VS_VERSION_B64__' | base64 -d > "$TV/version.json" 2>/dev/null || true
 
 # Eigene, schon angepasste tiles.json behalten
 if [ -f /tmp/tiles.json.keep ]; then
@@ -291,6 +292,16 @@ chmod 644 /usr/local/share/voidstation/allowed-packages
 echo "$(wc -l < /usr/local/share/voidstation/allowed-packages) Pakete freigegeben"
 printf '%s\n' "__VS_UPDATE_URL__" > /usr/local/share/voidstation/update-url
 chmod 644 /usr/local/share/voidstation/update-url
+# Update-Kanal (stable = fuer alle, main = Test); bestehende Wahl bleibt
+[ -s /usr/local/share/voidstation/channel ] || echo stable > /usr/local/share/voidstation/channel
+chmod 644 /usr/local/share/voidstation/channel
+# Signaturschluessel: danach werden nur noch signierte Updates installiert
+SIGNERS="$(echo '__VS_SIGNERS_B64__' | base64 -d 2>/dev/null || true)"
+if [ -n "$SIGNERS" ]; then
+  printf '%s\n' "$SIGNERS" > /usr/local/share/voidstation/allowed_signers
+  chmod 644 /usr/local/share/voidstation/allowed_signers
+  echo "Signaturpruefung fuer Updates aktiv"
+fi
 
 say "Extra: Freigabe-Ordner $SHARE"
 for d in ROMs/gba ROMs/nes ROMs/snes ROMs/psx ROMs/psp ROMs/nds ROMs/gamecube ROMs/dreamcast \
