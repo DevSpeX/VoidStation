@@ -1,0 +1,40 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# VoidStation: grafische Oberflaeche starten (aufgerufen aus ~/.bash_profile auf tty1).
+# Sicherheitsnetz: Startet X zweimal hintereinander nicht (unter 20 s), wird
+# automatisch auf X.Org zurueckgeschaltet, falls XLibre aktiv ist.
+TV="$HOME/.local/share/voidstation"
+FAILS="/tmp/voidstation-xfails-$(id -u)"
+mkdir -p "$TV/logs"
+
+t0=$(date +%s)
+startx -- -nolisten tcp vt1 >"$HOME/.xsession-errors" 2>&1
+dur=$(( $(date +%s) - t0 ))
+
+if [ "$dur" -ge 20 ]; then            # normal beendet (z. B. Neustart)
+  rm -f "$FAILS"
+  exit 0
+fi
+
+n=$(( $(cat "$FAILS" 2>/dev/null || echo 0) + 1 ))
+echo "$n" > "$FAILS"
+cp "$HOME/.xsession-errors" "$TV/logs/xstart-fehler-$n.log" 2>/dev/null
+
+if [ "$n" -ge 2 ] && xbps-query xlibre-xserver >/dev/null 2>&1; then
+  echo
+  echo "  Die Oberflaeche startet nicht (XLibre). Schalte auf X.Org zurueck – bitte warten …"
+  # shellcheck disable=SC2024  # Protokoll gehoert bewusst dem Benutzer
+  if sudo -n /usr/local/sbin/voidstation-pkg xserver xorg >>"$TV/logs/xserver-rueckfall.log" 2>&1; then
+    rm -f "$FAILS"
+    echo "  Fertig, starte neu …"
+    sleep 2
+  fi
+elif [ "$n" -ge 4 ]; then
+  echo
+  echo "  Die Oberflaeche startet nicht. Fehlerprotokoll: ~/.xsession-errors"
+  echo "  Konsole folgt. Neuer Versuch mit:  exit"
+  exec /bin/bash --noprofile
+else
+  sleep 2
+fi
+exit 1

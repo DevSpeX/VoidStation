@@ -1013,6 +1013,9 @@ class Jobs:
             elif action == "selfupdate":
                 ok = self._selfupdate()
                 self._finish(ok, None, ok)
+            elif action == "xserver":
+                ok = self._run(["sudo", "-n", PKG_HELPER, "xserver", a["target"]]) == 0
+                self._finish(ok, None, ok)
             elif action == "check":
                 self._log("Suche nach Updates …")
                 r = subprocess.run(["sudo", "-n", PKG_HELPER, "check"], capture_output=True, text=True, timeout=300)
@@ -1362,9 +1365,17 @@ def apps_payload():
     return {"categories": cat["categories"], "apps": apps, "job": JOBS.current()}
 
 
+def xserver_info():
+    try:
+        choice = Path("/usr/local/share/voidstation/xserver").read_text().split()[0]
+    except (OSError, IndexError):
+        choice = "xlibre"
+    return {"active": "xlibre" if xbps_installed("xlibre-xserver") else "xorg", "choice": choice}
+
+
 def settings_payload():
     s = settings_load()
-    return {"version": vs_version(), "scale": s["scale"], "scales": SCALES,
+    return {"version": vs_version(), "xserver": xserver_info(), "scale": s["scale"], "scales": SCALES,
             "cursor": {"theme": s.get("cursor_theme"), "size": s.get("cursor_size"),
                        "themes": [{"id": t, "label": CURSOR_NAMES[t]} for t in cursor_themes()],
                        "sizes": CURSOR_SIZES}, "displays": xrandr_info(),
@@ -1520,6 +1531,16 @@ class Handler(BaseHTTPRequestHandler):
                     favs.append(e)
                 tvfavs_save(favs)
                 return self._json(200, [IPTV.public(f) for f in favs])
+            if parts == ["api", "xserver"]:
+                target = str(self._body().get("target", ""))
+                if target not in ("xlibre", "xorg"):
+                    return self._json(400, {"error": "unbekannter X-Server"})
+                try:
+                    JOBS.start("xserver", {"id": "xserver", "target": target,
+                                           "name": "XLibre" if target == "xlibre" else "X.Org"})
+                except RuntimeError as e:
+                    return self._json(409, {"error": str(e)})
+                return self._json(200, JOBS.current())
             if parts == ["api", "selfupdate", "channel"]:
                 ch = str(self._body().get("channel", ""))
                 if ch not in CHANNELS:

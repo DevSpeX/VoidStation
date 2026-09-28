@@ -62,7 +62,7 @@ for f in tiles.json radio.json tvfavs.json settings.json; do [ -f "$TV/$f" ] && 
 sed -n '/^__PAYLOAD_BELOW__$/,$p' "$0" | tail -n +2 | base64 -d | tar -xz -C "$TV" || { warn "Entpacken fehlgeschlagen"; exit 1; }
 for f in tiles.json radio.json tvfavs.json settings.json; do [ -f "$KEEP/$f" ] && cp "$KEEP/$f" "$TV/$f"; done
 rm -rf "$KEEP"
-chmod +x "$TV/launcher.py" "$TV/home.sh" "$TV/vsctl" "$TV/voidstation-shell.py"
+chmod +x "$TV/launcher.py" "$TV/home.sh" "$TV/vsctl" "$TV/voidstation-shell.py" "$TV/xstart"
 echo "__VS_VERSION__" > "$TV/VERSION"
 echo '__VS_VERSION_B64__' | base64 -d > "$TV/version.json" 2>/dev/null || true
 cp "$TV/openbox/"{rc.xml,menu.xml,autostart} "$HOMEDIR/.config/openbox/"
@@ -130,6 +130,10 @@ if [ -n "$SIGNERS" ]; then
   echo "Signaturpruefung fuer Updates aktiv"
 fi
 
+# ---------------------------------------------------------------------
+say "X-Server: XLibre (Rueckfall auf X.Org, falls nicht verfuegbar)"
+sh /usr/local/sbin/voidstation-pkg xserver auto || warn "XLibre nicht eingerichtet – es bleibt vorerst bei X.Org"
+
 say "4/8  Rechte ohne Passwort: Ausschalten, WLAN, AppCenter"
 rm -f /etc/sudoers.d/voidstation /etc/sudoers.d/tvstart /etc/sudoers.d/zz-tvstart
 cat > /etc/sudoers.d/zz-voidstation <<EOF
@@ -139,6 +143,7 @@ chmod 440 /etc/sudoers.d/zz-voidstation
 visudo -cf /etc/sudoers.d/zz-voidstation >/dev/null || { warn "sudoers-Regel fehlerhaft, entferne sie"; rm -f /etc/sudoers.d/zz-voidstation; }
 
 say "5/8  Laufzeitordner fuer den Ton"
+sed -i 's|^  exec startx -- -nolisten tcp vt1 >"$HOME/.xsession-errors" 2>&1$|  exec "$HOME/.local/share/voidstation/xstart"|' "$HOMEDIR/.bash_profile" 2>/dev/null || true
 python3 - "$HOMEDIR/.bash_profile" <<'PYEOF'
 import sys, re
 p = sys.argv[1]

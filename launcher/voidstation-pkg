@@ -14,6 +14,9 @@ ALLOW=/usr/local/share/voidstation/allowed-packages
 URLFILE=/usr/local/share/voidstation/update-url
 CHANNELFILE=/usr/local/share/voidstation/channel
 SIGNERS=/usr/local/share/voidstation/allowed_signers
+XCHOICE=/usr/local/share/voidstation/xserver         # xlibre (Standard) oder xorg
+XLIBRE_REPO=https://github.com/xlibre-void/xlibre/releases/latest/download
+XLIBRE_KEYFP=00:ca:42:57:c9:c0:9a:ec:94:b4:7d:97:e5:a9:aa:1e
 export LC_ALL=C
 
 check_pkgs() {
@@ -63,6 +66,69 @@ selfupdate() {
   return $rc
 }
 
+# ---------------------------------------------------------------------
+#  X-Server: XLibre (Standard) oder klassisches X.Org
+# ---------------------------------------------------------------------
+xlibre_key() {   # Signaturschluessel des xlibre-void-Repos (Fingerabdruck geprueft: 00:ca:42:57:…)
+  cat <<'KEYEOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>public-key</key>
+	<data>LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUF6aFR1SkVjalBFZzZaUnNGbThtLwpaRnY0RWoyNUZVZzRZR3JQZlI3cWdaaGs5MExWd1hnTnVBQVl2TXFrSmpDd1dueEdYZVNzWUgyNFpSaFhiSHNvCm1DOGJFSDBOWkpmWGRYWFl3Rjg1dGl3b0RGRkpxOE0wN3daT0JsVmI4YXhkRm96UElpWXlRUEMxN1BwTjg0UksKS3NzZkJtQmt0dDUwbGptUWpmQW5lV21tZzF5VTRlSWZvR3AvamgrWW9TUGkyTzZTQi9ZVVJpZnNFYmlUK1RoMQpGdmpZTWhCb1VmQ2NGaGlIb3hDWXJOREhNOURSM21lUVI5ZkFuTEhKNEdXclhoMy84TjFhTngwcnZXckdSNDlJCkJrenNJdjErL2hHNzdyVG54Z3VPNGx0QVZ0QnljdVhRa2ZoWlpzMCtNSXphMzZpaVJja1lVRVVzYVFtQkJnUXMKaHdJREFRQUIKLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==</data>
+	<key>public-key-size</key>
+	<integer>2048</integer>
+	<key>signature-by</key>
+	<string>xlibre-github-actions</string>
+</dict>
+</plist>
+KEYEOF
+}
+
+xserver_now() { if xbps-query xlibre-xserver >/dev/null 2>&1; then echo xlibre; else echo xorg; fi; }
+
+xserver_xlibre() {
+  echo xlibre > "$XCHOICE"; chmod 644 "$XCHOICE"
+  if [ "$(xserver_now)" = xlibre ]; then echo "XLibre ist bereits aktiv."; return 0; fi
+  mkdir -p /etc/xbps.d /var/db/xbps/keys
+  xlibre_key > "/var/db/xbps/keys/$XLIBRE_KEYFP.plist"
+  echo "repository=$XLIBRE_REPO" > /etc/xbps.d/99-repository-xlibre.conf
+  echo "XLibre-Paketquelle eingerichtet, lade Paketlisten …"
+  if ! xbps-install -S >/dev/null || ! xbps-query -R xlibre-minimal >/dev/null 2>&1; then
+    echo "XLibre-Paketquelle nicht erreichbar – es bleibt bei X.Org."; return 1
+  fi
+  # X.Org-Pakete fuer den Notfall in den Zwischenspeicher laden (Rueckweg auch ohne Netz)
+  xbps-install -Dfy xorg-minimal xorg-server xf86-input-libinput xauth >/dev/null 2>&1 || true
+  echo "Entferne X.Org …"
+  xbps-query xorg-minimal >/dev/null 2>&1 && xbps-remove -Ry xorg-minimal
+  xbps-query xorg-server  >/dev/null 2>&1 && xbps-remove -Fy xorg-server
+  echo "Installiere XLibre …"
+  if xbps-install -y xlibre-minimal && [ "$(xserver_now)" = xlibre ]; then
+    echo "XLibre installiert – aktiv ab dem naechsten Neustart."
+    return 0
+  fi
+  echo "XLibre-Installation fehlgeschlagen – stelle X.Org wieder her (naechstes Update versucht es erneut) …"
+  xbps-install -y xorg-minimal
+  return 1
+}
+
+xserver_xorg() {
+  echo xorg > "$XCHOICE"; chmod 644 "$XCHOICE"
+  if [ "$(xserver_now)" = xorg ] && xbps-query xorg-server >/dev/null 2>&1; then echo "X.Org ist bereits aktiv."; return 0; fi
+  echo "Wechsle zurueck zu X.Org …"
+  xbps-query xlibre-minimal >/dev/null 2>&1 && xbps-remove -Ry xlibre-minimal
+  for p in xlibre-xserver xlibre-xserver-common xlibre-xf86-input-libinput xlibre-xf86-input-evdev; do
+    xbps-query "$p" >/dev/null 2>&1 && xbps-remove -Fy "$p"
+  done
+  if xbps-install -Sy xorg-minimal; then
+    rm -f /etc/xbps.d/99-repository-xlibre.conf
+    echo "X.Org installiert – aktiv ab dem naechsten Neustart."
+    return 0
+  fi
+  echo "X.Org konnte nicht installiert werden!"; return 1
+}
+
 main() {
   cmd="$1"; [ $# -gt 0 ] && shift
   case "$cmd" in
@@ -93,12 +159,21 @@ main() {
     selfupdate)
       selfupdate
       ;;
+    xserver)                                # X-Server waehlen: xlibre | xorg | status
+      case "$1" in
+        xlibre) xserver_xlibre ;;
+        xorg) xserver_xorg ;;
+        status|"") echo "aktiv: $(xserver_now), gewaehlt: $(cat "$XCHOICE" 2>/dev/null || echo xlibre)" ;;
+        auto) [ "$(cat "$XCHOICE" 2>/dev/null)" = xorg ] && { echo "X.Org gewaehlt – kein Wechsel"; return 0; }; xserver_xlibre ;;
+        *) echo "xserver: xlibre | xorg | status"; return 2 ;;
+      esac
+      ;;
     channel)                                # Update-Kanal waehlen: stable (Standard) oder main (Test)
       case "$1" in stable|main) echo "$1" > "$CHANNELFILE"; chmod 644 "$CHANNELFILE"; echo "Kanal: $1" ;;
         *) echo "Kanal muss stable oder main sein"; return 2 ;; esac
       ;;
     *)
-      echo "Benutzung: voidstation-pkg install|remove|markauto <paket>... | sync | update | check | selfupdate | channel stable|main"
+      echo "Benutzung: voidstation-pkg install|remove|markauto <paket>... | sync | update | check | selfupdate | channel stable|main | xserver xlibre|xorg|status"
       return 2
       ;;
   esac
