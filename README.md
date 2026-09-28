@@ -41,6 +41,17 @@ sudo EFISTUB=1 bash install.sh    # zusätzlich direkt per EFISTUB booten
 sudo bash update.sh               # Aktualisieren, eigene Kacheln/Favoriten bleiben
 ```
 
+## Updates
+
+**Am Fernseher:** Einstellungen → *VoidStation aktualisieren* (oder im AppCenter *Alles aktualisieren*).
+Das Gerät vergleicht seine Version mit `dist/version.txt` in diesem Repo, lädt bei Bedarf `dist/update.sh`
+und bietet danach einen Neustart an. Eigene Kacheln, Favoriten und Einstellungen bleiben erhalten.
+Die Update-Quelle steht in der Datei `update-url` (für Forks anpassen, dann `./build.sh`).
+
+**Veröffentlichen:** Änderungen landen per Git im Repo. Ein Git-Bundle lässt sich direkt auf dem Gerät einspielen:
+Bundle nach `\\<rechner>\share\Updates` kopieren, dann `bash ~/VoidStation/tools/publish.sh`
+(einmalig vorher `git config --global credential.helper store`, damit git sich das Codeberg-Token merkt).
+
 ## Eigene Live-ISO bauen (optional, für Installation ohne Internet-Download des Skripts)
 
 Auf einem Void-System: `sudo bash dist/build-iso.sh`. Die ISO landet unter `~/share/ISO/`.
@@ -59,6 +70,8 @@ Sie enthält `voidstation-install`, `nmtui` für WLAN, SSH mit root/voidlinux un
 | `launcher/openbox/`, `launcher/firefox/` | Openbox-Konfiguration, Firefox-Profile und Richtlinien |
 | `install-head.sh`, `update-head.sh` | Kopf der Installations- und Update-Skripte (Payload wird angehängt) |
 | `iso/` | Neuinstallation (`voidstation-install`) und ISO-Bau |
+| `tools/` | `publish.sh` (Bundle einspielen und pushen), `screenshots.py` (README-Bilder) |
+| `update-url` | Update-Quelle der Geräte |
 | `dist/` | **fertige Skripte**, erzeugt mit `./build.sh` |
 
 Nach Änderungen am Code: `./build.sh`, dann `dist/` mit einchecken.

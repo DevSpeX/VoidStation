@@ -710,6 +710,7 @@ const DEMO_SETT = { scale: 1.75, scales: [1, 1.25, 1.5, 1.75, 2, 2.25], cursor: 
 async function loadSettings() {
   try { sett = offline ? DEMO_SETT : await getJSON('/api/settings'); } catch { toast('Einstellungen nicht ladbar', true); return; }
   renderSettings();
+  refreshVs(false);
 }
 function pill(label, fn, on, extra) {
   const b = document.createElement('button');
@@ -819,6 +820,12 @@ function renderSettings() {
   const rb = pill('Neu starten', () => power('reboot')); rb.dataset.key = 'reboot';
   const po = pill('Herunterfahren', () => power('poweroff')); po.dataset.key = 'off';
   rsys.append(rl, rb, po);
+  const vi = document.createElement('div'); vi.className = 'info'; vi.id = 'vsInfo';
+  s.appendChild(vi);
+  const rvs = row(s);
+  const vu = pill('VoidStation aktualisieren', selfUpdate); vu.dataset.key = 'selfupd';
+  rvs.appendChild(vu);
+  showVs();
 
   showVol(sett.volume);
   if (layer() === 'settings') {
@@ -826,6 +833,36 @@ function renderSettings() {
     setFocus(again || $('#sTrack .snav.on') || $('#sTrack .snav'), true);
   }
 }
+/* ---- VoidStation selbst aktualisieren */
+let vsState = null;
+function showVs() {
+  const el = $('#vsInfo'); if (!el) return;
+  const ver = (vsState && vsState.local) || (sett && sett.version) || '–';
+  let st = 'suche nach Updates …';
+  if (vsState) st = vsState.available ? `<b>Update verfügbar</b> (${esc(vsState.remote)})`
+    : vsState.remote ? 'ist aktuell' : 'Update-Server nicht erreichbar';
+  el.innerHTML = `VoidStation · Version ${esc(ver)}<br>${st}`;
+}
+async function refreshVs(force) {
+  if (offline) return;
+  try { vsState = await getJSON('/api/selfupdate' + (force ? '?force=1' : '')); } catch { vsState = { local: null, remote: null, available: false }; }
+  showVs();
+}
+async function selfUpdate() {
+  if (JOBS_BUSY()) return toast('Bitte warten, es läuft noch ein Auftrag');
+  toast('Prüfe auf neue Version …');
+  await refreshVs(true);
+  $('#toast').classList.remove('show');
+  if (!vsState || !vsState.remote) return toast('Update-Server nicht erreichbar', true);
+  if (!vsState.available) return toast('VoidStation ist auf dem neuesten Stand');
+  adlg('VoidStation aktualisieren?', `Neue Version ${vsState.remote} (installiert: ${vsState.local || '–'}). Eigene Kacheln, Favoriten und Einstellungen bleiben erhalten. Danach ist ein Neustart nötig.`,
+    [['Jetzt aktualisieren', () => jobStart('selfupdate')], ['Abbrechen']]);
+}
+function rebootPrompt() {
+  adlg('Aktualisiert', 'VoidStation wurde aktualisiert. Zum Übernehmen jetzt neu starten?',
+    [['Jetzt neu starten', () => power('reboot')], ['Später']]);
+}
+
 async function setScale(s) {
   scale = s;
   try { if (!offline) sett = await api('/api/settings/scale', { scale: s }); } catch { return toast('Speichern fehlgeschlagen', true); }
@@ -1009,7 +1046,7 @@ function appDialog(a) {
 }
 function confirmUpdate() {
   if (JOBS_BUSY()) return;
-  adlg('Alles aktualisieren?', 'System, Flatpaks und AppImages werden aktualisiert. Das kann einige Minuten dauern; danach ist evtl. ein Neustart sinnvoll.', [['Jetzt aktualisieren', () => jobStart('update')], ['Abbrechen']]);
+  adlg('Alles aktualisieren?', 'System, Flatpaks, AppImages und VoidStation selbst werden aktualisiert. Das kann einige Minuten dauern; danach ist evtl. ein Neustart sinnvoll.', [['Jetzt aktualisieren', () => jobStart('update')], ['Abbrechen']]);
 }
 let jobState = null;
 const JOBS_BUSY = () => jobState && jobState.state === 'running';
@@ -1022,7 +1059,7 @@ function watchJob() {
   clearInterval(jobTimer);
   const tick = async () => {
     try { jobState = await getJSON('/api/apps/job'); } catch { return; }
-    const verb = { install: 'Installiere', remove: 'Entferne', update: 'Aktualisiere', check: 'Prüfe Updates für' }[jobState.action] || '';
+    const verb = { install: 'Installiere', remove: 'Entferne', update: 'Aktualisiere', check: 'Prüfe Updates für', selfupdate: 'Aktualisiere' }[jobState.action] || '';
     $('#jobTitle').textContent = `${verb} ${jobState.name}` + (jobState.state === 'running' ? ' …' : jobState.state === 'done' ? ' – fertig' : ' – fehlgeschlagen');
     $('#jobSpin').style.display = jobState.state === 'running' ? '' : 'none';
     $('#jobLog').textContent = (jobState.log || []).slice(-6).join('\n');
@@ -1033,6 +1070,9 @@ function watchJob() {
       setTimeout(() => band.classList.remove('show'), jobState.state === 'done' ? 2500 : 9000);
       await load();                                   // Kacheln neu aufbauen
       if (layer() === 'apps') loadApps();
+      if (layer() === 'settings') refreshVs(true);
+      if (jobState.state === 'done' && jobState.reboot) setTimeout(rebootPrompt, 400);
+      else if (jobState.state === 'done' && jobState.action === 'install' && typeof jobState.result === 'string') setTimeout(() => adlg(`${jobState.name} ist installiert`, jobState.result, [['OK']]), 400);
     }
   };
   tick(); jobTimer = setInterval(tick, 1000);
@@ -1050,7 +1090,7 @@ let toastT;
 function toast(msg, err) {
   const t = $('#toast');
   t.textContent = msg; t.classList.toggle('err', !!err); t.classList.add('show');
-  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), err ? 5000 : 2800);
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), Math.max(err ? 5000 : 2800, msg.length * 55));
 }
 
 /* ============================================================ Eingabe: Tastatur */

@@ -7,6 +7,36 @@
   ],
   "apps": [
     {
+      "id": "steam",
+      "name": "Steam + Proton-GE",
+      "cat": "Spiele",
+      "desc": "Steam im Big-Picture-Modus für den Fernseher, dazu Proton-GE für Windows-Spiele und die Controller-Regeln. Großer Download (ca. 2–3 GB); anspruchsvolle Spiele brauchen einen kräftigen Rechner.",
+      "source": {
+        "type": "flatpak",
+        "ref": "com.valvesoftware.Steam",
+        "extras": [
+          "com.valvesoftware.Steam.CompatibilityTool.Proton-GE"
+        ],
+        "host_pkgs": [
+          "steam-udev-rules"
+        ]
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "com.valvesoftware.Steam",
+        "-gamepadui"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "wide",
+        "color": "#1b2838",
+        "icon": "gamepad",
+        "sub": "Big Picture"
+      },
+      "note": "Beim ersten Start aktualisiert sich Steam selbst. Für Windows-Spiele einmalig in Steam: Einstellungen → Kompatibilität → Proton-GE wählen."
+    },
+    {
       "id": "retroarch",
       "name": "RetroArch",
       "cat": "Spiele",

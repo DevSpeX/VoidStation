@@ -884,7 +884,8 @@ class Jobs:
     def _run(self, args, cwd=None):
         self._log("$ " + " ".join(args))
         p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-                             stdin=subprocess.DEVNULL, cwd=cwd, bufsize=1, errors="replace")
+                             stdin=subprocess.DEVNULL, cwd=cwd, bufsize=1, errors="replace",
+                             start_new_session=True)
         for line in p.stdout:
             for part in line.replace("\r", "\n").split("\n"):
                 self._log(part)
@@ -894,15 +895,23 @@ class Jobs:
         with self.lock:
             if self.job and self.job["state"] == "running":
                 raise RuntimeError("Es läuft schon ein Auftrag")
+            name = app["name"] if app else ("VoidStation" if action == "selfupdate" else "System")
             self.job = {"action": action, "app": app["id"] if app else None,
-                        "name": app["name"] if app else "System", "state": "running",
+                        "name": name, "state": "running", "reboot": False,
                         "log": [], "started": time.time(), "result": None}
         threading.Thread(target=self._work, args=(action, app), daemon=True).start()
 
-    def _finish(self, ok, result=None):
+    def _finish(self, ok, result=None, reboot=False):
         with self.lock:
             self.job["state"] = "done" if ok else "error"
             self.job["result"] = result
+            self.job["reboot"] = bool(reboot)
+
+    def _selfupdate(self):
+        self._log("VoidStation wird aktualisiert …")
+        ok = self._run(["sudo", "-n", PKG_HELPER, "selfupdate"]) == 0
+        _VCACHE["t"] = 0.0
+        return ok
 
     def _work(self, action, a):
         try:
@@ -910,7 +919,7 @@ class Jobs:
                 ok = self._install(a)
                 if ok:
                     tile_add(a)
-                self._finish(ok)
+                self._finish(ok, a.get("note") if ok else None)
             elif action == "remove":
                 APPS.close(a["id"])
                 ok = self._remove(a)
@@ -924,7 +933,14 @@ class Jobs:
                 for app in catalog()["apps"]:
                     if app["source"]["type"] == "appimage" and app_installed(app):
                         self._appimage(app)
-                self._finish(ok, "Neustart empfohlen, falls der Kernel aktualisiert wurde" if ok else None)
+                reboot = False
+                if vs_update_status(force=True)["available"]:
+                    reboot = self._selfupdate()
+                    ok = ok and reboot
+                self._finish(ok, "Neustart empfohlen, falls der Kernel aktualisiert wurde" if ok else None, reboot)
+            elif action == "selfupdate":
+                ok = self._selfupdate()
+                self._finish(ok, None, ok)
             elif action == "check":
                 self._log("Suche nach Updates …")
                 r = subprocess.run(["sudo", "-n", PKG_HELPER, "check"], capture_output=True, text=True, timeout=300)
@@ -936,7 +952,11 @@ class Jobs:
                     f = run(["flatpak", "remote-ls", "--user", "--updates", "--columns=application"])
                     if f and f.returncode == 0:
                         n += len([l for l in f.stdout.splitlines() if l.strip()])
-                self._finish(r.returncode == 0, {"updates": n})
+                vs = vs_update_status(force=True)
+                if vs["available"]:
+                    self._log(f"VoidStation: neue Version {vs['remote']} (installiert: {vs['local']})")
+                    n += 1
+                self._finish(r.returncode == 0, {"updates": n, "voidstation": vs["available"]})
         except Exception as e:  # noqa: BLE001
             self._log(f"Fehler: {e}")
             self._finish(False)
@@ -950,8 +970,16 @@ class Jobs:
                 self._log("Flatpak fehlt – wird installiert …")
                 if self._run(["sudo", "-n", PKG_HELPER, "install", "flatpak"]) != 0:
                     return False
+            for pkg in s.get("host_pkgs", []):
+                if self._run(["sudo", "-n", PKG_HELPER, "install", pkg]) != 0:
+                    self._log(f"Hinweis: {pkg} konnte nicht installiert werden")
             self._run(["flatpak", "remote-add", "--user", "--if-not-exists", "flathub", FLATHUB])
-            return self._run(["flatpak", "install", "--user", "-y", "--noninteractive", "flathub", s["ref"]]) == 0
+            if self._run(["flatpak", "install", "--user", "-y", "--noninteractive", "flathub", s["ref"]]) != 0:
+                return False
+            for ext in s.get("extras", []):
+                if self._run(["flatpak", "install", "--user", "-y", "--noninteractive", "flathub", ext]) != 0:
+                    self._log(f"Hinweis: Erweiterung {ext} fehlt – spaeter ueber 'Alles aktualisieren' nachholen")
+            return True
         if s["type"] == "appimage":
             return self._appimage(a)
         if s["type"] == "web":
@@ -971,7 +999,13 @@ class Jobs:
         if s["type"] == "xbps":
             return self._run(["sudo", "-n", PKG_HELPER, "remove", s["pkg"]]) == 0
         if s["type"] == "flatpak":
-            return self._run(["flatpak", "uninstall", "--user", "-y", "--noninteractive", s["ref"]]) == 0
+            for ext in s.get("extras", []):
+                self._run(["flatpak", "uninstall", "--user", "-y", "--noninteractive", ext])
+            ok = self._run(["flatpak", "uninstall", "--user", "-y", "--noninteractive", s["ref"]]) == 0
+            self._run(["flatpak", "uninstall", "--user", "-y", "--noninteractive", "--unused"])
+            for pkg in s.get("host_pkgs", []):
+                self._run(["sudo", "-n", PKG_HELPER, "remove", pkg])
+            return ok
         if s["type"] in ("appimage", "web"):
             target = APPDIR / a["id"] if s["type"] == "appimage" else BASE / "profiles" / a["id"]
             shutil.rmtree(target, ignore_errors=True)
@@ -1017,6 +1051,38 @@ class Jobs:
         return True
 
 
+# ---------------------------------------------------------------------------
+#  VoidStation selbst aktualisieren (Quelle: /usr/local/share/voidstation/update-url)
+# ---------------------------------------------------------------------------
+URLFILE = Path("/usr/local/share/voidstation/update-url")
+_VCACHE = {"t": 0.0, "remote": None, "error": None}
+
+
+def vs_version():
+    try:
+        return (BASE / "VERSION").read_text().strip() or None
+    except OSError:
+        return None
+
+
+def vs_update_status(force=False):
+    """Vergleicht die eigene Version mit dist/version.txt im Repo (hoechstens alle 10 min)."""
+    if force or time.time() - _VCACHE["t"] > 600:
+        try:
+            base = URLFILE.read_text().split()[0].rstrip("/")
+            req = urllib.request.Request(base + "/version.txt", headers=UA)
+            with urllib.request.urlopen(req, timeout=8) as r:
+                remote = r.read(80).decode("ascii", "replace").strip()
+            if not re.fullmatch(r"[0-9a-f]{6,64}", remote):
+                raise ValueError("unerwartete Antwort vom Server")
+            _VCACHE.update(t=time.time(), remote=remote, error=None)
+        except Exception as e:  # noqa: BLE001
+            _VCACHE.update(t=time.time(), error=str(e))
+    local, remote = vs_version(), _VCACHE["remote"]
+    return {"local": local, "remote": remote, "error": _VCACHE["error"],
+            "available": bool(remote) and remote != local}
+
+
 def shutil_which(name):
     return shutil.which(name)
 
@@ -1039,7 +1105,7 @@ def apps_payload():
 
 def settings_payload():
     s = settings_load()
-    return {"scale": s["scale"], "scales": SCALES,
+    return {"version": vs_version(), "scale": s["scale"], "scales": SCALES,
             "cursor": {"theme": s.get("cursor_theme"), "size": s.get("cursor_size"),
                        "themes": [{"id": t, "label": CURSOR_NAMES[t]} for t in cursor_themes()],
                        "sizes": CURSOR_SIZES}, "displays": xrandr_info(),
@@ -1098,6 +1164,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, [IPTV.public(f) for f in tvfavs_load()])
         if path == "/api/apps":
             return self._json(200, apps_payload())
+        if path == "/api/selfupdate":
+            force = urllib.parse.parse_qs(url.query).get("force", [""])[0] == "1"
+            return self._json(200, vs_update_status(force))
         if path == "/api/apps/job":
             return self._json(200, JOBS.current() or {})
         if path == "/api/radio/favs":
@@ -1192,7 +1261,7 @@ class Handler(BaseHTTPRequestHandler):
                         if not a:
                             return self._json(404, {"error": "unbekannte App"})
                         JOBS.start(act, a)
-                    elif act in ("update", "check"):
+                    elif act in ("update", "check", "selfupdate"):
                         JOBS.start(act)
                     else:
                         return self._send(404)

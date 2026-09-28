@@ -51,7 +51,7 @@ done
 
 say "1/8  Pakete"
 MISSING=""
-for p in elogind xrdb pulseaudio-utils mpv mgba-qt samba flatpak adwaita-qt adwaita-qt6 gnome-themes-extra xsetroot python3-gobject libwebkit2gtk41; do
+for p in curl elogind xrdb pulseaudio-utils mpv mgba-qt samba flatpak adwaita-qt adwaita-qt6 gnome-themes-extra xsetroot python3-gobject libwebkit2gtk41; do
   xbps-query "$p" >/dev/null 2>&1 || MISSING="$MISSING $p"
 done
 if [ -n "$MISSING" ]; then xbps-install -Sy $MISSING || warn "Paketinstallation fehlgeschlagen"; else echo "alles da"; fi
@@ -63,6 +63,7 @@ sed -n '/^__PAYLOAD_BELOW__$/,$p' "$0" | tail -n +2 | base64 -d | tar -xz -C "$T
 for f in tiles.json radio.json tvfavs.json settings.json; do [ -f "$KEEP/$f" ] && cp "$KEEP/$f" "$TV/$f"; done
 rm -rf "$KEEP"
 chmod +x "$TV/launcher.py" "$TV/home.sh" "$TV/vsctl" "$TV/voidstation-shell.py"
+echo "__VS_VERSION__" > "$TV/VERSION"
 cp "$TV/openbox/"{rc.xml,menu.xml,autostart} "$HOMEDIR/.config/openbox/"
 
 python3 - "$TV/tiles.json" <<'PYEOF'
@@ -101,11 +102,14 @@ install -d -o root -g root -m 755 /usr/local/share/voidstation
 python3 - "$TV/catalog.json" > /usr/local/share/voidstation/allowed-packages <<'PYEOF'
 import json, sys
 c = json.load(open(sys.argv[1], encoding="utf-8"))
-pk = sorted({a["source"]["pkg"] for a in c["apps"] if a["source"]["type"] == "xbps"} | {"flatpak"})
+pk = sorted({a["source"]["pkg"] for a in c["apps"] if a["source"]["type"] == "xbps"}
+            | {p for a in c["apps"] for p in a["source"].get("host_pkgs", [])} | {"flatpak"})
 print("\n".join(pk))
 PYEOF
 chmod 644 /usr/local/share/voidstation/allowed-packages
 echo "$(wc -l < /usr/local/share/voidstation/allowed-packages) Pakete freigegeben"
+printf '%s\n' "__VS_UPDATE_URL__" > /usr/local/share/voidstation/update-url
+chmod 644 /usr/local/share/voidstation/update-url
 
 say "4/8  Rechte ohne Passwort: Ausschalten, WLAN, AppCenter"
 rm -f /etc/sudoers.d/voidstation /etc/sudoers.d/tvstart /etc/sudoers.d/zz-tvstart
@@ -180,6 +184,8 @@ cat > /etc/samba/smb.conf <<EOF
 EOF
 if pdbedit -L 2>/dev/null | grep -q "^${VSUSER}:" && [ -z "${SMBPASS:-}" ]; then
   echo "Freigabe-Benutzer $VSUSER existiert schon (Passwort bleibt)."
+elif [ -n "${VOIDSTATION_NONINTERACTIVE:-}" ] && [ -z "${SMBPASS:-}" ]; then
+  warn "Freigabe-Passwort fehlt – einmal per SSH setzen:  sudo smbpasswd -a $VSUSER"
 else
   PW="${SMBPASS:-}"
   while [ -z "$PW" ]; do

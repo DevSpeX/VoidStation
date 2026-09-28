@@ -1,31 +1,67 @@
 #!/bin/sh
 # voidstation-pkg – kleiner Root-Helfer fuer das AppCenter.
 # Darf per sudo ohne Passwort laufen, installiert/entfernt aber NUR Pakete
-# aus der Freigabeliste und fuehrt System-Updates aus.
+# aus der Freigabeliste, fuehrt System-Updates aus und aktualisiert
+# VoidStation selbst – immer aus der fest hinterlegten Quelle
+# (/usr/local/share/voidstation/update-url, gehoert root), nie aus einer
+# Datei, die der Benutzer vorgibt.
+#
+# Alles steckt in main(): die Shell liest die Funktion komplett ein, bevor
+# sie laeuft. So stoert es nicht, wenn das Selbst-Update diese Datei ersetzt.
+
 ALLOW=/usr/local/share/voidstation/allowed-packages
+URLFILE=/usr/local/share/voidstation/update-url
 export LC_ALL=C
 
-case "$1" in
-  install|remove)
-    pkg="$2"
-    case "$pkg" in *[!A-Za-z0-9._+-]*|"") echo "ungueltiger Paketname"; exit 2 ;; esac
-    grep -qx "$pkg" "$ALLOW" 2>/dev/null || { echo "nicht freigegeben: $pkg"; exit 2; }
-    if [ "$1" = install ]; then
-      exec xbps-install -Sy "$pkg"
-    else
-      exec xbps-remove -Ry "$pkg"
-    fi
-    ;;
-  update)
-    xbps-install -Syu xbps || true        # xbps muss sich ggf. zuerst selbst aktualisieren
-    exec xbps-install -Syu
-    ;;
-  check)
-    xbps-install -S >/dev/null 2>&1
-    exec xbps-install -un
-    ;;
-  *)
-    echo "Benutzung: voidstation-pkg install|remove <paket> | update | check"
-    exit 2
-    ;;
-esac
+selfupdate() {
+  url="$(head -n1 "$URLFILE" 2>/dev/null)"
+  case "$url" in https://*) ;; *) echo "keine gueltige Update-Adresse in $URLFILE"; return 2 ;; esac
+  user="${SUDO_USER:-}"
+  case "$user" in ""|root|*[!a-z0-9_-]*) echo "Selbst-Update nur per sudo von einem normalen Benutzer"; return 2 ;; esac
+  command -v curl >/dev/null 2>&1 || xbps-install -Sy curl >/dev/null 2>&1
+  tmp="$(mktemp -d /tmp/voidstation-update.XXXXXX)" || return 1   # gehoert root, 0700
+  echo "Lade $url/update.sh"
+  if ! curl -fsSL --proto '=https' --tlsv1.2 --retry 2 -o "$tmp/update.sh" "$url/update.sh"; then
+    echo "Download fehlgeschlagen"; rm -rf "$tmp"; return 1
+  fi
+  if [ "$(head -c 11 "$tmp/update.sh")" != '#!/bin/bash' ] || ! grep -q '^__PAYLOAD_BELOW__$' "$tmp/update.sh"; then
+    echo "Unerwarteter Inhalt – Update abgebrochen"; rm -rf "$tmp"; return 1
+  fi
+  VSUSER="$user" SUDO_USER="$user" VOIDSTATION_NONINTERACTIVE=1 bash "$tmp/update.sh" </dev/null
+  rc=$?
+  rm -rf "$tmp"
+  return $rc
+}
+
+main() {
+  case "$1" in
+    install|remove)
+      pkg="$2"
+      case "$pkg" in *[!A-Za-z0-9._+-]*|"") echo "ungueltiger Paketname"; return 2 ;; esac
+      grep -qx "$pkg" "$ALLOW" 2>/dev/null || { echo "nicht freigegeben: $pkg"; return 2; }
+      if [ "$1" = install ]; then
+        xbps-install -Sy "$pkg"
+      else
+        xbps-remove -Ry "$pkg"
+      fi
+      ;;
+    update)
+      xbps-install -Syu xbps || true        # xbps muss sich ggf. zuerst selbst aktualisieren
+      xbps-install -Syu
+      ;;
+    check)
+      xbps-install -S >/dev/null 2>&1
+      xbps-install -un
+      ;;
+    selfupdate)
+      selfupdate
+      ;;
+    *)
+      echo "Benutzung: voidstation-pkg install|remove <paket> | update | check | selfupdate"
+      return 2
+      ;;
+  esac
+}
+
+main "$@"
+exit $?

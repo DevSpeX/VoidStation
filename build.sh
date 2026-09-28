@@ -4,6 +4,8 @@
 #   update.sh           – VoidStation aktualisieren (behaelt eigene Kacheln/Favoriten)
 #   voidstation-install.sh  – komplette Neuinstallation von der offiziellen Void-ISO aus
 #   build-iso.sh        – eigene Live-ISO mit Installer bauen (auf einem Void-System)
+#   version.txt         – Versionskennung fuer den Update-Knopf auf den Geraeten
+# Update-Quelle der Geraete: Datei update-url (fuer Forks anpassen)
 set -euo pipefail
 cd "$(dirname "$0")"
 rm -rf dist && mkdir dist
@@ -12,8 +14,14 @@ tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 (cd launcher && tar --owner=0 --group=0 --sort=name --mtime='2026-01-01' \
    --exclude='*.pyc' --exclude=__pycache__ -czf "$tmp/payload.tgz" \
    launcher.py voidstation-shell.py tiles.json catalog.json voidstation-pkg home.sh vsctl web openbox firefox)
-{ cat install-head.sh; base64 -w 76 "$tmp/payload.tgz"; } > dist/install.sh
-{ cat update-head.sh;  base64 -w 76 "$tmp/payload.tgz"; } > dist/update.sh
+# Version = Pruefsumme ueber Programmdateien und Installationsskripte (reproduzierbar)
+VERSION="$(cat "$tmp/payload.tgz" install-head.sh update-head.sh | sha256sum | cut -c1-12)"
+URL="$(head -n1 update-url)"
+case "$URL" in https://*) ;; *) echo "update-url muss mit https:// beginnen" >&2; exit 1 ;; esac
+subst() { sed -e "s|__VS_VERSION__|$VERSION|g" -e "s|__VS_UPDATE_URL__|$URL|g" "$1"; }
+{ subst install-head.sh; base64 -w 76 "$tmp/payload.tgz"; } > dist/install.sh
+{ subst update-head.sh;  base64 -w 76 "$tmp/payload.tgz"; } > dist/update.sh
+echo "$VERSION" > dist/version.txt
 
 # Einzeldatei fuer die offizielle Void-ISO
 { cat iso/voidstation-install; echo '__INSTALLER_BELOW__'; base64 -w 76 dist/install.sh; } > dist/voidstation-install.sh
@@ -26,4 +34,5 @@ cp iso/voidstation-install iso/99-voidstation-live.sh iso/voidstation-live-profi
 
 chmod +x dist/*.sh
 for f in dist/*.sh; do bash -n "$f"; done
+echo "Version: $VERSION"
 ls -l dist
