@@ -1316,7 +1316,7 @@ class Jobs:
 # ---------------------------------------------------------------------------
 URLFILE = Path("/usr/local/share/voidstation/update-url")
 CHANNELFILE = Path("/usr/local/share/voidstation/channel")
-CHANNELS = {"stable": "Stabil", "main": "Test"}
+CHANNELS = {"stable": "Stable", "main": "Testing"}
 _VCACHE = {"t": 0.0, "remote": None, "error": None, "key": None}
 
 

@@ -4,7 +4,7 @@
 #  (dort liegt der private Signaturschluessel).
 #
 #    vspub --init-key   einmalig: Signaturschluessel anlegen
-#    vspub              Bundle einspielen, bauen, signieren, nach "main" (Test-Kanal) pushen
+#    vspub              Bundle einspielen, bauen, signieren, nach "main" (Kanal Testing) pushen
 #    vspub --release    aktuellen Test-Stand fuer alle freigeben ("stable")
 #
 #  vspub ist ein Alias – einmalig in ~/.bashrc eintragen:
@@ -87,7 +87,7 @@ EOF
   verify_dist || die "dist/ ist nicht korrekt signiert – erst  vspub"
   ver="$(python3 -c 'import json;print(json.load(open("dist/version.json"))["version"])')"
   if git rev-parse -q --verify origin/stable >/dev/null; then
-    echo "Stabil bisher: $(git log -1 --format='%h %s' origin/stable)"
+    echo "Stable bisher: $(git log -1 --format='%h %s' origin/stable)"
   fi
   echo "Neu stabil:    $(git log -1 --format='%h %s' HEAD)  (Version $ver)"
   read -r -p "Freigeben? [j/N] " a
@@ -163,7 +163,7 @@ else
   git commit -q -m "[build] $ver signiert"
 fi
 
-say "Veroeffentlichen (Test-Kanal)"
+say "Veroeffentlichen (Kanal Testing)"
 git push -q origin HEAD:main
 if ! git ls-remote --exit-code --heads origin stable >/dev/null 2>&1; then
   if has_mirror && git fetch -q "$MIRROR" stable 2>/dev/null; then
@@ -180,7 +180,7 @@ mirror_push HEAD:main
 ver="$(python3 -c 'import json;print(json.load(open("dist/version.json"))["version"])')"
 cat <<EOF
 
-Veroeffentlicht: Version $ver im Test-Kanal (main).
-Testen:    Geraet auf Kanal "Test" -> Einstellungen -> VoidStation aktualisieren
+Veroeffentlicht: Version $ver im Kanal Testing (main).
+Testen:    Geraet auf Kanal "Testing" -> Einstellungen -> VoidStation aktualisieren
 Freigabe:  vspub --release
 EOF

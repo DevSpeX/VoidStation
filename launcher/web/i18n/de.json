@@ -63,9 +63,9 @@
   "upd.doneTitle": "Aktualisiert",
   "upd.doneText": "VoidStation wurde aktualisiert. Zum Übernehmen jetzt neu starten?",
   "upd.rebootNow": "Jetzt neu starten",
-  "channel.stable": "Stabil",
-  "channel.main": "Test",
-  "channel.testWarn": "Test-Kanal: neue Versionen vor allen anderen – können Fehler enthalten",
+  "channel.stable": "Stable",
+  "channel.main": "Testing",
+  "channel.testWarn": "Kanal „Testing“: neue Versionen vor allen anderen – können Fehler enthalten",
 
   "radio.title": "Radio",
   "radio.fav": "Favorit",

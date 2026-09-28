@@ -52,7 +52,7 @@ Die Geräte prüfen kurz nach dem Start und dann alle 6 Stunden selbst und zeige
 wenn eine neue Version bereitsteht. Der Update-Dialog zeigt, was neu ist. Eigene Kacheln, Favoriten und
 Einstellungen bleiben erhalten.
 
-**Kanäle:** *Stabil* (Zweig `stable`, Standard) oder *Test* (Zweig `main`, neue Versionen zuerst) –
+**Kanäle:** *Stable* (Zweig `stable`, Standard) oder *Testing* (Zweig `main`, neue Versionen zuerst) –
 umschaltbar unter Einstellungen → System → Update-Kanal.
 
 **Signaturen:** Updates laufen als root, deshalb installieren Geräte nur Updates, die mit dem Schlüssel des
@@ -69,7 +69,7 @@ git config --global credential.helper store      # einmalig: GitHub-Zugang (Toke
 echo "alias vspub='bash ~/VoidStation/tools/publish.sh'" >> ~/.bashrc   # einmalig, dann neu anmelden
 vspub --init-key                                 # einmalig: Signaturschlüssel anlegen (Sicherungskopie!)
 vspub                                            # Bundle aus ~/share/Updates übernehmen, bauen, signieren,
-                                                 # nach main (Test-Kanal) pushen
+                                                 # nach main (Kanal Testing) pushen
 vspub --release                                  # Test-Stand für alle freigeben (stable)
 ```
 
