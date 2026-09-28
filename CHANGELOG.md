@@ -3,6 +3,10 @@
 Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Geräte im Update-Dialog anzeigen.
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 
+## 0.5.1 – 2026-09-28
+- Umzug nach GitHub (github.com/Panther92/VoidStation) – Geräte beziehen Updates ab jetzt von dort
+- Kurzbefehl zur Neuinstallation: xbps-fetch https://panther92.github.io/VoidStation/vs
+
 ## 0.5.0 – 2026-09-28
 - Grafik-Server: XLibre statt X.Org (Paketquelle xlibre-void, Schlüssel fest hinterlegt)
 - Sicherheitsnetz: startet die Oberfläche zweimal nicht, schaltet VoidStation automatisch auf X.Org zurück
