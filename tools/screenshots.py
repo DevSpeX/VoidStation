@@ -2,9 +2,11 @@
 """
 README-Screenshots neu erzeugen: echte Oberflaeche, Beispieldaten (kein Void noetig).
 Benoetigt: pip install playwright pillow && playwright install chromium
-Aufruf:    python3 tools/screenshots.py      -> docs/screenshots/*.webp
+Aufruf:    python3 tools/screenshots.py              -> docs/screenshots/*.webp
+           VS_LANG=en python3 tools/screenshots.py   -> docs/screenshots/en/*.webp (englische Oberflaeche)
 """
 import json
+import os
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -14,6 +16,7 @@ WEB = REPO / "launcher" / "web"
 TILES = json.loads((REPO / "launcher" / "tiles.json").read_text(encoding="utf-8"))
 TILES["user"] = "Paul"
 CAT = json.loads((REPO / "launcher" / "catalog.json").read_text(encoding="utf-8"))
+LANG = os.environ.get("VS_LANG", "de")
 INSTALLED = {"retroarch", "duckstation", "kodi", "youtube-tv"}
 
 RADIO_NOW = {"station": {"name": "Deutschlandfunk", "url": "https://example.invalid/dlf"}, "title": "Nachrichten"}
@@ -40,7 +43,8 @@ COUNTRIES = [{"code": c, "n": n} for c, n in [("DE", 212), ("AT", 48), ("CH", 61
                                               ("GB", 150), ("US", 1400), ("ES", 260), ("NL", 90), ("PL", 120)]]
 
 SETTINGS = {
-    "scale": float(__import__("os").environ.get("SCALE", "1.25")), "scales": [1, 1.25, 1.5, 1.75, 2, 2.25],
+    "lang": LANG, "langs": [{"id": "de", "label": "Deutsch"}, {"id": "en", "label": "English"}],
+    "scale": float(os.environ.get("SCALE", "1.25")), "scales": [1, 1.25, 1.5, 1.75, 2, 2.25],
     "cursor": {"theme": "Bibata-Modern-Ice", "size": 48,
                "themes": [{"id": "Bibata-Modern-Ice", "label": "Hell"}, {"id": "Bibata-Modern-Classic", "label": "Dunkel"}],
                "sizes": [32, 48, 64, 80, 96]},
@@ -129,7 +133,7 @@ def shoot(out):
 
     with sync_playwright() as p:
         b = p.chromium.launch()
-        pg = b.new_page(viewport={"width": 1920, "height": 1080}, locale="de-DE")
+        pg = b.new_page(viewport={"width": 1920, "height": 1080}, locale={"de": "de-DE", "en": "en-US"}.get(LANG, "de-DE"))
         pg.add_init_script(FAKE_DATE)
         pg.goto("http://127.0.0.1:8765/"); time.sleep(3)
         pg.evaluate("setFocus(document.querySelector('[data-id=youtube]'), true)"); time.sleep(0.5)
@@ -142,4 +146,4 @@ def shoot(out):
 
 
 if __name__ == "__main__":
-    shoot(REPO / "docs" / "screenshots")
+    shoot(REPO / "docs" / "screenshots" / ("" if LANG == "de" else LANG))

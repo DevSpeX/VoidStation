@@ -10,6 +10,8 @@
 #
 #  Eingaben:
 #    CHANGELOG.md                 – erste Ueberschrift = Versionsnummer
+#    CHANGELOG.en.md              – englische Fassung, neueste Version muss drinstehen
+#    launcher/web/i18n/*.json     – Texte der Oberflaeche (en.json muss alle Schluessel aus de.json haben)
 #    update-url                   – Update-Quelle der Geraete ({channel} = stable/main)
 #    keys/voidstation-release.pub – oeffentlicher Signaturschluessel (optional)
 #
@@ -36,24 +38,50 @@ if [ -s keys/voidstation-release.pub ]; then
   SIGNERS="voidstation-release namespaces=\"voidstation\" $ktype $kdata"
 fi
 
+# Sprachdateien: jeder Text aus de.json muss in en.json stehen, mit denselben {Platzhaltern}
+python3 - launcher/web/i18n/de.json launcher/web/i18n/en.json <<'PYEOF'
+import json, re, sys
+de, en = (json.load(open(p, encoding="utf-8")) for p in sys.argv[1:3])
+ph = lambda s: sorted(re.findall(r"\{(\w+)\}", s)) if isinstance(s, str) else []
+missing = [k for k in de if k != "labels" and k not in en]
+wrong = [k for k in de if k in en and ph(de[k]) != ph(en[k])]
+for k in missing: print(f"  fehlt in en.json: {k}", file=sys.stderr)
+for k in wrong:   print(f"  andere Platzhalter in en.json: {k}", file=sys.stderr)
+if missing or wrong:
+    sys.exit("i18n: en.json ist unvollstaendig – jeder neue Text gehoert in de.json UND en.json")
+PYEOF
+
 # Build-Kennung = Pruefsumme ueber alles, was auf dem Geraet landet (reproduzierbar)
-BUILD="$( { cat "$tmp/payload.tgz" install-head.sh update-head.sh CHANGELOG.md update-url; printf '%s' "$SIGNERS"; } \
+BUILD="$( { cat "$tmp/payload.tgz" install-head.sh update-head.sh CHANGELOG.md CHANGELOG.en.md update-url; printf '%s' "$SIGNERS"; } \
           | sha256sum | cut -c1-12)"
 
-# Versionsnummer und Aenderungen aus CHANGELOG.md
+# Versionsnummer und Aenderungen aus CHANGELOG.md (deutsch) und CHANGELOG.en.md (englisch)
 python3 - "$BUILD" > "$tmp/version.json" <<'PYEOF'
 import json, re, sys
-entries, cur = [], None
-for line in open("CHANGELOG.md", encoding="utf-8"):
-    m = re.match(r"^##\s+(\S+)\s+[–-]\s+(\d{4}-\d{2}-\d{2})", line)
-    if m:
-        cur = {"version": m.group(1), "date": m.group(2), "changes": []}
-        entries.append(cur)
-    elif cur and line.startswith("- "):
-        cur["changes"].append(line[2:].strip())
+def parse(fn):
+    entries, cur = [], None
+    for line in open(fn, encoding="utf-8"):
+        m = re.match(r"^##\s+(\S+)\s+[–-]\s+(\d{4}-\d{2}-\d{2})", line)
+        if m:
+            cur = {"version": m.group(1), "date": m.group(2), "changes": []}
+            entries.append(cur)
+        elif cur and line.startswith("- "):
+            cur["changes"].append(line[2:].strip())
+    return entries
+entries = parse("CHANGELOG.md")
 if not entries:
     sys.exit("CHANGELOG.md: keine Version gefunden (Format: '## 0.4.0 – 2026-09-28')")
-print(json.dumps({"version": entries[0]["version"], "build": sys.argv[1], "date": entries[0]["date"],
+try:
+    en = {e["version"]: e for e in parse("CHANGELOG.en.md")}
+except FileNotFoundError:
+    sys.exit("CHANGELOG.en.md fehlt (englische Fassung von CHANGELOG.md)")
+top = entries[0]["version"]
+if not en.get(top, {}).get("changes"):
+    sys.exit(f"CHANGELOG.en.md: Version {top} fehlt – jede neue Version braucht auch einen englischen Eintrag")
+for e in entries:
+    if en.get(e["version"], {}).get("changes"):
+        e["changes_en"] = en[e["version"]]["changes"]
+print(json.dumps({"version": top, "build": sys.argv[1], "date": entries[0]["date"],
                   "history": entries[:10]}, ensure_ascii=False))
 PYEOF
 VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$tmp/version.json")"

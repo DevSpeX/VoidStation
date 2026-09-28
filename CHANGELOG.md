@@ -2,6 +2,13 @@
 
 Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Geräte im Update-Dialog anzeigen.
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
+Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
+
+## 0.6.0 – 2026-09-28
+- Sprache: Deutsch oder Englisch, umschaltbar unter Einstellungen → Sprache · Language
+- „Was ist neu“ erscheint in der gewählten Sprache
+- Uhrzeit, Datum und Zahlen im Format der gewählten Sprache
+- Standard-Kacheln werden mitübersetzt, eigene Kachelnamen bleiben unverändert
 
 ## 0.5.1 – 2026-09-28
 - Umzug nach GitHub (github.com/Panther92/VoidStation) – Geräte beziehen Updates ab jetzt von dort

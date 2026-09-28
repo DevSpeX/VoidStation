@@ -4,8 +4,9 @@ Void Linux als TV-Station: Kacheloberfläche im Stil von Windows 8, dunkel, bedi
 Läuft auf Openbox mit einer schlanken WebKitGTK-Startseite (etwa 250 MB RAM).
 
 **Funktionen:** YouTube (Firefox im Kiosk-Modus), Radio mit Suche und Favoriten, TV-Sender aus aller Welt (iptv-org),
-Emulatoren, AppCenter für optionale Apps (xbps, Flatpak, AppImage, Web), Einstellungen (Skalierung, Auflösung,
+Emulatoren, AppCenter für optionale Apps (xbps, Flatpak, AppImage, Web), Einstellungen (Sprache, Skalierung, Auflösung,
 Tonausgang, WLAN, Mauszeiger), Samba-Freigabe `\\<rechner>\share`, mehrere Apps parallel mit Umschalten.
+Oberfläche auf **Deutsch oder Englisch** (Einstellungen → Sprache · Language).
 Grafik-Server ist [XLibre](https://github.com/X11Libre/xserver) (Pakete von [xlibre-void](https://github.com/xlibre-void/xlibre));
 startet die Oberfläche damit zweimal nicht, schaltet VoidStation automatisch auf X.Org zurück.
 Manuell: Einstellungen → System → Grafik-Server, oder `sudo /usr/local/sbin/voidstation-pkg xserver xlibre|xorg|status`.
@@ -72,7 +73,8 @@ vspub                                            # Bundle aus ~/share/Updates ü
 vspub --release                                  # Test-Stand für alle freigeben (stable)
 ```
 
-Neue Versionen bekommen einen Eintrag oben in `CHANGELOG.md` (`## 0.4.1 – JJJJ-MM-TT` plus Stichpunkte).
+Neue Versionen bekommen einen Eintrag oben in `CHANGELOG.md` (`## 0.4.1 – JJJJ-MM-TT` plus Stichpunkte)
+und denselben Eintrag auf Englisch in `CHANGELOG.en.md` – fehlt er, bricht `build.sh` ab.
 `dist/` wird nur von `publish.sh` erzeugt und nicht von Hand geändert.
 Forks tragen ihre eigene Adresse in `update-url` ein und legen einen eigenen Schlüssel an.
 Ist ein Remote `codeberg` eingerichtet, pflegt `publish.sh` ihn als Spiegel mit (früherer Standort des Projekts).
@@ -82,12 +84,26 @@ Ist ein Remote `codeberg` eingerichtet, pflegt `publish.sh` ihn als Spiegel mit 
 Auf einem Void-System: `sudo bash dist/build-iso.sh`. Die ISO landet unter `~/share/ISO/`.
 Sie enthält `voidstation-install`, `nmtui` für WLAN, SSH mit root/voidlinux und die eigenen Radio- und TV-Favoriten.
 
+## Sprachen
+
+Alle Texte der Oberfläche stehen in `launcher/web/i18n/de.json` und `en.json` (Schlüssel → Text, `{name}` = Platzhalter).
+Im Code: `T('schlüssel', { name })` für Texte, `L(text)` für Kachel-, Gruppen- und App-Namen.
+Neue Texte gehören immer in **beide** Dateien – `build.sh` bricht ab, wenn in `en.json` ein Schlüssel oder Platzhalter fehlt.
+
+- Sprache wählen: Einstellungen → Sprache · Language. Ohne Wahl gilt `LANG` der Sitzung (`en_US…` → Englisch, sonst Deutsch).
+- Kacheln: Deutsche Standardnamen (z. B. „Fernsehen“) übersetzt `labels` in `en.json`; eigene Namen bleiben, wie sie sind.
+  Eigene Kacheln können auch zweisprachig sein: `"label": {"de": "Fernsehen", "en": "TV"}`.
+- AppCenter: Beschreibungen über `app.<id>.desc` in `en.json`, sonst gilt der Text aus `catalog.json`.
+- Englisch heißt `en_US`: 12-Stunden-Uhr (8:15 PM), Datum und Zahlen im US-Format.
+- Screenshots der englischen Oberfläche: `VS_LANG=en python3 tools/screenshots.py`.
+
 ## Aufbau
 
 | Pfad | Inhalt |
 |---|---|
 | `launcher/launcher.py` | Backend: HTTP-API auf 127.0.0.1:8765, Apps starten/umschalten, Radio, TV, AppCenter, Einstellungen |
 | `launcher/web/index.html` | Oberfläche (Kacheln, Radio, TV, AppCenter, Einstellungen) |
+| `launcher/web/i18n/` | Texte der Oberfläche: `de.json`, `en.json` |
 | `launcher/voidstation-shell.py` | Vollbild-Fenster (WebKitGTK) für die Startseite; Firefox als Rückfall |
 | `launcher/tiles.json` | Standard-Kacheln |
 | `launcher/catalog.json` | App-Katalog für das AppCenter |
@@ -98,7 +114,7 @@ Sie enthält `voidstation-install`, `nmtui` für WLAN, SSH mit root/voidlinux un
 | `iso/` | Neuinstallation (`voidstation-install`) und ISO-Bau |
 | `tools/` | `publish.sh` (Bundle einspielen und pushen), `screenshots.py` (README-Bilder) |
 | `update-url` | Update-Quelle der Geräte (`{channel}` = stable/main) |
-| `CHANGELOG.md` | Versionsnummer und Änderungen (erscheinen im Update-Dialog) |
+| `CHANGELOG.md`, `CHANGELOG.en.md` | Versionsnummer und Änderungen, deutsch und englisch (erscheinen im Update-Dialog) |
 | `keys/` | öffentlicher Signaturschlüssel |
 | `dist/` | **fertige Skripte**, erzeugt mit `./build.sh` |
 

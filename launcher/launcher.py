@@ -380,7 +380,9 @@ def volume_set(action):
 #  Einstellungen (Skalierung, Aufloesung, Audioausgang, Netzwerk)
 # ---------------------------------------------------------------------------
 SETTINGS = BASE / "settings.json"
-DEFAULTS = {"scale": 1.75, "resolution": None, "cursor_theme": "Bibata-Modern-Ice", "cursor_size": 48}
+DEFAULTS = {"scale": 1.75, "resolution": None, "cursor_theme": "Bibata-Modern-Ice", "cursor_size": 48, "lang": None}
+# Sprachen der Oberflaeche (Texte in web/i18n/<id>.json); Anzeige immer in der eigenen Sprache
+LANGS = [{"id": "de", "label": "Deutsch"}, {"id": "en", "label": "English"}]
 CURSOR_SIZES = [32, 48, 64, 80, 96]
 CURSOR_NAMES = {"Bibata-Modern-Ice": "Hell", "Bibata-Modern-Classic": "Dunkel", "Adwaita": "Adwaita"}
 SCALES = [1.0, 1.25, 1.5, 1.75, 2.0, 2.25]
@@ -393,6 +395,15 @@ def settings_load():
     except (OSError, ValueError):
         pass
     return s
+
+
+def ui_lang(s=None):
+    """Sprache der Oberflaeche: Einstellung, sonst aus LANG der Sitzung (en_US.UTF-8 -> en), sonst Deutsch."""
+    lang = (s or settings_load()).get("lang")
+    if lang in {l["id"] for l in LANGS}:
+        return lang
+    env = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or ""
+    return "en" if env.startswith("en") else "de"
 
 
 def settings_save(s):
@@ -1375,7 +1386,8 @@ def xserver_info():
 
 def settings_payload():
     s = settings_load()
-    return {"version": vs_version(), "xserver": xserver_info(), "scale": s["scale"], "scales": SCALES,
+    return {"version": vs_version(), "xserver": xserver_info(), "lang": ui_lang(s), "langs": LANGS,
+            "scale": s["scale"], "scales": SCALES,
             "cursor": {"theme": s.get("cursor_theme"), "size": s.get("cursor_size"),
                        "themes": [{"id": t, "label": CURSOR_NAMES[t]} for t in cursor_themes()],
                        "sizes": CURSOR_SIZES}, "displays": xrandr_info(),
@@ -1564,6 +1576,13 @@ class Handler(BaseHTTPRequestHandler):
                 except RuntimeError as e:
                     return self._json(409, {"error": str(e)})
                 return self._json(200, JOBS.current())
+            if parts == ["api", "settings", "lang"]:
+                lang = str(self._body().get("lang", ""))
+                if lang not in {l["id"] for l in LANGS}:
+                    return self._json(400, {"error": "unbekannte Sprache"})
+                s = settings_load(); s["lang"] = lang; settings_save(s)
+                log("Sprache:", lang)
+                return self._json(200, {"lang": lang})
             if parts == ["api", "settings", "scale"]:
                 val = float(self._body().get("scale", 1.75))
                 if val not in SCALES:

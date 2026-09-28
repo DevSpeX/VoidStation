@@ -91,6 +91,7 @@
   .tile.running.focus .x { display: grid; }
   .tile.clock { cursor: default; }
   .tile.clock .big { position: absolute; left: 7%; top: 12%; font-size: calc(var(--u) * .42); font-weight: 300; line-height: 1; }
+  .tile.clock .big .ap { font-size: .36em; margin-left: .18em; letter-spacing: .02em; }
   .tile.clock .date { position: absolute; left: 7.5%; bottom: 9%; font-size: calc(var(--u) * .1); color: var(--text-dim); }
   .tile.radio .now { position: absolute; left: 7%; right: 7%; top: 14%; display: none; }
   .tile.radio.playing .now { display: block; }
@@ -216,18 +217,18 @@
   <div class="who">
     <button class="updbadge nav" id="updBadge" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span id="updBadgeTxt">Update</span></button>
     <div class="meta"><div class="name" id="user"></div><div class="time" id="hdrTime"></div></div>
-    <button class="round nav" id="power" aria-label="Ausschalten"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg></button>
+    <button class="round nav" id="power" aria-label="Ausschalten" data-i18n-aria="home.power"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg></button>
   </div>
 </header>
 <div class="stage" id="home"><div class="track" id="track"></div></div>
 
 <!-- Radio -->
 <section class="layer" id="radio">
-  <header><div class="htitle"><button class="round rnav" data-act="back" aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Radio</h1></div><div class="nowline" id="rNow"></div></header>
+  <header><div class="htitle"><button class="round rnav" data-act="back" aria-label="Zurück" data-i18n-aria="common.back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1 data-i18n="radio.title">Radio</h1></div><div class="nowline" id="rNow"></div></header>
   <div class="bar">
-    <button class="pill rnav" id="rStop" data-act="stop"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>Stopp</button>
-    <button class="pill rnav" id="rFav" data-act="fav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg><span>Favorit</span></button>
-    <input class="field rnav" id="rSearch" type="text" placeholder="Sender suchen …" autocomplete="off" spellcheck="false">
+    <button class="pill rnav" id="rStop" data-act="stop"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg><span data-i18n="common.stop">Stopp</span></button>
+    <button class="pill rnav" id="rFav" data-act="fav"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg><span data-i18n="radio.fav">Favorit</span></button>
+    <input class="field rnav" id="rSearch" type="text" placeholder="Sender suchen …" data-i18n-ph="common.searchStations" autocomplete="off" spellcheck="false">
     <div class="vol"><button class="pill rnav" data-act="voldown">−</button><div class="meter"><b class="volbar"></b></div><button class="pill rnav" data-act="volup">+</button><span class="voltxt"></span></div>
   </div>
   <div class="stage"><div class="track" id="rTrack"></div></div>
@@ -235,10 +236,10 @@
 
 <!-- Fernsehen -->
 <section class="layer" id="tv">
-  <header><div class="htitle"><button class="round tnav" data-act="back" aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Fernsehen</h1></div><div class="nowline" id="tNow"></div></header>
+  <header><div class="htitle"><button class="round tnav" data-act="back" aria-label="Zurück" data-i18n-aria="common.back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1 data-i18n="tv.title">Fernsehen</h1></div><div class="nowline" id="tNow"></div></header>
   <div class="bar">
-    <input class="field tnav" id="tSearch" type="text" placeholder="Sender suchen …" autocomplete="off" spellcheck="false">
-    <button class="pill tnav" id="tStop" data-act="tvstop"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>Stopp</button>
+    <input class="field tnav" id="tSearch" type="text" placeholder="Sender suchen …" data-i18n-ph="tv.search" autocomplete="off" spellcheck="false">
+    <button class="pill tnav" id="tStop" data-act="tvstop"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg><span data-i18n="common.stop">Stopp</span></button>
     <div class="vol"><button class="pill tnav" data-act="voldown">−</button><div class="meter"><b class="volbar"></b></div><button class="pill tnav" data-act="volup">+</button><span class="voltxt"></span></div>
   </div>
   <div class="stage"><div class="track" id="tTrack"></div></div>
@@ -246,10 +247,10 @@
 
 <!-- AppCenter -->
 <section class="layer" id="apps">
-  <header><div class="htitle"><button class="round anav" data-act="back" aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1>AppCenter</h1></div><div class="nowline" id="aNow"></div></header>
+  <header><div class="htitle"><button class="round anav" data-act="back" aria-label="Zurück" data-i18n-aria="common.back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1 data-i18n="apps.title">AppCenter</h1></div><div class="nowline" id="aNow"></div></header>
   <div class="bar">
-    <button class="pill anav" data-act="checkupd">Nach Updates suchen</button>
-    <button class="pill anav" data-act="doupd" id="aUpd">Alles aktualisieren</button>
+    <button class="pill anav" data-act="checkupd" data-i18n="apps.checkUpd">Nach Updates suchen</button>
+    <button class="pill anav" data-act="doupd" id="aUpd" data-i18n="apps.updateAll">Alles aktualisieren</button>
   </div>
   <div class="stage"><div class="track" id="aTrack"></div></div>
 </section>
@@ -262,21 +263,21 @@
 
 <!-- Einstellungen -->
 <section class="layer" id="settings">
-  <header><div class="htitle"><button class="round snav" data-act="back" aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Einstellungen</h1></div><div class="nowline" id="sNet"></div></header>
+  <header><div class="htitle"><button class="round snav" data-act="back" aria-label="Zurück" data-i18n-aria="common.back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1 data-i18n="settings.title">Einstellungen</h1></div><div class="nowline" id="sNet"></div></header>
   <div class="stage"><div class="track" id="sTrack"></div></div>
 </section>
 
 <div class="hint" id="hint"></div>
-<div class="splash" id="splash"><div class="inner"><div id="splashIcon"></div><div class="name" id="splashName"></div><div class="ring"></div><div class="shint" id="splashHint"></div></div><div class="skey" id="splashKey"><b>Esc / B</b> im Hintergrund weiter starten</div></div>
+<div class="splash" id="splash"><div class="inner"><div id="splashIcon"></div><div class="name" id="splashName"></div><div class="ring"></div><div class="shint" id="splashHint"></div></div><div class="skey" id="splashKey" data-i18n-html="splash.key"><b>Esc / B</b> im Hintergrund weiter starten</div></div>
 
 <div class="dialog" id="dialog" role="dialog" aria-modal="true">
   <div class="band">
-    <h3>Ausschalten</h3>
-    <p>Offene Programme werden vorher geschlossen.</p>
+    <h3 data-i18n="power.title">Ausschalten</h3>
+    <p data-i18n="power.text">Offene Programme werden vorher geschlossen.</p>
     <div class="btns">
-      <button class="btn danger dnav" data-power="poweroff">Herunterfahren</button>
-      <button class="btn dnav" data-power="reboot">Neu starten</button>
-      <button class="btn dnav" data-close>Abbrechen</button>
+      <button class="btn danger dnav" data-power="poweroff" data-i18n="power.off">Herunterfahren</button>
+      <button class="btn dnav" data-power="reboot" data-i18n="power.reboot">Neu starten</button>
+      <button class="btn dnav" data-close data-i18n="common.cancel">Abbrechen</button>
     </div>
   </div>
 </div>
@@ -314,6 +315,45 @@ const offline = location.protocol === 'file:';
 let cfg = null, focusEl = null, running = [], radioState = { station: null, title: null };
 let favs = [], results = null, lastQuery = '', sett = null, scale = 1.75, wifiList = null, wifiPick = null;
 const lastFocus = {};
+
+/* ============================================================ Sprache (i18n)
+   Texte stehen in web/i18n/<sprache>.json – neue Texte immer in de.json UND en.json (build.sh prueft das).
+   T('schluessel', { name: … })  Text der Oberflaeche, {name} wird ersetzt (Werte vorher selbst escapen, wenn HTML)
+   L(text)                       Kachel-, Gruppen- und App-Namen: {"de": …, "en": …} oder deutscher Standardname,
+                                 der ueber "labels" in en.json uebersetzt wird; eigene Namen bleiben, wie sie sind.
+   Statisches HTML: data-i18n (Text), data-i18n-html, data-i18n-ph (Platzhalter), data-i18n-aria */
+let LANG = 'de';
+const STR = { de: {}, en: {} };
+const LOCALE = { de: 'de-DE', en: 'en-US' };
+function T(key, vars, fallback) {
+  let s = STR[LANG][key] ?? STR.de[key] ?? fallback ?? key;
+  if (vars) s = String(s).replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? m));
+  return s;
+}
+function L(v) {
+  if (v && typeof v === 'object') return v[LANG] ?? v.de ?? Object.values(v)[0] ?? '';
+  if (!v || LANG === 'de') return v || '';
+  return (STR[LANG].labels || {})[v] ?? v;
+}
+const loc = () => LOCALE[LANG] || 'de-DE';
+const num = n => Number(n).toLocaleString(loc());
+const pct = n => LANG === 'de' ? `${n} %` : `${n}%`;
+async function loadLang(lang) {
+  LANG = STR[lang] ? lang : 'de';
+  document.documentElement.lang = LANG;
+  for (const l of new Set(['de', LANG])) {
+    if (Object.keys(STR[l]).length) continue;
+    try { STR[l] = await getJSON(`i18n/${l}.json`); } catch { STR[l] = {}; }   // offline (file://): Texte bleiben deutsch
+  }
+  applyStatic();
+}
+function applyStatic(root = document) {
+  const has = k => k in STR[LANG] || k in STR.de;
+  root.querySelectorAll('[data-i18n]').forEach(e => { if (has(e.dataset.i18n)) e.textContent = T(e.dataset.i18n); });
+  root.querySelectorAll('[data-i18n-html]').forEach(e => { if (has(e.dataset.i18nHtml)) e.innerHTML = T(e.dataset.i18nHtml); });
+  root.querySelectorAll('[data-i18n-ph]').forEach(e => { if (has(e.dataset.i18nPh)) e.placeholder = T(e.dataset.i18nPh); });
+  root.querySelectorAll('[data-i18n-aria]').forEach(e => { if (has(e.dataset.i18nAria)) e.setAttribute('aria-label', T(e.dataset.i18nAria)); });
+}
 
 /* ============================================================ API */
 async function api(path, body) {
@@ -398,13 +438,13 @@ const SCOPE = { home: '.nav', radio: '.rnav', settings: '.snav', dialog: '.dnav'
 function navItems() { return $$(SCOPE[layer()]).filter(e => !e.disabled && e.offsetParent !== null); }
 function updateHint() {
   const h = {
-    home:     ['<b>Enter / A</b> öffnen', '<b>Entf / Y</b> schließen', '<b>Win / Guide</b> zur Startseite'],
-    radio:    ['<b>A</b> abspielen', '<b>F / X</b> Favorit', '<b>LB / RB</b> leiser/lauter', '<b>Esc / B</b> zurück'],
-    settings: ['<b>Enter / A</b> auswählen', '<b>Esc / B</b> zurück'],
-    tv:       ['<b>A</b> einschalten', '<b>F / X</b> Favorit', '<b>Win / Guide</b> Startseite', '<b>Esc / B</b> zurück'],
-    apps:     ['<b>A</b> installieren / öffnen', '<b>Esc / B</b> zurück'],
-    adlg:     ['<b>Esc / B</b> abbrechen'],
-    dialog:   ['<b>Esc / B</b> abbrechen']
+    home:     [T('hint.open'), T('hint.close'), T('hint.home')],
+    radio:    [T('hint.play'), T('hint.fav'), T('hint.volume'), T('hint.back')],
+    settings: [T('hint.select'), T('hint.back')],
+    tv:       [T('hint.tvOn'), T('hint.fav'), T('hint.homeShort'), T('hint.back')],
+    apps:     [T('hint.appInstall'), T('hint.back')],
+    adlg:     [T('hint.cancel')],
+    dialog:   [T('hint.cancel')]
   }[layer()];
   $('#hint').innerHTML = h.map(s => `<span>${s}</span>`).join('');
   document.documentElement.style.setProperty('--hint', ($('#hint').offsetHeight + 22 * scale * innerHeight / 768) + 'px');
@@ -413,7 +453,7 @@ function updateHint() {
 /* ============================================================ Startseite */
 async function load() {
   try { cfg = offline ? DEMO : await getJSON('/tiles.json'); } catch { cfg = DEMO; }
-  $('#title').textContent = cfg.title || 'Start';
+  $('#title').textContent = L(cfg.title) || T('home.title');
   $('#user').textContent = cfg.user || '';
   if (cfg.background) { document.body.classList.add('has-wall'); document.body.style.backgroundImage = `url("${cfg.background}")`; }
   const track = $('#track');
@@ -422,7 +462,7 @@ async function load() {
   for (const g of cfg.groups || []) {
     const sec = document.createElement('section');
     sec.className = 'group';
-    sec.innerHTML = `<h2>${esc(g.name)}</h2>`;
+    sec.innerHTML = `<h2>${esc(L(g.name))}</h2>`;
     const grid = document.createElement('div');
     grid.className = 'grid';
     for (const t of g.tiles || []) {
@@ -437,9 +477,9 @@ async function load() {
       else el.innerHTML =
         (t.image ? `<img class="cover" src="${esc(t.image)}" alt="">` : `<div class="icon">${ICONS[t.icon] || ICONS.globe}</div>`) +
         ((t.type === 'radio' || t.type === 'tv') ? '<div class="now"><div class="st"></div><div class="ti"></div></div><div class="eq"><i></i><i></i><i></i><i></i></div>' : '') +
-        (t.sub ? `<div class="sub">${esc(t.sub)}</div>` : '') +
-        `<div class="label">${esc(t.label)}</div>` +
-        (t.cmd || t.type === 'tv' || (offline && !t.type) ? '<div class="run"></div><div class="x" title="Schließen">✕</div>' : '');
+        (t.sub ? `<div class="sub">${esc(L(t.sub))}</div>` : '') +
+        `<div class="label">${esc(L(t.label))}</div>` +
+        (t.cmd || t.type === 'tv' || (offline && !t.type) ? `<div class="run"></div><div class="x" title="${esc(T('common.close'))}">✕</div>` : '');
       grid.appendChild(el);
     }
     sec.appendChild(grid);
@@ -457,10 +497,13 @@ async function load() {
 
 function tick() {
   const d = new Date();
-  const hm = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-  const date = d.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
-  $('#hdrTime').textContent = hm;
-  $$('.tile.clock').forEach(c => { c.querySelector('.big').textContent = hm; c.querySelector('.date').textContent = date; });
+  // Uhrzeit im Format der Sprache (de: 20:15, en: 8:15 PM); AM/PM auf der Uhr-Kachel kleiner
+  const parts = new Intl.DateTimeFormat(loc(), { hour: LANG === 'de' ? '2-digit' : 'numeric', minute: '2-digit' }).formatToParts(d);
+  const ap = parts.filter(p => p.type === 'dayPeriod').map(p => p.value).join('');
+  const hm = parts.filter(p => p.type !== 'dayPeriod').map(p => p.value).join('').trim();
+  const date = d.toLocaleDateString(loc(), { weekday: 'long', day: 'numeric', month: 'long' });
+  $('#hdrTime').textContent = ap ? `${hm} ${ap}` : hm;
+  $$('.tile.clock').forEach(c => { c.querySelector('.big').innerHTML = esc(hm) + (ap ? `<span class="ap">${esc(ap)}</span>` : ''); c.querySelector('.date').textContent = date; });
 }
 setInterval(tick, 5000);
 
@@ -557,8 +600,8 @@ function secondary() {
   if (l === 'home' && focusEl?._tile) {
     const t = focusEl._tile;
     if (running.includes(t.id)) closeApp(t);
-    else if (t.cmd) toast(`${t.label} ist gerade nicht geöffnet`);
-    else toast('Diese Kachel lässt sich nicht schließen');
+    else if (t.cmd) toast(T('home.notOpen', { name: L(t.label) }));
+    else toast(T('home.cantClose'));
   }
   if (l === 'radio' && focusEl?._station) toggleFav(focusEl._station);
   if (l === 'tv' && focusEl?._chan) tvFav(focusEl._chan);
@@ -576,7 +619,7 @@ async function launch(t, el) {
     const r = await api('/api/launch/' + encodeURIComponent(t.id)); if (r.running) setRunning(r.running);
     if (!already) splashWatch(t);                    // Startbildschirm bleibt, bis das Fenster da ist
   }
-  catch { toast('Konnte ' + (t.label || 'Programm') + ' nicht starten', true); hideSplash(); }
+  catch { toast(T('home.launchFailed', { name: L(t.label) || T('common.program') }), true); hideSplash(); }
   setTimeout(() => { launching = false; }, 600);
 }
 let splashTile = null, splashPoll = null, splashT0 = 0;
@@ -584,7 +627,7 @@ function showSplash(t) {
   const sp = $('#splash');
   sp.style.setProperty('--c', t.color || '#2a2e33');
   $('#splashIcon').innerHTML = ICONS[t.icon] || '';
-  $('#splashName').textContent = t.label || '';
+  $('#splashName').textContent = L(t.label);
   $('#splashHint').textContent = '';
   $('#splashKey').classList.remove('on');
   sp.classList.add('show');
@@ -604,11 +647,11 @@ function splashWatch(t) {
     const secs = (Date.now() - splashT0) / 1000;
     if (!(s.running || []).includes(t.id)) {
       hideSplash();
-      return toast(`${t.label} hat sich beendet, ohne ein Fenster zu öffnen – Details in logs/${t.id}.log`, true);
+      return toast(T('home.exited', { name: L(t.label), id: t.id }), true);
     }
     if (!(s.starting || []).includes(t.id)) return hideSplash();
     if (secs > 5) {
-      $('#splashHint').textContent = t.start_hint || 'Das dauert gerade etwas länger – das Programm startet noch …';
+      $('#splashHint').textContent = t.start_hint ? T('app.' + t.id + '.hint', null, t.start_hint) : T('home.slow');
       $('#splashKey').classList.add('on');
     }
   }, 1000);
@@ -616,14 +659,14 @@ function splashWatch(t) {
 function hideSplash() { clearTimeout(splashTimer); clearInterval(splashPoll); splashTile = null; $('#splash').classList.remove('show'); }
 function splashToBackground() {
   const t = splashTile; hideSplash();
-  if (t) toast(`${t.label} startet im Hintergrund weiter`);
+  if (t) toast(T('home.background', { name: L(t.label) }));
 }
 addEventListener('blur', () => setTimeout(hideSplash, 400));
 $('#splash').addEventListener('click', () => { if (splashTile) splashToBackground(); });
 
 async function closeApp(t) {
-  try { const r = await api('/api/close/' + encodeURIComponent(t.id)); setRunning(r.running || []); toast((t.label || 'Programm') + ' geschlossen'); }
-  catch { toast('Schließen fehlgeschlagen', true); }
+  try { const r = await api('/api/close/' + encodeURIComponent(t.id)); setRunning(r.running || []); toast(T('home.closed', { name: L(t.label) || T('common.program') })); }
+  catch { toast(T('home.closeFailed'), true); }
 }
 function setRunning(list) {
   running = list;
@@ -639,8 +682,8 @@ function showUpdBadge(u) {
   const on = !!(u && u.available);
   if (b.hidden === on) b.hidden = !on;
   if (on) {
-    $('#updBadgeTxt').textContent = u.version ? `Update ${u.version}` : 'Update verfügbar';
-    if (updToasted !== u.version && layer() === 'home') { updToasted = u.version; toast('VoidStation-Update verfügbar – oben rechts auswählen'); }
+    $('#updBadgeTxt').textContent = u.version ? T('upd.badge', { version: u.version }) : T('upd.badgeGeneric');
+    if (updToasted !== u.version && layer() === 'home') { updToasted = u.version; toast(T('upd.toast')); }
   }
 }
 setInterval(poll, 1500);
@@ -696,17 +739,17 @@ function renderStations() {
     const g = document.createElement('div');
     g.className = results.length ? 'sgrid' : 'empty';
     if (results.length) results.forEach((st, i) => g.appendChild(stationTile(st, i)));
-    else g.textContent = 'Nichts gefunden. Anderen Namen probieren?';
-    section(tr, `Ergebnisse für „${lastQuery}“`, g);
+    else g.textContent = T('radio.nothing');
+    section(tr, T('radio.results', { q: lastQuery }), g);
   } else {
-    if (favs.length) { const g = document.createElement('div'); g.className = 'sgrid'; favs.forEach((st, i) => g.appendChild(stationTile(st, i))); section(tr, 'Favoriten', g); }
+    if (favs.length) { const g = document.createElement('div'); g.className = 'sgrid'; favs.forEach((st, i) => g.appendChild(stationTile(st, i))); section(tr, T('common.favorites'), g); }
     const chips = document.createElement('div');
     chips.className = 'chips';
     for (const q of cfg.radio_suggestions || []) { const b = document.createElement('button'); b.className = 'pill rnav'; b.dataset.query = q; b.textContent = q; chips.appendChild(b); }
     const wrap = document.createElement('div');
-    if (!favs.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'Noch keine Favoriten. Suche einen Sender oder wähle einen Vorschlag, dann mit „Favorit“ merken.'; wrap.appendChild(e); }
+    if (!favs.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = T('radio.noFavs'); wrap.appendChild(e); }
     wrap.appendChild(chips);
-    section(tr, favs.length ? 'Suchen' : 'Vorschläge', wrap);
+    section(tr, favs.length ? T('radio.search') : T('radio.suggestions'), wrap);
   }
   fitGrid(tr, '.sgrid', 3);
   if (keepUrl && layer() === 'radio') { const again = $$('#rTrack .station').find(e => e._station.url === keepUrl); if (again) setFocus(again, true); }
@@ -716,25 +759,25 @@ async function loadFavs() { if (offline) return; try { favs = await getJSON('/ap
 async function search(q) {
   q = q.trim(); if (!q) return;
   lastQuery = q;
-  toast('Suche „' + q + '“ …');
+  toast(T('radio.searching', { q }));
   try { results = offline ? [] : await getJSON('/api/radio/search?q=' + encodeURIComponent(q)); }
-  catch { return toast('Senderverzeichnis nicht erreichbar', true); }
+  catch { return toast(T('radio.dirUnreachable'), true); }
   $('#rSearch').blur(); $('#toast').classList.remove('show');
   renderStations();
   setFocus($('#rTrack .station') || $('#rSearch'), true);
 }
-async function radioPlay(st) { try { setRadio(await api('/api/radio/play', st)); toast('Spielt: ' + st.name); } catch { toast('Sender lässt sich nicht abspielen', true); } }
+async function radioPlay(st) { try { setRadio(await api('/api/radio/play', st)); toast(T('radio.playing', { name: st.name })); } catch { toast(T('radio.cantPlay'), true); } }
 async function radioStop() { try { setRadio(await api('/api/radio/stop')); } catch {} }
 async function toggleFav(st) {
   st = st || focusEl?._station || radioState.station;
-  if (!st) return toast('Erst einen Sender auswählen');
+  if (!st) return toast(T('radio.pickFirst'));
   const isFav = favs.some(f => f.url === st.url);
-  try { favs = await api(isFav ? '/api/radio/unfav' : '/api/radio/fav', st); toast(isFav ? 'Aus Favoriten entfernt' : 'Zu Favoriten hinzugefügt'); renderStations(); }
-  catch { toast('Speichern fehlgeschlagen', true); }
+  try { favs = await api(isFav ? '/api/radio/unfav' : '/api/radio/fav', st); toast(isFav ? T('common.favRemoved') : T('common.favAdded')); renderStations(); }
+  catch { toast(T('common.saveFailed'), true); }
 }
 function updateFavBtn() {
   const st = radioState.station;
-  $('#rFav span').textContent = st && favs.some(f => f.url === st.url) ? 'Favorit entfernen' : 'Favorit';
+  $('#rFav span').textContent = st && favs.some(f => f.url === st.url) ? T('radio.favRemove') : T('radio.fav');
   $('#rStop').disabled = !st;
 }
 function setRadio(s) {
@@ -742,17 +785,17 @@ function setRadio(s) {
   radioState = { station: s.station || null, title: s.title || null };
   const st = radioState.station;
   const tile = $('#track .tile.radio:not(.tvtile)');
-  if (tile) { tile.classList.toggle('playing', !!st); tile.querySelector('.st').textContent = st ? st.name : ''; tile.querySelector('.ti').textContent = st ? (radioState.title || 'Live') : ''; }
-  $('#rNow').innerHTML = st ? `<strong>${esc(st.name)}</strong><span>${esc(radioState.title || 'Live')}</span>` : '<strong>Kein Sender</strong><span>Favorit wählen oder Sender suchen</span>';
+  if (tile) { tile.classList.toggle('playing', !!st); tile.querySelector('.st').textContent = st ? st.name : ''; tile.querySelector('.ti').textContent = st ? (radioState.title || T('common.live')) : ''; }
+  $('#rNow').innerHTML = st ? `<strong>${esc(st.name)}</strong><span>${esc(radioState.title || T('common.live'))}</span>` : `<strong>${esc(T('radio.none'))}</strong><span>${esc(T('radio.noneHint'))}</span>`;
   if (prev !== st?.url) $$('#rTrack .station').forEach(e => e.classList.toggle('playing', !!st && e._station.url === st.url));
   updateFavBtn();
 }
 async function volume(action) { try { showVol(await api('/api/volume/' + action)); } catch {} }
 async function refreshVolume() { if (offline) return showVol({ level: 45 }); try { showVol(await getJSON('/api/volume')); } catch {} }
 function showVol(v) {
-  if (!v || v.level === undefined) { $$('.voltxt').forEach(e => e.textContent = 'kein Ton-Dienst'); return; }
+  if (!v || v.level === undefined) { $$('.voltxt').forEach(e => e.textContent = T('vol.none')); return; }
   $$('.volbar').forEach(e => e.style.width = Math.min(100, v.level) + '%');
-  $$('.voltxt').forEach(e => e.textContent = v.muted ? 'stumm' : v.level + ' %');
+  $$('.voltxt').forEach(e => e.textContent = v.muted ? T('vol.muted') : pct(v.level));
 }
 
 /* ============================================================ Einstellungen */
@@ -761,7 +804,7 @@ const DEMO_SETT = { scale: 1.75, scales: [1, 1.25, 1.5, 1.75, 2, 2.25], cursor: 
   volume: { level: 45, muted: false }, net: { hostname: 'void', addresses: [{ iface: 'enp1s0', ip: '192.168.178.49' }] } };
 
 async function loadSettings() {
-  try { sett = offline ? DEMO_SETT : await getJSON('/api/settings'); } catch { toast('Einstellungen nicht ladbar', true); return; }
+  try { sett = offline ? DEMO_SETT : await getJSON('/api/settings'); } catch { toast(T('settings.loadFailed'), true); return; }
   renderSettings();
   refreshVs(false);
 }
@@ -788,62 +831,68 @@ function renderSettings() {
   const keepKey = focusEl?.dataset.key;
   tr.innerHTML = ''; tr.dataset.x = 0; tr.style.transform = 'none';
 
+  // Sprache
+  const lr = row(col(tr, T('settings.language')));
+  for (const l of sett.langs || [{ id: 'de', label: 'Deutsch' }, { id: 'en', label: 'English' }]) {
+    const b = pill(esc(l.label), () => setLang(l.id), l.id === LANG); b.dataset.key = 'lang' + l.id; lr.appendChild(b);
+  }
+
   // Anzeige
-  const a = col(tr, 'Skalierung');
+  const a = col(tr, T('settings.scale'));
   const rs = row(a);
   for (const s of sett.scales) {
-    const b = pill(String(s).replace('.', ',') + '×', () => setScale(s), Math.abs(s - scale) < 0.01);
+    const b = pill(num(s) + '×', () => setScale(s), Math.abs(s - scale) < 0.01);
     b.dataset.key = 'scale' + s; rs.appendChild(b);
   }
   if (sett.cursor) {
-    const mc = col(tr, 'Mauszeiger');
-    const rt = row(mc, 'Stil');
-    for (const t of sett.cursor.themes) { const b = pill(esc(t.label), () => setCursor({ theme: t.id }), t.id === sett.cursor.theme); b.dataset.key = 'ct' + t.id; rt.appendChild(b); }
-    const rz = row(mc, 'Größe');
+    const mc = col(tr, T('settings.cursor'));
+    const rt = row(mc, T('settings.cursorStyle'));
+    for (const t of sett.cursor.themes) { const b = pill(esc(L(t.label)), () => setCursor({ theme: t.id }), t.id === sett.cursor.theme); b.dataset.key = 'ct' + t.id; rt.appendChild(b); }
+    const rz = row(mc, T('settings.cursorSize'));
     for (const z of sett.cursor.sizes) { const b = pill(String(z), () => setCursor({ size: z }), z === sett.cursor.size); b.dataset.key = 'cs' + z; rz.appendChild(b); }
   }
   for (const d of sett.displays || []) {
-    const rr = row(col(tr, `Auflösung · ${d.name}`));
+    const rr = row(col(tr, T('settings.resolution', { name: d.name })));
     const modes = d.modes.filter(m => { const [w, h] = m.split('x').map(v => parseInt(v, 10)); return w >= 1024 && h >= 576; }).slice(0, 6);
     for (const m of modes) {
-      const label = m.replace('x', '×').replace(/i$/, ' Halbbild') + (m === d.current && d.rate ? ` · ${Math.round(d.rate)} Hz` : '');
+      const label = m.replace('x', '×').replace(/i$/, ' ' + T('settings.interlaced')) + (m === d.current && d.rate ? ` · ${Math.round(d.rate)} Hz` : '');
       const b = pill(label, () => setResolution(m), m === d.current); b.dataset.key = 'res' + m; rr.appendChild(b);
     }
   }
 
   // Ton
-  const t = col(tr, 'Tonausgang');
+  const t = col(tr, T('settings.audioOut'));
   const ro = row(t);
   if (!sett.audio?.ok) {
-    const e = document.createElement('div'); e.className = 'info'; e.textContent = 'Kein Ton-Dienst erreichbar (PipeWire läuft nicht).'; ro.appendChild(e);
+    const e = document.createElement('div'); e.className = 'info'; e.textContent = T('settings.noAudio'); ro.appendChild(e);
   } else for (const o of sett.audio.outputs) {
     const b = pill(esc(o.label), () => setOutput(o), o.active); b.dataset.key = 'out' + o.profile; ro.appendChild(b);
   }
-  const rv = row(col(tr, 'Lautstärke'));
+  const rv = row(col(tr, T('settings.volume')));
   const v = document.createElement('div'); v.className = 'vol';
   const dn = pill('−', () => volume('down')); dn.dataset.key = 'vd';
   const up = pill('+', () => volume('up')); up.dataset.key = 'vu';
-  const mu = pill('Stumm', () => volume('mute')); mu.dataset.key = 'vm';
+  const mu = pill(esc(T('settings.mute')), () => volume('mute')); mu.dataset.key = 'vm';
   const meter = document.createElement('div'); meter.className = 'meter'; meter.innerHTML = '<b class="volbar"></b>';
   const txt = document.createElement('span'); txt.className = 'voltxt';
   v.append(dn, meter, up, txt); rv.append(v, mu);
 
   // Netzwerk
-  const n = col(tr, 'Netzwerk');
+  const n = col(tr, T('settings.network'));
   const info = document.createElement('div'); info.className = 'info';
-  info.innerHTML = `Rechnername: <b>${esc(sett.net.hostname)}</b><br>` + (sett.net.addresses.length ? sett.net.addresses.map(x => `${esc(x.iface)}: <b>${esc(x.ip)}</b>`).join('<br>') : 'Keine Verbindung');
+  info.innerHTML = `${esc(T('settings.hostname'))}: <b>${esc(sett.net.hostname)}</b><br>` + (sett.net.addresses.length ? sett.net.addresses.map(x => `${esc(x.iface)}: <b>${esc(x.ip)}</b>`).join('<br>') : esc(T('settings.noConn')));
   n.appendChild(info);
-  const wc = col(tr, 'WLAN');
+  const wc = col(tr, T('settings.wifi'));
   const rw = row(wc);
   if (wifiPick) {
     const inp = document.createElement('input');
-    inp.className = 'field snav'; inp.type = 'password'; inp.placeholder = `Passwort für „${wifiPick.ssid}“`; inp.id = 'wifiPw'; inp.dataset.key = 'pw';
+    inp.className = 'field snav'; inp.type = 'password'; inp.placeholder = T('settings.wifiPw', { ssid: wifiPick.ssid }); inp.id = 'wifiPw'; inp.dataset.key = 'pw';
     rw.appendChild(inp);
-    const go = pill('Verbinden', () => wifiConnect(wifiPick.ssid, $('#wifiPw').value)); go.dataset.key = 'go';
-    const cancel = pill('Abbrechen', () => { wifiPick = null; renderSettings(); }); cancel.dataset.key = 'cancel';
+    const go = pill(esc(T('settings.connect')), () => wifiConnect(wifiPick.ssid, $('#wifiPw').value)); go.dataset.key = 'go';
+    const cancel = pill(esc(T('common.cancel')), () => { wifiPick = null; renderSettings(); }); cancel.dataset.key = 'cancel';
     rw.append(go, cancel);
   } else {
-    const scan = pill(wifiList ? 'Neu suchen' : 'Netze suchen', wifiScan); scan.dataset.key = 'scan'; rw.appendChild(scan);
+    const scan = pill(esc(wifiList ? T('settings.rescan') : T('settings.scan')), wifiScan); scan.dataset.key = 'scan'; rw.appendChild(scan);
     if (wifiList) {
       const rl = row(wc);
       rl.classList.add('wifi');
@@ -853,40 +902,40 @@ function renderSettings() {
       }
     }
   }
-  $('#sNet').innerHTML = sett.net.addresses.length ? `<strong>${esc(sett.net.addresses[0].ip)}</strong><span>${esc(sett.net.hostname)}</span>` : '<strong>Offline</strong>';
+  $('#sNet').innerHTML = sett.net.addresses.length ? `<strong>${esc(sett.net.addresses[0].ip)}</strong><span>${esc(sett.net.hostname)}</span>` : `<strong>${esc(T('settings.offline'))}</strong>`;
 
   // Freigabe
   if (sett.share) {
-    const fc = col(tr, 'Freigabe');
+    const fc = col(tr, T('settings.share'));
     const fi = document.createElement('div'); fi.className = 'info';
     const ip = sett.net.addresses[0]?.ip;
     fi.innerHTML = sett.share.samba
-      ? `Im Windows-Explorer eingeben:<br><b>\\\\${esc(sett.net.hostname)}\\share</b>` + (ip ? `<br>oder <b>\\\\${esc(ip)}\\share</b>` : '') + `<br>Anmelden mit Benutzer <b>${esc(sett.share.user || '')}</b> und dem Freigabe-Passwort.`
-      : 'Freigabe ist nicht aktiv (Samba läuft nicht).';
+      ? `${esc(T('settings.shareHow'))}<br><b>\\\\${esc(sett.net.hostname)}\\share</b>` + (ip ? `<br>${esc(T('settings.shareOr'))} <b>\\\\${esc(ip)}\\share</b>` : '') + `<br>${T('settings.shareLogin', { user: `<b>${esc(sett.share.user || '')}</b>` })}`
+      : esc(T('settings.shareOff'));
     fc.appendChild(fi);
   }
 
   // System
-  const s = col(tr, 'System');
+  const s = col(tr, T('settings.system'));
   const rsys = row(s);
-  const rl = pill('Startseite neu laden', () => location.reload()); rl.dataset.key = 'reload';
-  const rb = pill('Neu starten', () => power('reboot')); rb.dataset.key = 'reboot';
-  const po = pill('Herunterfahren', () => power('poweroff')); po.dataset.key = 'off';
+  const rl = pill(esc(T('settings.reload')), () => location.reload()); rl.dataset.key = 'reload';
+  const rb = pill(esc(T('settings.reboot')), () => power('reboot')); rb.dataset.key = 'reboot';
+  const po = pill(esc(T('settings.poweroff')), () => power('poweroff')); po.dataset.key = 'off';
   rsys.append(rl, rb, po);
   const vi = document.createElement('div'); vi.className = 'info'; vi.id = 'vsInfo';
   s.appendChild(vi);
   const rvs = row(s);
-  const vu = pill('VoidStation aktualisieren', selfUpdate); vu.dataset.key = 'selfupd';
+  const vu = pill(esc(T('settings.selfupdate')), selfUpdate); vu.dataset.key = 'selfupd';
   rvs.appendChild(vu);
   if (sett.xserver) {
-    const rx = row(s, 'Grafik-Server');
+    const rx = row(s, T('settings.xserver'));
     for (const [id, lab] of [['xlibre', 'XLibre'], ['xorg', 'X.Org']]) {
       const b = pill(lab, () => setXserver(id), sett.xserver.active === id); b.dataset.key = 'xs' + id; rx.appendChild(b);
     }
   }
-  const rch = row(s, 'Update-Kanal');
+  const rch = row(s, T('settings.channel'));
   const cur = (vsState && vsState.channel) || 'stable';
-  for (const [id, lab] of [['stable', 'Stabil'], ['main', 'Test']]) {
+  for (const [id, lab] of [['stable', T('channel.stable')], ['main', T('channel.main')]]) {
     const b = pill(lab, () => setChannel(id), cur === id); b.dataset.key = 'ch' + id; rch.appendChild(b);
   }
   showVs();
@@ -899,31 +948,30 @@ function renderSettings() {
 }
 /* ---- VoidStation selbst aktualisieren */
 let vsState = null;
+const chLabel = v => T('channel.' + v.channel, null, v.channel_label);
 function showVs() {
   const el = $('#vsInfo'); if (!el) return;
   const sv = sett && sett.version;
   const ver = (vsState && vsState.local) || (sv && (sv.version || sv.build)) || '–';
-  let st = 'suche nach Updates …';
-  if (vsState) st = vsState.available ? `<b>Update auf ${esc(vsState.remote)} verfügbar</b>`
-    : vsState.remote ? 'ist aktuell' : 'Update-Server nicht erreichbar';
-  const ch = vsState ? ` · Kanal ${esc(vsState.channel_label)}` : '';
+  let st = esc(T('upd.searching'));
+  if (vsState) st = vsState.available ? `<b>${esc(T('upd.available', { version: vsState.remote }))}</b>`
+    : esc(vsState.remote ? T('upd.current') : T('upd.unreachable'));
+  const ch = vsState ? ` · ${esc(T('upd.channel', { channel: chLabel(vsState) }))}` : '';
   el.innerHTML = `VoidStation ${esc(ver)}${ch}<br>${st}`;
 }
 function setXserver(id) {
-  if (JOBS_BUSY()) return toast('Bitte warten, es läuft noch ein Auftrag');
-  if (sett.xserver && sett.xserver.active === id) return toast((id === 'xlibre' ? 'XLibre' : 'X.Org') + ' ist bereits aktiv');
-  const txt = id === 'xlibre'
-    ? 'XLibre ist ein weiterentwickelter Fork von X.Org. Startet die Oberfläche damit zweimal nicht, schaltet VoidStation automatisch auf X.Org zurück.'
-    : 'Zurück zum klassischen X.Org-Server. VoidStation bleibt dann auch bei Updates bei X.Org.';
-  adlg(id === 'xlibre' ? 'Zu XLibre wechseln?' : 'Zu X.Org wechseln?', txt + '\n\nDanach ist ein Neustart nötig.',
-    [['Wechseln', async () => {
+  if (JOBS_BUSY()) return toast(T('common.busy'));
+  if (sett.xserver && sett.xserver.active === id) return toast(T('xs.already', { name: id === 'xlibre' ? 'XLibre' : 'X.Org' }));
+  const txt = id === 'xlibre' ? T('xs.xlibreText') : T('xs.xorgText');
+  adlg(id === 'xlibre' ? T('xs.toXlibre') : T('xs.toXorg'), txt + '\n\n' + T('xs.reboot'),
+    [[T('xs.switch'), async () => {
       try { jobState = await api('/api/xserver', { target: id }); } catch (e) { return toast(e.message, true); }
       watchJob();
-    }], ['Abbrechen']]);
+    }], [T('common.cancel')]]);
 }
 async function setChannel(ch) {
-  if (ch === 'main' && !(vsState && vsState.channel === 'main')) toast('Test-Kanal: neue Versionen vor allen anderen – können Fehler enthalten');
-  try { vsState = await api('/api/selfupdate/channel', { channel: ch }); } catch (e) { return toast('Fehlgeschlagen: ' + e.message, true); }
+  if (ch === 'main' && !(vsState && vsState.channel === 'main')) toast(T('channel.testWarn'));
+  try { vsState = await api('/api/selfupdate/channel', { channel: ch }); } catch (e) { return toast(T('common.failedMsg', { msg: e.message }), true); }
   renderSettings();
 }
 async function refreshVs(force) {
@@ -932,71 +980,77 @@ async function refreshVs(force) {
   if (layer() === 'settings' && $('#vsInfo')) renderSettings(); else showVs();
 }
 async function selfUpdate() {
-  if (JOBS_BUSY()) return toast('Bitte warten, es läuft noch ein Auftrag');
-  toast('Prüfe auf neue Version …');
+  if (JOBS_BUSY()) return toast(T('common.busy'));
+  toast(T('upd.checking'));
   await refreshVs(true);
   $('#toast').classList.remove('show');
-  if (!vsState || !vsState.remote) return toast('Update-Server nicht erreichbar', true);
-  if (!vsState.available) return toast('VoidStation ist auf dem neuesten Stand');
-  const news = (vsState.changes || []).map(e => `${e.version}:\n` + e.changes.map(c => '• ' + c).join('\n')).join('\n\n');
-  adlg('VoidStation aktualisieren?', `Version ${vsState.remote} (installiert: ${vsState.local || '–'}, Kanal ${vsState.channel_label}).` +
-    (news ? `\n\nNeu:\n${news}` : '') + '\n\nEigene Kacheln, Favoriten und Einstellungen bleiben erhalten. Danach ist ein Neustart nötig.',
-    [['Jetzt aktualisieren', () => jobStart('selfupdate')], ['Abbrechen']]);
+  if (!vsState || !vsState.remote) return toast(T('upd.unreachable'), true);
+  if (!vsState.available) return toast(T('upd.upToDate'));
+  // "Was ist neu" in der eingestellten Sprache (changes_en ab 0.6.0, sonst deutsch)
+  const news = (vsState.changes || []).map(e => `${e.version}:\n` + ((LANG !== 'de' && e['changes_' + LANG]?.length) ? e['changes_' + LANG] : e.changes).map(c => '• ' + c).join('\n')).join('\n\n');
+  adlg(T('upd.confirmTitle'), T('upd.confirmText', { remote: vsState.remote, local: vsState.local || '–', channel: chLabel(vsState) }) +
+    (news ? `\n\n${T('upd.news')}\n${news}` : '') + '\n\n' + T('upd.keep'),
+    [[T('upd.now'), () => jobStart('selfupdate')], [T('common.cancel')]]);
 }
 function rebootPrompt(action) {
   const [title, text] = action === 'xserver'
-    ? ['Grafik-Server gewechselt', 'Der neue Grafik-Server ist installiert. Zum Übernehmen jetzt neu starten?']
-    : ['Aktualisiert', 'VoidStation wurde aktualisiert. Zum Übernehmen jetzt neu starten?'];
-  adlg(title, text, [['Jetzt neu starten', () => power('reboot')], ['Später']]);
+    ? [T('xs.doneTitle'), T('xs.doneText')]
+    : [T('upd.doneTitle'), T('upd.doneText')];
+  adlg(title, text, [[T('upd.rebootNow'), () => power('reboot')], [T('common.later')]]);
 }
 
+async function setLang(l) {
+  if (l === LANG) return;
+  try { if (!offline) await api('/api/settings/lang', { lang: l }); } catch { return toast(T('common.saveFailed'), true); }
+  location.reload();                                 // Startseite komplett in der neuen Sprache aufbauen
+}
 async function setScale(s) {
   scale = s;
-  try { if (!offline) sett = await api('/api/settings/scale', { scale: s }); } catch { return toast('Speichern fehlgeschlagen', true); }
+  try { if (!offline) sett = await api('/api/settings/scale', { scale: s }); } catch { return toast(T('common.saveFailed'), true); }
   layout(); renderSettings();
-  toast('Skalierung ' + String(s).replace('.', ',') + '× – gilt für neu geöffnete Programme');
+  toast(T('settings.scaleToast', { scale: num(s) }));
 }
 async function setCursor(c) {
-  try { sett = await api('/api/settings/cursor', c); } catch (e) { return toast('Fehlgeschlagen: ' + e.message, true); }
+  try { sett = await api('/api/settings/cursor', c); } catch (e) { return toast(T('common.failedMsg', { msg: e.message }), true); }
   renderSettings();
-  toast('Mauszeiger geändert – Startseite lädt kurz neu');
+  toast(T('settings.cursorToast'));
 }
 async function setResolution(m) {
-  try { sett = await api('/api/settings/resolution', { mode: m }); toast('Auflösung ' + m.replace('x', '×')); } catch (e) { return toast('Fehlgeschlagen: ' + e.message, true); }
+  try { sett = await api('/api/settings/resolution', { mode: m }); toast(T('settings.resToast', { mode: m.replace('x', '×') })); } catch (e) { return toast(T('common.failedMsg', { msg: e.message }), true); }
   setTimeout(() => { layout(); renderSettings(); }, 800);
 }
 async function setOutput(o) {
-  try { sett = await api('/api/audio/output', { card: o.card, profile: o.profile }); toast('Ausgang: ' + o.label); renderSettings(); } catch (e) { toast('Fehlgeschlagen: ' + e.message, true); }
+  try { sett = await api('/api/audio/output', { card: o.card, profile: o.profile }); toast(T('settings.outToast', { name: o.label })); renderSettings(); } catch (e) { toast(T('common.failedMsg', { msg: e.message }), true); }
 }
 async function wifiScan() {
-  toast('Suche WLAN-Netze …');
+  toast(T('wifi.scanning'));
   try { wifiList = offline ? [{ ssid: 'FRITZ!Box 7530', signal: 72, secure: true, active: false }] : await getJSON('/api/wifi/scan'); $('#toast').classList.remove('show'); }
-  catch (e) { return toast('WLAN-Suche fehlgeschlagen: ' + e.message, true); }
+  catch (e) { return toast(T('wifi.scanFailed', { msg: e.message }), true); }
   renderSettings();
 }
 async function wifiConnect(ssid, pw) {
-  toast(`Verbinde mit „${ssid}“ …`);
-  try { sett = await api('/api/wifi/connect', { ssid, password: pw }); wifiPick = null; toast(`Verbunden mit „${ssid}“`); renderSettings(); }
-  catch (e) { toast('Verbindung fehlgeschlagen: ' + e.message, true); }
+  toast(T('wifi.connecting', { ssid }));
+  try { sett = await api('/api/wifi/connect', { ssid, password: pw }); wifiPick = null; toast(T('wifi.connected', { ssid })); renderSettings(); }
+  catch (e) { toast(T('wifi.failed', { msg: e.message }), true); }
 }
 
 /* ============================================================ Fernsehen */
 let tvQuery = '', tvCountry = 'DE', tvCat = '', tvFavs = [], tvResults = [], tvStatus = null, tvNow = null, tvMore = false;
-const regionName = (() => { try { const d = new Intl.DisplayNames(['de'], { type: 'region' }); return c => { try { return d.of(c.toUpperCase()); } catch { return c; } }; } catch { return c => c; } })();
-const TV_CATS = [['', 'Alle Themen'], ['news', 'Nachrichten'], ['general', 'Allgemein'], ['entertainment', 'Unterhaltung'], ['movies', 'Filme'], ['series', 'Serien'], ['documentary', 'Doku'], ['kids', 'Kinder'], ['music', 'Musik'], ['sports', 'Sport'], ['culture', 'Kultur']];
+const regionName = (() => { const cache = {}; return c => { try { const d = cache[LANG] ||= new Intl.DisplayNames([loc()], { type: 'region' }); return d.of(c.toUpperCase()); } catch { return c; } }; })();
+const TV_CATS = ['', 'news', 'general', 'entertainment', 'movies', 'series', 'documentary', 'kids', 'music', 'sports', 'culture'];
 
 async function tvOpen() {
   try { tvStatus = await getJSON('/api/tv/status'); tvFavs = await getJSON('/api/tv/favs'); } catch { tvStatus = { state: 'error' }; }
   setTvNow(tvStatus?.now);
   if (tvStatus.state === 'loading' || tvStatus.state === 'idle') {
-    renderTv('Senderverzeichnis wird geladen … (beim ersten Mal ca. 20–60 Sekunden)');
+    renderTv(T('tv.loading'));
     const iv = setInterval(async () => {
       if (layer() !== 'tv') return clearInterval(iv);
       try { tvStatus = await getJSON('/api/tv/status'); } catch {}
       if (tvStatus.state === 'ready') { clearInterval(iv); tvSearch(); }
-      if (tvStatus.state === 'error') { clearInterval(iv); renderTv('Senderverzeichnis nicht erreichbar: ' + (tvStatus.error || '')); }
+      if (tvStatus.state === 'error') { clearInterval(iv); renderTv(T('tv.unreachable', { err: tvStatus.error || '' })); }
     }, 1500);
-  } else if (tvStatus.state === 'error') renderTv('Senderverzeichnis nicht erreichbar: ' + (tvStatus.error || ''));
+  } else if (tvStatus.state === 'error') renderTv(T('tv.unreachable', { err: tvStatus.error || '' }));
   else tvSearch();
 }
 async function tvSearch() {
@@ -1032,25 +1086,25 @@ function renderTv(msg) {
   const top = ['DE', 'AT', 'CH'];
   const more = (tvStatus?.countries || []).map(c => c.code).filter(c => !top.includes(c)).slice(0, 16);
   for (const c of [...top, ...(tvMore ? more : [])]) { const b = fpill(regionName(c), tvCountry === c, () => { tvCountry = c; tvSearch(); }); b.dataset.fk = 'c' + c; rc.appendChild(b); }
-  const all = fpill('Alle Länder', tvCountry === '*', () => { tvCountry = '*'; tvSearch(); }); all.dataset.fk = 'c*'; rc.appendChild(all);
-  const mb = fpill(tvMore ? 'Weniger' : 'Weitere Länder …', false, () => { tvMore = !tvMore; renderTv(); }); mb.dataset.fk = 'more'; rc.appendChild(mb);
+  const all = fpill(T('tv.allCountries'), tvCountry === '*', () => { tvCountry = '*'; tvSearch(); }); all.dataset.fk = 'c*'; rc.appendChild(all);
+  const mb = fpill(tvMore ? T('tv.less') : T('tv.more'), false, () => { tvMore = !tvMore; renderTv(); }); mb.dataset.fk = 'more'; rc.appendChild(mb);
   const rt = document.createElement('div'); rt.className = 'row';
-  for (const [k, lab] of TV_CATS) { const b = fpill(lab, tvCat === k, () => { tvCat = k; tvSearch(); }); b.dataset.fk = 't' + k; rt.appendChild(b); }
+  for (const k of TV_CATS) { const b = fpill(T('tv.cat.' + (k || 'all')), tvCat === k, () => { tvCat = k; tvSearch(); }); b.dataset.fk = 't' + k; rt.appendChild(b); }
   f.append(rc, rt);
-  section(tr, 'Filter', f);
+  section(tr, T('tv.filter'), f);
   if (tvFavs.length && !tvQuery) {
     const g = document.createElement('div'); g.className = 'sgrid';
     tvFavs.forEach((ch, i) => g.appendChild(chanTile(ch, i)));
-    section(tr, 'Favoriten', g);
+    section(tr, T('common.favorites'), g);
   }
-  if (msg) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = msg; section(tr, 'Sender', e); }
+  if (msg) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = msg; section(tr, T('tv.channels'), e); }
   else {
     const g = document.createElement('div');
     g.className = tvResults.length ? 'sgrid' : 'empty';
     if (tvResults.length) tvResults.forEach((ch, i) => g.appendChild(chanTile(ch, i)));
-    else g.textContent = 'Keine Sender gefunden.';
-    const where = tvCountry === '*' ? 'alle Länder' : regionName(tvCountry);
-    section(tr, tvQuery ? `„${tvQuery}“ · ${where}` : `Sender · ${where}`, g);
+    else g.textContent = T('tv.none');
+    const where = tvCountry === '*' ? T('tv.allCountriesLower') : regionName(tvCountry);
+    section(tr, tvQuery ? T('tv.query', { q: tvQuery, where }) : T('tv.list', { where }), g);
   }
   $('#tStop').disabled = !tvNow;
   fitGrid(tr, '.sgrid', 3);
@@ -1060,22 +1114,22 @@ function renderTv(msg) {
   }
 }
 async function tvPlay(ch) {
-  toast('Schalte auf ' + ch.name + ' …');
+  toast(T('tv.switching', { name: ch.name }));
   try { const s = await api('/api/tv/play', { key: ch.key }); setTvNow(s.now); }
-  catch (e) { toast('Sender lässt sich nicht starten', true); }
+  catch (e) { toast(T('tv.cantStart'), true); }
 }
 async function tvStop() { try { await api('/api/tv/stop'); setTvNow(null); } catch {} }
 async function tvFav(ch) {
   const isFav = tvFavs.some(f => f.key === ch.key);
-  try { tvFavs = await api(isFav ? '/api/tv/unfav' : '/api/tv/fav', { key: ch.key }); toast(isFav ? 'Aus Favoriten entfernt' : 'Zu Favoriten hinzugefügt'); renderTv(); }
-  catch { toast('Speichern fehlgeschlagen', true); }
+  try { tvFavs = await api(isFav ? '/api/tv/unfav' : '/api/tv/fav', { key: ch.key }); toast(isFav ? T('common.favRemoved') : T('common.favAdded')); renderTv(); }
+  catch { toast(T('common.saveFailed'), true); }
 }
 function setTvNow(now) {
   const prev = tvNow?.key;
   tvNow = now || null;
   const tile = $('#track .tile.tvtile');
-  if (tile) { tile.classList.toggle('playing', !!tvNow); tile.querySelector('.st').textContent = tvNow ? tvNow.name : ''; tile.querySelector('.ti').textContent = tvNow ? (tvNow.country ? regionName(tvNow.country) : 'Live') : ''; }
-  $('#tNow').innerHTML = tvNow ? `<strong>${esc(tvNow.name)}</strong><span>läuft · Win/Guide wechselt zurück</span>` : `<strong>${tvStatus?.count ? tvStatus.count.toLocaleString('de-DE') + ' Sender' : 'Fernsehen'}</strong><span>frei empfangbare Livestreams</span>`;
+  if (tile) { tile.classList.toggle('playing', !!tvNow); tile.querySelector('.st').textContent = tvNow ? tvNow.name : ''; tile.querySelector('.ti').textContent = tvNow ? (tvNow.country ? regionName(tvNow.country) : T('common.live')) : ''; }
+  $('#tNow').innerHTML = tvNow ? `<strong>${esc(tvNow.name)}</strong><span>${esc(T('tv.running'))}</span>` : `<strong>${esc(tvStatus?.count ? T('tv.count', { n: num(tvStatus.count) }) : T('tv.title'))}</strong><span>${esc(T('tv.free'))}</span>`;
   if (prev !== tvNow?.key) $$('#tTrack .chan').forEach(e => e.classList.toggle('playing', !!tvNow && e._chan.key === tvNow.key));
   if ($('#tStop')) $('#tStop').disabled = !tvNow;
 }
@@ -1083,7 +1137,7 @@ function setTvNow(now) {
 /* ============================================================ AppCenter */
 let appsData = null, jobTimer = null, updCount = null;
 async function loadApps() {
-  try { appsData = offline ? { categories: ['Spiele'], apps: [], job: null } : await getJSON('/api/apps'); } catch { return toast('AppCenter nicht ladbar', true); }
+  try { appsData = offline ? { categories: ['Spiele'], apps: [], job: null } : await getJSON('/api/apps'); } catch { return toast(T('apps.loadFailed'), true); }
   renderApps();
   if (appsData.job && appsData.job.state === 'running') watchJob();
 }
@@ -1103,16 +1157,16 @@ function renderApps() {
       el.style.animationDelay = (i * 30) + 'ms';
       el.style.setProperty('--ac', a.color);
       el._app = a;
-      el.innerHTML = `<div class="aicon">${ICONS[a.icon] || ICONS.globe}</div><div class="aname">${esc(a.name)}</div>` +
-        `<div class="astate">${a.installed ? '✓ installiert' : (a.type === 'web' ? 'Web-App' : a.type === 'flatpak' ? 'Flatpak' : a.type === 'appimage' ? 'AppImage' : 'Paket')}</div>` +
-        `<div class="adesc">${esc(a.desc)}</div>`;
+      el.innerHTML = `<div class="aicon">${ICONS[a.icon] || ICONS.globe}</div><div class="aname">${esc(L(a.name))}</div>` +
+        `<div class="astate">${esc(a.installed ? T('apps.installed') : T('apps.type.' + a.type, null, T('apps.type.xbps')))}</div>` +
+        `<div class="adesc">${esc(appDesc(a))}</div>`;
       g.appendChild(el);
     });
-    section(tr, cat, g);
+    section(tr, L(cat), g);
   }
   fitGrid(tr, '.agrid', 3);
-  $('#aNow').innerHTML = updCount === null ? '<strong>Optionale Programme</strong><span>Kacheln werden automatisch angelegt</span>'
-    : `<strong>${updCount ? updCount + ' Updates verfügbar' : 'System ist aktuell'}</strong><span>Stand: gerade eben</span>`;
+  $('#aNow').innerHTML = updCount === null ? `<strong>${esc(T('apps.optional'))}</strong><span>${esc(T('apps.autoTiles'))}</span>`
+    : `<strong>${esc(updCount ? T('apps.updates', { n: num(updCount) }) : T('apps.current'))}</strong><span>${esc(T('apps.justNow'))}</span>`;
   if (layer() === 'apps') { const again = keep && $$('#aTrack .appcard').find(e => e._app.id === keep); setFocus(again || $('#aTrack .appcard') || $('#apps .anav'), true); }
 }
 function adlg(title, text, buttons) {
@@ -1122,18 +1176,19 @@ function adlg(title, text, buttons) {
   $('#adlg').classList.add('open'); setFocus(b.querySelector('.adnav')); updateHint();
 }
 function closeAdlg() { $('#adlg').classList.remove('open'); const l = layer(); setFocus(lastFocus[l] || $(`#${l} ${SCOPE[l]}`)); updateHint(); }
+const appDesc = a => T('app.' + a.id + '.desc', null, a.desc);
 function appDialog(a) {
-  if (JOBS_BUSY()) return toast('Bitte warten, es läuft noch ein Auftrag');
+  if (JOBS_BUSY()) return toast(T('common.busy'));
   if (a.installed) {
     const tile = cfg.groups.flatMap(g => g.tiles).find(t => t.id === a.id);
-    adlg(a.name, a.desc, [
-      ...(tile ? [['Öffnen', () => { closeLayer(); setTimeout(() => launch(tile, $(`#track [data-id="${a.id}"]`) || document.body), 250); }]] : []),
-      ['Entfernen', () => jobStart('remove', a), 'danger'], ['Abbrechen']]);
-  } else adlg(a.name + ' installieren?', a.desc + (a.type === 'flatpak' ? ' (Flatpak, der erste Download dauert länger.)' : ''), [['Installieren', () => jobStart('install', a)], ['Abbrechen']]);
+    adlg(L(a.name), appDesc(a), [
+      ...(tile ? [[T('apps.open'), () => { closeLayer(); setTimeout(() => launch(tile, $(`#track [data-id="${a.id}"]`) || document.body), 250); }]] : []),
+      [T('apps.remove'), () => jobStart('remove', a), 'danger'], [T('common.cancel')]]);
+  } else adlg(T('apps.installQ', { name: L(a.name) }), appDesc(a) + (a.type === 'flatpak' ? T('apps.flatpakNote') : ''), [[T('apps.install'), () => jobStart('install', a)], [T('common.cancel')]]);
 }
 function confirmUpdate() {
   if (JOBS_BUSY()) return;
-  adlg('Alles aktualisieren?', 'System, Flatpaks, AppImages und VoidStation selbst werden aktualisiert. Das kann einige Minuten dauern; danach ist evtl. ein Neustart sinnvoll.', [['Jetzt aktualisieren', () => jobStart('update')], ['Abbrechen']]);
+  adlg(T('apps.updateAllQ'), T('apps.updateAllText'), [[T('upd.now'), () => jobStart('update')], [T('common.cancel')]]);
 }
 let jobState = null;
 const JOBS_BUSY = () => jobState && jobState.state === 'running';
@@ -1146,20 +1201,21 @@ function watchJob() {
   clearInterval(jobTimer);
   const tick = async () => {
     try { jobState = await getJSON('/api/apps/job'); } catch { return; }
-    const verb = { install: 'Installiere', remove: 'Entferne', update: 'Aktualisiere', check: 'Prüfe Updates für', selfupdate: 'Aktualisiere', xserver: 'Wechsle zu' }[jobState.action] || '';
-    $('#jobTitle').textContent = `${verb} ${jobState.name}` + (jobState.state === 'running' ? ' …' : jobState.state === 'done' ? ' – fertig' : ' – fehlgeschlagen');
+    const name = L(jobState.name);
+    const what = ['install', 'remove', 'update', 'check', 'selfupdate', 'xserver'].includes(jobState.action) ? T('job.' + jobState.action, { name }) : name;
+    $('#jobTitle').textContent = what + T(jobState.state === 'running' ? 'job.running' : jobState.state === 'done' ? 'job.done' : 'job.failed');
     $('#jobSpin').style.display = jobState.state === 'running' ? '' : 'none';
     $('#jobLog').textContent = (jobState.log || []).slice(-6).join('\n');
     if (jobState.state !== 'running') {
       clearInterval(jobTimer);
       if (jobState.action === 'check' && jobState.result) updCount = jobState.result.updates;
-      toast(jobState.state === 'done' ? `${jobState.name}: fertig${jobState.result && typeof jobState.result === 'string' ? ' – ' + jobState.result : ''}` : `${jobState.name}: fehlgeschlagen – Details im Protokoll`, jobState.state !== 'done');
+      toast(jobState.state === 'done' ? T('job.toastDone', { name }) + (jobState.result && typeof jobState.result === 'string' ? ' – ' + jobState.result : '') : T('job.toastFailed', { name }), jobState.state !== 'done');
       setTimeout(() => band.classList.remove('show'), jobState.state === 'done' ? 2500 : 9000);
       await load();                                   // Kacheln neu aufbauen
       if (layer() === 'apps') loadApps();
       if (layer() === 'settings') { refreshVs(true); loadSettings(); }
       if (jobState.state === 'done' && jobState.reboot) { const act = jobState.action; setTimeout(() => rebootPrompt(act), 400); }
-      else if (jobState.state === 'done' && jobState.action === 'install' && typeof jobState.result === 'string') setTimeout(() => adlg(`${jobState.name} ist installiert`, jobState.result, [['OK']]), 400);
+      else if (jobState.state === 'done' && jobState.action === 'install' && typeof jobState.result === 'string') setTimeout(() => adlg(T('apps.isInstalled', { name }), jobState.result, [[T('common.ok')]]), 400);
     }
   };
   tick(); jobTimer = setInterval(tick, 1000);
@@ -1170,8 +1226,8 @@ function openDialog() { $('#dialog').classList.add('open'); setFocus($('.dnav[da
 function closeDialog() { $('#dialog').classList.remove('open'); const l = layer(); setFocus(lastFocus[l] || $('#power')); updateHint(); }
 async function power(action) {
   if (layer() === 'dialog') closeDialog();
-  toast(action === 'reboot' ? 'Neustart …' : 'Fährt herunter …');
-  try { await api('/api/power/' + action); } catch { toast('Fehlgeschlagen', true); }
+  toast(action === 'reboot' ? T('power.rebooting') : T('power.shuttingDown'));
+  try { await api('/api/power/' + action); } catch { toast(T('common.failed'), true); }
 }
 let toastT;
 function toast(msg, err) {
@@ -1247,13 +1303,15 @@ function fire(k) {
   else if (k === 'start') layer() === 'dialog' ? closeDialog() : openDialog();
   else move(k);
 }
-addEventListener('gamepadconnected', e => toast('Controller verbunden: ' + e.gamepad.id.split('(')[0].trim()));
+addEventListener('gamepadconnected', e => toast(T('pad.connected', { name: e.gamepad.id.split('(')[0].trim() })));
 addEventListener('focus', () => { hideSplash(); poll(); });
 addEventListener('resize', layout);
 
 document.fonts?.ready.then(() => layout());
 (async () => {
-  try { if (!offline) scale = (await getJSON('/api/settings')).scale || 1.75; } catch {}
+  let lang = (navigator.language || 'de').slice(0, 2);
+  try { if (!offline) { const s = await getJSON('/api/settings'); scale = s.scale || 1.75; lang = s.lang || lang; } } catch {}
+  await loadLang(lang);
   document.documentElement.style.setProperty('--f', scale * innerHeight / 768);
   await loadFavs(); await load(); poll(); requestAnimationFrame(padLoop);
 })();
