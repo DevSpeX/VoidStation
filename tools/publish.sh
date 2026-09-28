@@ -10,7 +10,10 @@
 #                                                      freigeben ("stable")
 #
 #  Bundles: am Windows-PC nach \\<rechner>\share\Updates kopieren.
-#  Einmalig, damit git sich das Codeberg-Token merkt:
+#
+#  Remotes:  origin   = GitHub (Hauptquelle, Pflicht)
+#            codeberg = Spiegel (optional; wird mitgepusht, solange er existiert)
+#  Einmalig, damit git sich das GitHub-Token merkt:
 #     git config --global credential.helper store
 # =====================================================================
 set -euo pipefail
@@ -19,9 +22,18 @@ REPO="${VS_REPO:-$HOME/VoidStation}"
 INBOX="${VS_INBOX:-$HOME/share/Updates}"
 KEY="${VS_KEY:-$HOME/.ssh/voidstation-release}"
 PUB="keys/voidstation-release.pub"
+MIRROR="${VS_MIRROR:-codeberg}"
 
 say()  { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
+warn() { printf '\033[1;33m[!] %s\033[0m\n' "$*"; }
 die()  { printf '\033[1;31m[x] %s\033[0m\n' "$*"; exit 1; }
+
+has_mirror() { git remote get-url "$MIRROR" >/dev/null 2>&1; }
+mirror_push() {            # Spiegel mitpflegen – Fehler dort brechen nichts ab
+  has_mirror || return 0
+  if git push -q "$MIRROR" "$@"; then echo "Spiegel ($MIRROR) aktualisiert."
+  else warn "Spiegel ($MIRROR) nicht erreichbar – GitHub ist trotzdem aktuell."; fi
+}
 
 [ -d "$REPO/.git" ] || die "Kein Repo unter $REPO gefunden."
 cd "$REPO"
@@ -69,7 +81,7 @@ EOF
 --release)
   say "Test-Stand fuer alle freigeben"
   git fetch -q origin
-  [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || die "Lokaler Stand weicht von Codeberg ab – erst  bash tools/publish.sh"
+  [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || die "Lokaler Stand weicht von GitHub ab – erst  bash tools/publish.sh"
   [ -s "$PUB" ] || die "Kein Signaturschluessel im Repo – erst  bash tools/publish.sh --init-key"
   verify_dist || die "dist/ ist nicht korrekt signiert – erst  bash tools/publish.sh"
   ver="$(python3 -c 'import json;print(json.load(open("dist/version.json"))["version"])')"
@@ -80,6 +92,7 @@ EOF
   read -r -p "Freigeben? [j/N] " a
   [ "$a" = j ] || [ "$a" = J ] || die "Abgebrochen."
   git push origin HEAD:stable
+  mirror_push HEAD:stable
   echo "Freigegeben: Version $ver ist jetzt fuer alle Geraete verfuegbar."
   exit 0 ;;
 
@@ -139,9 +152,16 @@ fi
 say "Veroeffentlichen (Test-Kanal)"
 git push -q origin HEAD:main
 if ! git ls-remote --exit-code --heads origin stable >/dev/null 2>&1; then
-  git push -q origin HEAD:stable
-  echo "Zweig 'stable' angelegt (erste Veroeffentlichung)."
+  if has_mirror && git fetch -q "$MIRROR" stable 2>/dev/null; then
+    # Umzug: bisher freigegebenen Stand uebernehmen statt ungetestet freizugeben
+    git push -q origin FETCH_HEAD:refs/heads/stable
+    echo "Zweig 'stable' angelegt (bisheriger Stand vom Spiegel $MIRROR)."
+  else
+    git push -q origin HEAD:stable
+    echo "Zweig 'stable' angelegt (erste Veroeffentlichung)."
+  fi
 fi
+mirror_push HEAD:main
 
 ver="$(python3 -c 'import json;print(json.load(open("dist/version.json"))["version"])')"
 cat <<EOF

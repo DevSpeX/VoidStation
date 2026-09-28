@@ -23,14 +23,14 @@ Manuell: Einstellungen → System → Grafik-Server, oder `sudo /usr/local/sbin/
 
 ```sh
 loadkeys de
-xbps-fetch https://goldhahn.codeberg.page/vs
+xbps-fetch https://panther92.github.io/VoidStation/vs
 bash vs
 ```
 
-`vs` ist ein kleiner Starter (siehe `pages/vs`, veröffentlicht über das Repo `goldhahn/pages`):
+`vs` ist ein kleiner Starter (`docs/vs`, veröffentlicht über GitHub Pages aus dem Zweig `stable`, Ordner `/docs`):
 Er lädt jedes Mal den aktuellen `dist/voidstation-install.sh` aus diesem Repo und startet ihn.
 Lange Variante ohne Starter:
-`xbps-fetch https://codeberg.org/goldhahn/VoidStation/raw/branch/stable/dist/voidstation-install.sh`
+`xbps-fetch https://raw.githubusercontent.com/Panther92/VoidStation/stable/dist/voidstation-install.sh`
 
 Das Skript fragt Ziel-SSD, Rechnername, Name und Passwort ab. **Es löscht die komplette SSD.**
 Danach installiert es Void, VoidStation, EFISTUB (GRUB als Rückfall) und die Samba-Freigabe.
@@ -64,7 +64,7 @@ HTTPS und diesem Repo.
 Gebaut und signiert wird auf dem Rechner des Herausgebers mit `tools/publish.sh` – dort liegt der private Schlüssel.
 
 ```sh
-git config --global credential.helper store      # einmalig: Codeberg-Zugang merken
+git config --global credential.helper store      # einmalig: GitHub-Zugang (Token) merken
 bash tools/publish.sh --init-key                 # einmalig: Signaturschlüssel anlegen (Sicherungskopie!)
 bash tools/publish.sh                            # Bundle aus ~/share/Updates übernehmen, bauen, signieren,
                                                  # nach main (Test-Kanal) pushen
@@ -74,6 +74,7 @@ bash tools/publish.sh --release                  # Test-Stand für alle freigebe
 Neue Versionen bekommen einen Eintrag oben in `CHANGELOG.md` (`## 0.4.1 – JJJJ-MM-TT` plus Stichpunkte).
 `dist/` wird nur von `publish.sh` erzeugt und nicht von Hand geändert.
 Forks tragen ihre eigene Adresse in `update-url` ein und legen einen eigenen Schlüssel an.
+Ist ein Remote `codeberg` eingerichtet, pflegt `publish.sh` ihn als Spiegel mit (früherer Standort des Projekts).
 
 ## Eigene Live-ISO bauen (optional, für Installation ohne Internet-Download des Skripts)
 
@@ -92,6 +93,7 @@ Sie enthält `voidstation-install`, `nmtui` für WLAN, SSH mit root/voidlinux un
 | `launcher/voidstation-pkg` | root-Helfer, installiert nur freigegebene Pakete |
 | `launcher/openbox/`, `launcher/firefox/` | Openbox-Konfiguration, Firefox-Profile und Richtlinien |
 | `install-head.sh`, `update-head.sh` | Kopf der Installations- und Update-Skripte (Payload wird angehängt) |
+| `docs/` | Screenshots und der Starter `vs` (GitHub Pages) |
 | `iso/` | Neuinstallation (`voidstation-install`) und ISO-Bau |
 | `tools/` | `publish.sh` (Bundle einspielen und pushen), `screenshots.py` (README-Bilder) |
 | `update-url` | Update-Quelle der Geräte (`{channel}` = stable/main) |
