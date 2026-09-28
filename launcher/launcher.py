@@ -123,12 +123,20 @@ class AppManager:
     def __init__(self):
         self.lock = threading.Lock()
         self.procs = {}                       # tile_id -> Popen
+        self.shown = set()                    # tile_ids, deren Programm schon ein Fenster hat
 
     def running(self):
         with self.lock:
             for tid in [t for t, p in self.procs.items() if p.poll() is not None]:
                 del self.procs[tid]
+                self.shown.discard(tid)
             return list(self.procs)
+
+    def starting(self):
+        """Laufende Programme, die noch kein Fenster zeigen (z. B. Steam bei der Ersteinrichtung)."""
+        running = self.running()
+        with self.lock:
+            return [t for t in running if t not in self.shown]
 
     def _get(self, tile_id):
         with self.lock:
@@ -167,24 +175,33 @@ class AppManager:
         out.close()
         with self.lock:
             self.procs[tid] = proc
+            self.shown.discard(tid)
         # Neues Fenster aktiv nach vorn holen (Openbox verhindert sonst u. U. den Fokuswechsel,
         # und das Programm laeuft unsichtbar hinter der Startseite)
         threading.Thread(target=self._bring_up, args=(tid, proc), daemon=True).start()
         return "started"
 
     def _bring_up(self, tid, proc):
-        for _ in range(40):                     # bis zu ~12 s auf das erste Fenster warten
-            time.sleep(0.3)
+        # Auf das erste Fenster warten: anfangs schnell, danach gemaechlich - Steam braucht
+        # bei der Ersteinrichtung mehrere Minuten, bis sich ein Fenster zeigt
+        t0 = time.monotonic()
+        while time.monotonic() - t0 < 1800:
+            time.sleep(0.3 if time.monotonic() - t0 < 12 else 1.0)
             if proc.poll() is not None:
                 log(tid, "beendet mit Code", proc.returncode)
                 return
             pids = session_pids(proc.pid)
-            wins = [w for w in windows() if w[1] in pids]
+            wins = [w for w in windows() if w[1] in pids and HOME_TITLE not in w[2]]
             if wins:
+                with self.lock:
+                    self.shown.add(tid)
+                log(tid, f"Fenster nach {time.monotonic() - t0:.1f} s")
                 time.sleep(0.4)
                 for wid, _, _ in wins:
                     run(["wmctrl", "-i", "-a", wid])
                 return
+        with self.lock:                          # kein Fenster erkennbar -> nicht ewig "startet"
+            self.shown.add(tid)
 
     def close(self, tile_id):
         with self.lock:
@@ -1318,7 +1335,7 @@ class Handler(BaseHTTPRequestHandler):
         path = url.path
         if path == "/api/status":
             running = APPS.running()
-            return self._json(200, {"running": running, "radio": RADIO.status(),
+            return self._json(200, {"running": running, "starting": APPS.starting(), "radio": RADIO.status(),
                                     "tv": TV.now if "tv" in running else None})
         if path == "/api/tv/status":
             TV.ensure()
@@ -1357,9 +1374,15 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(502, {"error": str(e)})
         if path == "/tiles.json":
             try:
-                return self._send(200, CONFIG.read_bytes(), MIME[".json"])
-            except OSError:
+                c = json.loads(CONFIG.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
                 return self._send(404)
+            hints = {a["id"]: a["start_hint"] for a in catalog()["apps"] if a.get("start_hint")}
+            for g in c.get("groups", []):
+                for t in g.get("tiles", []):
+                    if t.get("id") in hints and not t.get("start_hint"):
+                        t["start_hint"] = hints[t["id"]]
+            return self._json(200, c)
         if path == "/":
             path = "/index.html"
         target = (WEB / path.lstrip("/")).resolve()

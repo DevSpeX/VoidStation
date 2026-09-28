@@ -58,7 +58,8 @@
         "icon": "gamepad",
         "sub": "Big Picture"
       },
-      "note": "Beim ersten Start lädt Steam sich selbst herunter (ca. 300 MB). Für Windows-Spiele einmalig in Steam: Einstellungen → Kompatibilität → GE-Proton wählen."
+      "note": "Beim ersten Start lädt Steam sich selbst herunter (ca. 300 MB). Für Windows-Spiele einmalig in Steam: Einstellungen → Kompatibilität → GE-Proton wählen.",
+      "start_hint": "Beim ersten Start lädt Steam Updates herunter und richtet sich ein – das kann einige Minuten dauern. Danach geht es deutlich schneller."
     },
     {
       "id": "retroarch",

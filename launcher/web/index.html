@@ -104,6 +104,10 @@
   .splash .inner { text-align: center; }
   .splash svg { width: 16vh; height: 16vh; }
   .splash .name { margin-top: 3vh; font-size: calc(26px * var(--f)); font-weight: 300; }
+  .splash .ring { width: calc(34px * var(--f)); height: calc(34px * var(--f)); margin: 4.5vh auto 0; border: calc(3px * var(--f)) solid rgba(255,255,255,.22); border-top-color: var(--text); border-radius: 50%; animation: spin 1s linear infinite; }
+  .splash .shint { margin: 3.2vh auto 0; max-width: 60vw; font-size: calc(15px * var(--f)); color: var(--text-dim); line-height: 1.45; min-height: 1.45em; }
+  .splash .skey { position: absolute; left: 0; right: 0; bottom: 6vh; text-align: center; font-size: calc(12px * var(--f)); color: var(--text-faint); opacity: 0; transition: opacity .4s; }
+  .splash .skey.on { opacity: 1; }
   .dots { display: flex; gap: 10px; justify-content: center; margin-top: 5vh; height: 8px; }
   .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--text); animation: dot 1.4s infinite ease-in-out; }
   .dots i:nth-child(2) { animation-delay: .15s; } .dots i:nth-child(3) { animation-delay: .3s; }
@@ -255,7 +259,7 @@
 </section>
 
 <div class="hint" id="hint"></div>
-<div class="splash" id="splash"><div class="inner"><div id="splashIcon"></div><div class="name" id="splashName"></div><div class="dots"><i></i><i></i><i></i></div></div></div>
+<div class="splash" id="splash"><div class="inner"><div id="splashIcon"></div><div class="name" id="splashName"></div><div class="ring"></div><div class="shint" id="splashHint"></div></div><div class="skey" id="splashKey"><b>Esc / B</b> im Hintergrund weiter starten</div></div>
 
 <div class="dialog" id="dialog" role="dialog" aria-modal="true">
   <div class="band">
@@ -477,6 +481,7 @@ function keepVisible(track, el, instant) {
   track.style.transform = `translateX(${x}px)`;
 }
 function move(dir) {
+  if (splashTile) return;
   const items = navItems();
   if (!focusEl || !items.includes(focusEl)) return setFocus(items[0]);
   const a = focusEl.getBoundingClientRect();
@@ -500,7 +505,7 @@ function move(dir) {
 }
 
 function activate(el = focusEl) {
-  if (!el) return;
+  if (!el || splashTile) return;
   const act = el.dataset.act;
   if (el.id === 'power') return openDialog();
   if (el.dataset.close !== undefined) return closeDialog();
@@ -529,6 +534,7 @@ function activate(el = focusEl) {
   if (el._tile) return launch(el._tile, el);
 }
 function back() {
+  if (splashTile) return splashToBackground();
   const l = layer();
   if (l === 'adlg') closeAdlg();
   else if (l === 'dialog') closeDialog();
@@ -557,26 +563,54 @@ async function launch(t, el) {
   el.classList.add('pressed'); setTimeout(() => el.classList.remove('pressed'), 150);
   if (!already) showSplash(t);
   launching = true;
-  try { const r = await api('/api/launch/' + encodeURIComponent(t.id)); if (r.running) setRunning(r.running); }
+  try {
+    const r = await api('/api/launch/' + encodeURIComponent(t.id)); if (r.running) setRunning(r.running);
+    if (!already) splashWatch(t);                    // Startbildschirm bleibt, bis das Fenster da ist
+  }
   catch { toast('Konnte ' + (t.label || 'Programm') + ' nicht starten', true); hideSplash(); }
   setTimeout(() => { launching = false; }, 600);
-  // Wenn das Programm nach 4 s nicht (mehr) läuft, ist es beim Start abgestürzt
-  if (!already && !offline) setTimeout(async () => {
-    try { const s = await getJSON('/api/status'); setRunning(s.running || []);
-      if (!running.includes(t.id)) { hideSplash(); toast(`${t.label} hat sich sofort wieder beendet – Details in logs/${t.id}.log`, true); } } catch {}
-  }, 4000);
 }
+let splashTile = null, splashPoll = null, splashT0 = 0;
 function showSplash(t) {
   const sp = $('#splash');
   sp.style.setProperty('--c', t.color || '#2a2e33');
   $('#splashIcon').innerHTML = ICONS[t.icon] || '';
   $('#splashName').textContent = t.label || '';
+  $('#splashHint').textContent = '';
+  $('#splashKey').classList.remove('on');
   sp.classList.add('show');
-  clearTimeout(splashTimer);
-  splashTimer = setTimeout(hideSplash, offline ? 1400 : 12000);
+  splashTile = t; splashT0 = Date.now();
+  clearTimeout(splashTimer); clearInterval(splashPoll);
+  if (offline) splashTimer = setTimeout(hideSplash, 1400);
 }
-function hideSplash() { clearTimeout(splashTimer); $('#splash').classList.remove('show'); }
+// Fragt jede Sekunde nach, ob das Programm schon ein Fenster hat
+function splashWatch(t) {
+  if (offline || splashTile !== t) return;
+  clearInterval(splashPoll);
+  splashPoll = setInterval(async () => {
+    if (splashTile !== t) return clearInterval(splashPoll);
+    let s; try { s = await getJSON('/api/status'); } catch { return; }
+    if (splashTile !== t) return;
+    setRunning(s.running || []);
+    const secs = (Date.now() - splashT0) / 1000;
+    if (!(s.running || []).includes(t.id)) {
+      hideSplash();
+      return toast(`${t.label} hat sich beendet, ohne ein Fenster zu öffnen – Details in logs/${t.id}.log`, true);
+    }
+    if (!(s.starting || []).includes(t.id)) return hideSplash();
+    if (secs > 5) {
+      $('#splashHint').textContent = t.start_hint || 'Das dauert gerade etwas länger – das Programm startet noch …';
+      $('#splashKey').classList.add('on');
+    }
+  }, 1000);
+}
+function hideSplash() { clearTimeout(splashTimer); clearInterval(splashPoll); splashTile = null; $('#splash').classList.remove('show'); }
+function splashToBackground() {
+  const t = splashTile; hideSplash();
+  if (t) toast(`${t.label} startet im Hintergrund weiter`);
+}
 addEventListener('blur', () => setTimeout(hideSplash, 400));
+$('#splash').addEventListener('click', () => { if (splashTile) splashToBackground(); });
 
 async function closeApp(t) {
   try { const r = await api('/api/close/' + encodeURIComponent(t.id)); setRunning(r.running || []); toast((t.label || 'Programm') + ' geschlossen'); }
