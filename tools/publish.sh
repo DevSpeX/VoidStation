@@ -127,16 +127,29 @@ fi
 say "Bauen"
 mkdir -p keys
 if ! cmp -s "$KEY.pub" "$PUB" 2>/dev/null; then cp "$KEY.pub" "$PUB"; echo "oeffentlicher Schluessel ins Repo uebernommen"; fi
+# build.sh leert dist/ – Signaturen retten; der Bau ist reproduzierbar, bei
+# unveraendertem Stand passen sie danach weiter (dann keine Passphrase noetig)
+sigs="$(mktemp -d)"
+cp dist/*.sig "$sigs/" 2>/dev/null || true
 ./build.sh | sed -n '/^Version:/p'
+cp "$sigs"/*.sig dist/ 2>/dev/null || true
+rm -rf "$sigs"
 
 say "Signieren"
 if verify_dist >/dev/null 2>&1; then
   echo "Signaturen sind aktuell."
 else
+  # Schluessel einmal in einen kurzlebigen ssh-agent laden -> Passphrase nur einmal
+  signkey="$KEY"
+  if command -v ssh-agent >/dev/null 2>&1 && eval "$(ssh-agent -s)" >/dev/null; then
+    trap 'ssh-agent -k >/dev/null 2>&1' EXIT
+    if ssh-add -q -t 300 "$KEY"; then signkey="$KEY.pub"; else ssh-agent -k >/dev/null 2>&1; trap - EXIT; fi
+  fi
   for f in dist/update.sh dist/install.sh dist/voidstation-install.sh; do
     rm -f "$f.sig"
-    ssh-keygen -q -Y sign -f "$KEY" -n voidstation "$f"
+    ssh-keygen -q -Y sign -f "$signkey" -n voidstation "$f"
   done
+  if [ "$signkey" = "$KEY.pub" ]; then ssh-agent -k >/dev/null 2>&1; trap - EXIT; fi
   verify_dist || die "Signaturpruefung nach dem Signieren fehlgeschlagen."
   echo "signiert und geprueft"
 fi
