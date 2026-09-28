@@ -885,11 +885,6 @@ def xbps_installed(pkg):
     return bool(r and r.returncode == 0)
 
 
-def xbps_available(pkg):
-    r = run(["xbps-query", "-R", pkg])
-    return bool(r and r.returncode == 0)
-
-
 # Proton-GE (offizielle Releases von GloriousEggroll) fuer natives Steam
 PROTON_DIR = Path.home() / ".local/share/Steam/compatibilitytools.d"
 PROTON_API = "https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases/latest"
@@ -1067,24 +1062,24 @@ class Jobs:
             if self._run(["sudo", "-n", PKG_HELPER, "install", *repos]) != 0:
                 return False
             self._run(["sudo", "-n", PKG_HELPER, "sync"])
-        # 2. Abhaengigkeiten: fest, passend zur GPU, optional (nur was es im Repo gibt)
+        # 2. Abhaengigkeiten: fest + passend zur GPU in EINEM xbps-Durchgang (keine Einzelabfragen
+        #    gegen die Repos - die sind mit multilib/nonfree gross und auf schwachen Rechnern langsam)
         gpus = gpu_vendors()
         self._log("Grafik: " + (", ".join(gpus) or "unbekannt"))
         want = list(s.get("deps", []))
         for v in gpus:
             want += s.get("gpu_deps", {}).get(v, [])
-        want += s.get("optional", [])
-        deps = []
-        for p in dict.fromkeys(want):
-            if xbps_installed(p):
-                continue
-            if xbps_available(p):
-                deps.append(p)
-            else:
-                self._log(f"Hinweis: {p} gibt es im Repo nicht – uebersprungen")
-        # 3. Alles in einem Durchgang installieren
+        deps = [p for p in dict.fromkeys(want) if not xbps_installed(p)]
         if self._run(["sudo", "-n", PKG_HELPER, "install", *deps, s["pkg"]]) != 0:
             return False
+        # 3. Optionale Pakete einzeln - fehlt eins im Repo, geht es trotzdem weiter
+        for p in s.get("optional", []):
+            if xbps_installed(p):
+                continue
+            if self._run(["sudo", "-n", PKG_HELPER, "install", p]) == 0:
+                deps.append(p)
+            else:
+                self._log(f"Hinweis: optionales Paket {p} nicht installiert")
         # Neu hinzugekommene Abhaengigkeiten als automatisch markieren -> beim Entfernen wieder weg
         if deps:
             self._run(["sudo", "-n", PKG_HELPER, "markauto", *deps])

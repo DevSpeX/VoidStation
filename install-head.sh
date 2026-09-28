@@ -360,6 +360,22 @@ done
 chown -R "$VSUSER:$VSUSER" "$HOMEDIR/.config" "$HOMEDIR/.local" "$HOMEDIR/.xinitrc" "$HOMEDIR/.bash_profile"
 
 # ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Auslagerungsdatei bei wenig RAM: ohne Swap friert ein 4-GB-System bei
+# Speicherdruck komplett ein, statt ein Programm zu beenden
+MEM_MB=$(( $(awk '/MemTotal/{print $2}' /proc/meminfo) / 1024 ))
+FREE_ROOT_MB=$(( $(df --output=avail -k / | tail -1) / 1024 ))
+if [ "$MEM_MB" -lt 7800 ] && [ -z "$(swapon --noheadings --show 2>/dev/null)" ] && [ ! -e /swapfile ] \
+   && [ "$FREE_ROOT_MB" -gt 6000 ]; then
+  say "Auslagerungsdatei: 2 GB (RAM: ${MEM_MB} MB)"
+  if dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none && chmod 600 /swapfile && mkswap -q /swapfile; then
+    grep -q '^/swapfile' /etc/fstab || echo "/swapfile  none  swap  defaults  0 0" >> /etc/fstab
+    if [ "${VOIDSTATION_CHROOT:-0}" != 1 ]; then swapon /swapfile && echo "aktiv"; fi
+  else
+    rm -f /swapfile; warn "Auslagerungsdatei konnte nicht angelegt werden"
+  fi
+fi
+
 say "8/8  Dienste"
 for s in dbus elogind sshd chronyd; do
   [ -d "/etc/sv/$s" ] || continue
