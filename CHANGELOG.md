@@ -4,6 +4,10 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.7.5 – 2026-09-29
+- Installer: nach dem Halten erscheint sofort der Fortschritt (große Kachel mit Prozent, Schritten und Erklärung) – zurück geht es erst nach dem Neustart
+- Installer fertig: nur noch „Jetzt neu starten“
+
 ## 0.7.4 – 2026-09-29
 - Installer: „Löschen und installieren“ blieb hängen – behoben
 - mGBA ist nicht mehr vorinstalliert, sondern im AppCenter (Spiele); vorhandene Installationen bleiben

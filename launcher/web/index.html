@@ -337,7 +337,7 @@
   .tile.hold .ring::before { content: ""; position: absolute; inset: 12%; border-radius: 50%; background: var(--c); }
   .tile.hold .ring b { position: relative; font-size: calc(var(--iu) * .13); font-weight: 600; }
   /* Fortschritt */
-  .phl { display: flex; flex-direction: column; gap: calc(6px * var(--f)); width: calc(var(--iu) * 3.2); }
+  .phl { display: flex; flex-direction: column; gap: calc(6px * var(--f)); width: calc(var(--iu) * 2.6); }
   .ph { position: relative; display: flex; align-items: center; gap: calc(14px * var(--f)); min-height: calc(var(--iu) * .36); padding: 0 calc(16px * var(--f)); background: #1b1e22; color: var(--text-dim); font-size: calc(16px * var(--f)); overflow: hidden; }
   .ph .m { width: calc(20px * var(--f)); flex: none; text-align: center; }
   .ph .nm { flex: 1; }
@@ -353,6 +353,20 @@
   .tile.iradio .now { position: absolute; left: 7%; right: 7%; top: 30%; }
   .tile.iradio .now .st { font-size: calc(var(--iu) * .14); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tile.iradio .now .ti { margin-top: 4px; font-size: calc(var(--iu) * .09); color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* grosse Fortschrittskachel (Farbe wie der Installieren-Knopf) */
+  .pbig { position: relative; width: calc(var(--iu) * 2.9); height: calc(var(--iu) * 2 + var(--gap)); box-sizing: border-box; padding: calc(20px * var(--f)) calc(22px * var(--f));
+    background: linear-gradient(160deg, rgba(255,255,255,.08), transparent 45%, rgba(0,0,0,.2)), var(--c); display: flex; flex-direction: column; }
+  .pbig .cap { font-size: calc(15px * var(--f)); color: rgba(255,255,255,.8); }
+  .pbig .big { font-size: calc(var(--iu) * .55); font-weight: 300; line-height: 1.05; margin-top: calc(6px * var(--f)); }
+  .pbig .now { font-size: calc(18px * var(--f)); margin-top: calc(4px * var(--f)); }
+  .pbig .det { font-size: calc(14px * var(--f)); color: rgba(255,255,255,.75); min-height: 1.3em; }
+  .pbig .what { margin-top: calc(12px * var(--f)); font-size: calc(15px * var(--f)); line-height: 1.4; color: rgba(255,255,255,.9); max-width: 95%; }
+  .pbig .foot { margin-top: auto; }
+  .pnote { margin-top: calc(10px * var(--f)); max-width: calc(var(--iu) * 2.6); font-size: calc(14px * var(--f)); color: var(--text-dim); line-height: 1.4; }
+  .pnote .k { color: var(--text-faint); margin-right: .4em; }
+  .pbig .tb { height: calc(8px * var(--f)); background: rgba(0,0,0,.3); } .pbig .tb b { display: block; height: 100%; background: #fff; transition: width .5s; }
+  .pbig .tt { margin-top: calc(8px * var(--f)); font-size: calc(14px * var(--f)); color: rgba(255,255,255,.85); }
+  .pbig .warn { margin-top: calc(4px * var(--f)); font-size: calc(14px * var(--f)); font-weight: 600; }
   .iload { padding: 0 var(--pad-x); color: var(--text-dim); font-size: calc(18px * var(--f)); display: flex; align-items: center; gap: calc(14px * var(--f)); }
 
   @media (prefers-reduced-motion: reduce) { .tile { animation: none; opacity: 1; } .track, .tile, .splash, .layer { transition: none; } }
@@ -621,7 +635,7 @@ function instHints() {
   return ({ welcome: [T('hint.instSelect'), T('hint.instBackLive')], disk: [T('hint.instSelect'), b], beside: [T('hint.instSize'), T('hint.instContinue'), b],
     free: [T('hint.instContinue'), b], manual: [T('hint.instRole'), b], account: [T('hint.instType'), T('hint.instDel'), T('hint.instFields'), b],
     host: [T('hint.instType'), T('hint.instDel'), b], device: [T('hint.instChange'), T('hint.instNext'), b], confirm: [T('hint.instHold'), b],
-    progress: [T('hint.instOpen'), T('hint.instVol')], error: [T('hint.instSelect'), T('hint.instBackLive')], done: [T('hint.instReboot')] })[I?.step] || [T('hint.instSelect'), b];
+    progress: [T('hint.instWait'), T('hint.instVol')], error: [T('hint.instSelect'), T('hint.instBackLive')], done: [T('hint.instReboot')] })[I?.step] || [T('hint.instSelect'), b];
 }
 
 /* ============================================================ Startseite */
@@ -1568,6 +1582,7 @@ function instClose() {
 const STEPNO = { disk: 1, beside: 1, free: 1, manual: 1, account: 2, host: 3, device: 3, confirm: 4, progress: 5, error: 5 };
 function instShell(title, sub, stepNo) {
   $('#iTitle').textContent = title;
+  $('#inst header .round').style.display = ['progress', 'done'].includes(I?.step) ? 'none' : '';   // waehrend/nach der Installation kein Zurueck
   $('#iSub').textContent = sub || '';
   $('#iSteps').innerHTML = stepNo ? `<div class="sn">${esc(T('inst.step', { n: stepNo, total: 5 }))}</div><div class="sb">${[1, 2, 3, 4, 5].map(n => `<i${n <= stepNo ? ' class="on"' : ''}></i>`).join('')}</div>` : '';
   const tr = $('#iTrack'); tr.innerHTML = ''; tr.dataset.x = 0; tr.style.transform = 'none';
@@ -1626,6 +1641,7 @@ function instRender() {
 function instBack() {
   const s = I?.step;
   if (s === 'progress') return toast(T('inst.busy'));
+  if (s === 'done') return toast(T('inst.pleaseReboot'));
   if (s === 'welcome' || s === 'done' || s === 'error' || !s) return instClose();
   if (s === 'host') { I.hostEdit = null; return instGo('device'); }
   instGo({ disk: 'welcome', beside: 'disk', free: 'disk', manual: 'disk', account: I.mode === 'whole' ? 'disk' : I.mode, device: 'account', confirm: 'device' }[s] || 'welcome');
@@ -2052,9 +2068,11 @@ function instConfig() {
 }
 async function instStart() {
   I.t0 = Date.now();
-  try { I.status = offline ? { state: 'running', pct: 0, phases: {} } : await api('/api/install/start', { config: instConfig() }); }
-  catch (e) { return toast(T('inst.startFailed', { msg: e.message }), true); }
-  instGo('progress'); instWatch();
+  I.status = { state: 'running', pct: 0, phases: {}, mode: I.mode };
+  instGo('progress');                                     // sofort umschalten: ab hier nichts mehr aenderbar
+  try { if (!offline) I.status = await api('/api/install/start', { config: instConfig() }); }
+  catch (e) { I.step = 'confirm'; instRender(); return toast(T('inst.startFailed', { msg: e.message }), true); }
+  instWatch();
 }
 
 /* ---- B6 Fortschritt */
@@ -2072,39 +2090,45 @@ const PHGROUPS = mode => [...(mode === 'beside' ? [['shrink', ['check', 'shrink'
   ['copy', ['copy']], ['configure', ['configure']], ['boot', ['boot']], ['cleanup', ['cleanup']]];
 function rProgress() {
   const tr = instShell(T('inst.installing'), '', 5);
+  const whole = (I.status?.mode || I.mode) === 'whole';
+  const big = document.createElement('div'); big.className = 'pbig'; big.style.setProperty('--c', whole ? '#6e2b2b' : '#2f6d4f');
+  big.innerHTML = `<div class="cap">${esc(T(whole ? 'inst.progCapWhole' : 'inst.progCap'))}</div><div class="big" id="iPct">0 %</div>` +
+    `<div class="now" id="iNow"></div><div class="det" id="iDet"></div><div class="what" id="iWhat"></div>` +
+    `<div class="foot"><div class="tb"><b id="iTotBar"></b></div><div class="tt" id="iTot"></div><div class="warn">${esc(T('inst.dontOffCaps'))}</div></div>`;
+  section(tr, T('inst.installing'), big);
   const box = document.createElement('div');
-  box.innerHTML = '<div class="phl" id="iPh"></div><div class="ptotal"><div class="tb"><b id="iTotBar"></b></div><div class="tt" id="iTot"></div></div>';
-  section(tr, T('inst.installing'), box);
-  const rt = itile({ size: 'wide', color: '#3b2f4f', cls: 'iradio', key: 'radio', fn: () => openLayer('radio'), html: `<div class="sub" id="iRadioSub"></div><div class="now"><div class="st" id="iRadioSt"></div><div class="ti" id="iRadioTi"></div></div><div class="label">${esc(T('radio.title'))}</div>` });
-  const tip = itile({ size: 'wide', nav: false, color: '#23272c', html: `<div class="stile"><div class="k">${esc(T('inst.goodToKnow'))}</div></div><div class="d" id="iTip" style="position:absolute;left:7%;right:7%;top:30%;font-size:calc(var(--iu) * .1);line-height:1.4"></div>` });
-  const lg = itile({ color: '#2f3238', icon: 'log', label: T('inst.log'), key: 'log', fn: instShowLog });
-  section(tr, ' ', grid('', [rt, tip, lg]));
+  box.innerHTML = '<div class="phl" id="iPh"></div><div class="pnote"><span class="k">' + esc(T('inst.goodToKnow')) + '</span> <span id="iTip"></span></div>' +
+    '<div class="pnote"><span class="k">' + esc(T('radio.title')) + '</span> <span id="iRadio"></span></div>';
+  section(tr, T('inst.steps'), box);
+  setFocus(null); focusEl = null; $$('.focus').forEach(e => e.classList.remove('focus'));
   rProgressUpdate();
-  instFocus('#iTrack [data-key="radio"]');
+  updateHint();
 }
 function rProgressUpdate() {
   const st = I.status || {}, ph = st.phases || {};
   const box = $('#iPh'); if (!box) return;
+  let cur = null;
   box.innerHTML = PHGROUPS(st.mode || I.mode).map(([id, members]) => {
     const states = members.map(m => ph[m]);
     const state = states.includes('error') ? 'error' : states.every(s => s === 'done') ? 'done' : states.some(s => s === 'running' || s === 'done') ? 'run' : '';
-    let dt = '', pc = '';
-    if (id === 'copy' && state === 'run' && st.copy?.total) { dt = T('inst.copyOf', { done: gb(st.copy.done || 0), total: gb(st.copy.total) }); pc = pct(Math.round(st.phase_pct || 0)); }
-    else if (state === 'run' && members.includes(st.phase) && st.phase_pct) pc = pct(Math.round(st.phase_pct));
+    if (state === 'run' && !cur) cur = id;
+    let dt = '';
+    if (id === 'copy' && state === 'run' && st.copy?.total) dt = T('inst.copyOf', { done: gb(st.copy.done || 0), total: gb(st.copy.total) });
     if (id === 'boot') dt = (st.mode || I.mode) === 'whole' ? T('inst.bootStub') : T('inst.bootMenuShort');
     return `<div class="ph ${state}"><span class="m">${state === 'done' ? '✓' : state === 'error' ? '✕' : state === 'run' ? '<span class="spin" style="display:inline-block"></span>' : '·'}</span>` +
-      `<span class="nm">${esc(T('inst.ph.' + id))}</span><span class="dt">${esc(dt)}</span><span class="pc">${esc(pc)}</span>` +
+      `<span class="nm">${esc(T('inst.ph.' + id))}</span><span class="dt">${esc(dt)}</span>` +
       (state === 'run' ? `<span class="phbar" style="width:${Math.round(st.phase_pct || 0)}%"></span>` : '') + '</div>';
   }).join('');
   const p = Math.round(st.pct || 0);
+  $('#iPct').textContent = pct(p);
   $('#iTotBar').style.width = p + '%';
+  $('#iNow').textContent = cur ? T('inst.ph.' + cur) : T('inst.starting');
+  $('#iDet').textContent = cur === 'copy' && st.copy?.total ? T('inst.copyOf', { done: gb(st.copy.done || 0), total: gb(st.copy.total) }) + ' · ' + pct(Math.round(st.phase_pct || 0)) : '';
   const eta = st.copy?.eta;
-  const tail = st.phase === 'copy' && eta ? (eta > 90 ? T('inst.eta', { min: Math.max(2, Math.round((eta + 60) / 60)) }) : T('inst.etaSoon')) : T('inst.dontOff');
-  $('#iTot').textContent = `${T('inst.total', { pct: pct(p) })} · ${tail}`;
+  $('#iTot').textContent = st.phase === 'copy' && eta ? (eta > 90 ? T('inst.etaShort', { min: Math.max(2, Math.round((eta + 60) / 60)) }) : T('inst.etaSoonShort')) : '';
+  $('#iWhat').textContent = T('inst.phx.' + (cur || 'check'));
   const r = radioState.station;
-  $('#iRadioSub').textContent = r ? T('inst.radioOn') : '';
-  $('#iRadioSt').textContent = r ? r.name : T('inst.radioOff');
-  $('#iRadioTi').textContent = r ? (radioState.title || T('common.live')) : '';
+  $('#iRadio').textContent = r ? `${r.name} · ${T('inst.radioOn')}` : T('inst.radioNone');
   const tips = ['inst.tip1', 'inst.tip2', 'inst.tip3', 'inst.tip4'];
   instTipN = (instTipN + 1) % (tips.length * 8);
   $('#iTip').innerHTML = T(tips[Math.floor(instTipN / 8)], { host: esc(I.host) });
@@ -2153,18 +2177,20 @@ function rError() {
   instFocus('#iTrack [data-key="' + (e.alt ? 'alt' : 'retry') + '"]');
 }
 async function instRetry(alt) {
-  try { I.status = await api('/api/install/retry', { alt }); } catch (e) { return toast(T('inst.startFailed', { msg: e.message }), true); }
-  instGo('progress'); instWatch();
+  const prev = I.status;
+  I.status = Object.assign({}, prev, { state: 'running', error: null });
+  instGo('progress');
+  try { I.status = await api('/api/install/retry', { alt }); }
+  catch (e) { I.status = prev; I.step = 'error'; instRender(); return toast(T('inst.startFailed', { msg: e.message }), true); }
+  instWatch();
 }
 
 /* ---- B7 Fertig */
 function rDone() {
   const st = I.status || {}, r = st.result || {};
   const tr = instShell(T('inst.done'), T('inst.doneSub'));
-  section(tr, T('inst.whatNow'), grid('', [
-    itile({ size: 'large', color: '#2f6d4f', icon: 'restart', label: T('inst.rebootNow'), key: 'reboot', fn: () => power('reboot') }),
-    itile({ color: '#3a3f46', icon: 'home', label: T('inst.stayLive'), key: 'stay', fn: instClose }),
-    itile({ color: '#2f3238', icon: 'log', label: T('inst.log'), key: 'log', fn: instShowLog })]));
+  section(tr, T('inst.whatNow'), grid('r2', [
+    itile({ size: 'large', color: '#2f6d4f', icon: 'restart', label: T('inst.rebootNow'), key: 'reboot', fn: () => power('reboot') })]));
   const secs = r.seconds || Math.round((Date.now() - (I.t0 || Date.now())) / 1000);
   const host = r.hostname || I.host, login = r.login || loginOf(I.name);
   section(tr, T('inst.afterReboot'), panel([
@@ -2277,7 +2303,7 @@ function fire(k) {
   else if (k === 'lt') jumpGroup(-1);
   else if (k === 'rt') jumpGroup(1);
   else if (k === 'select') openUpdate();
-  else if (k === 'start') layer() === 'dialog' ? closeDialog() : openDialog();
+  else if (k === 'start') { if (layer() === 'inst' && I?.step === 'progress') return toast(T('inst.busy')); layer() === 'dialog' ? closeDialog() : openDialog(); }
   else move(k);
 }
 addEventListener('gamepadconnected', e => toast(T('pad.connected', { name: e.gamepad.id.split('(')[0].trim() })));

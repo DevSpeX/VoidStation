@@ -3,6 +3,10 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.7.5 – 2026-09-29
+- Installer: the progress screen appears right after holding (large tile with percentage, steps and explanation) – no going back until the restart
+- Installer finished: only “Restart now” remains
+
 ## 0.7.4 – 2026-09-29
 - Installer: “Erase and install” got stuck – fixed
 - mGBA is no longer preinstalled but available in the AppCenter (Games); existing installations keep it
