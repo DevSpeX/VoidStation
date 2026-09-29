@@ -4,6 +4,9 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.7.6 – 2026-09-29
+- Intel-PCs bekommen beim Start den aktuellen CPU-Microcode (intel-ucode) – behebt Hänger älterer Skylake-Geräte mit altem BIOS; auch in der Live-ISO
+
 ## 0.7.5 – 2026-09-29
 - Installer: nach dem Halten erscheint sofort der Fortschritt (große Kachel mit Prozent, Schritten und Erklärung) – zurück geht es erst nach dem Neustart
 - Installer fertig: nur noch „Jetzt neu starten“
