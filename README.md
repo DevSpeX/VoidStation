@@ -8,8 +8,9 @@ Emulatoren, AppCenter für optionale Apps (xbps, Flatpak, AppImage, Web), Einste
 Tonausgang, WLAN, Mauszeiger), Samba-Freigabe `\\<rechner>\share`, mehrere Apps parallel mit Umschalten.
 Oberfläche auf **Deutsch oder Englisch** (Einstellungen → Sprache · Language).
 Grafik-Server ist [XLibre](https://github.com/X11Libre/xserver) (Pakete von [xlibre-void](https://github.com/xlibre-void/xlibre));
-startet die Oberfläche damit zweimal nicht, schaltet VoidStation automatisch auf X.Org zurück.
-Manuell: Einstellungen → System → Grafik-Server, oder `sudo /usr/local/sbin/voidstation-pkg xserver xlibre|xorg|status`.
+X.Org wird nicht verwendet. Startet die Oberfläche zweimal nicht, installiert VoidStation XLibre einmal neu;
+danach folgt eine Rettungskonsole. Von Hand: `sudo /usr/local/sbin/voidstation-pkg xserver ensure|repair|status`.
+Fernzugriff per SSH lässt sich unter Einstellungen → System ein- und ausschalten.
 
 ![Startseite](docs/screenshots/1-start.webp)
 

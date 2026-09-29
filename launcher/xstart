@@ -1,8 +1,9 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-or-later
 # VoidStation: grafische Oberflaeche starten (aufgerufen aus ~/.bash_profile auf tty1).
-# Sicherheitsnetz: Startet X zweimal hintereinander nicht (unter 20 s), wird
-# automatisch auf X.Org zurueckgeschaltet, falls XLibre aktiv ist.
+# Grafik-Server ist ausschliesslich XLibre. Sicherheitsnetz bei Fehlstarts (X endet nach < 20 s):
+#   2. Fehlstart -> XLibre einmal neu installieren (Reparatur), dann neuer Versuch
+#   4. Fehlstart -> Rettungskonsole
 TV="$HOME/.local/share/voidstation"
 FAILS="/tmp/voidstation-xfails-$(id -u)"
 mkdir -p "$TV/logs"
@@ -12,7 +13,7 @@ startx -- -nolisten tcp vt1 >"$HOME/.xsession-errors" 2>&1
 dur=$(( $(date +%s) - t0 ))
 
 if [ "$dur" -ge 20 ]; then            # normal beendet (z. B. Neustart)
-  rm -f "$FAILS"
+  rm -f "$FAILS" "$FAILS.repaired"
   exit 0
 fi
 
@@ -20,20 +21,19 @@ n=$(( $(cat "$FAILS" 2>/dev/null || echo 0) + 1 ))
 echo "$n" > "$FAILS"
 cp "$HOME/.xsession-errors" "$TV/logs/xstart-fehler-$n.log" 2>/dev/null
 
-if [ "$n" -ge 2 ] && xbps-query xlibre-xserver >/dev/null 2>&1; then
-  echo
-  echo "  Die Oberflaeche startet nicht (XLibre). Schalte auf X.Org zurueck – bitte warten …"
-  # shellcheck disable=SC2024  # Protokoll gehoert bewusst dem Benutzer
-  if sudo -n /usr/local/sbin/voidstation-pkg xserver xorg >>"$TV/logs/xserver-rueckfall.log" 2>&1; then
-    rm -f "$FAILS"
-    echo "  Fertig, starte neu …"
-    sleep 2
-  fi
-elif [ "$n" -ge 4 ]; then
+if [ "$n" -ge 4 ]; then
   echo
   echo "  Die Oberflaeche startet nicht. Fehlerprotokoll: ~/.xsession-errors"
   echo "  Konsole folgt. Neuer Versuch mit:  exit"
   exec /bin/bash --noprofile
+elif [ "$n" -ge 2 ] && [ ! -e "$FAILS.repaired" ]; then
+  echo
+  echo "  Die Oberflaeche startet nicht. Repariere den Grafik-Server (XLibre) – bitte warten …"
+  touch "$FAILS.repaired"
+  # shellcheck disable=SC2024  # Protokoll gehoert bewusst dem Benutzer
+  sudo -n /usr/local/sbin/voidstation-pkg xserver repair >>"$TV/logs/xserver-reparatur.log" 2>&1 \
+    && echo "  Fertig, starte neu …" || echo "  Reparatur fehlgeschlagen – Protokoll: $TV/logs/xserver-reparatur.log"
+  sleep 2
 else
   sleep 2
 fi

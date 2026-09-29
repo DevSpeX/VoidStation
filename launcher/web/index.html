@@ -995,10 +995,10 @@ function renderSettings() {
   const rvs = row(s);
   const vu = pill(esc(T('settings.selfupdate')), selfUpdate); vu.dataset.key = 'selfupd';
   rvs.appendChild(vu);
-  if (sett.xserver) {
-    const rx = row(s, T('settings.xserver'));
-    for (const [id, lab] of [['xlibre', 'XLibre'], ['xorg', 'X.Org']]) {
-      const b = pill(lab, () => setXserver(id), sett.xserver.active === id); b.dataset.key = 'xs' + id; rx.appendChild(b);
+  if (sett.ssh !== undefined) {
+    const rs2 = row(s, T('settings.ssh'));
+    for (const on of [true, false]) {
+      const b = pill(esc(T(on ? 'common.on' : 'common.off')), () => setSsh(on), !!sett.ssh === on); b.dataset.key = 'ssh' + on; rs2.appendChild(b);
     }
   }
   const rch = row(s, T('settings.channel'));
@@ -1027,15 +1027,13 @@ function showVs() {
   const ch = vsState ? ` · ${esc(T('upd.channel', { channel: chLabel(vsState) }))}` : '';
   el.innerHTML = `VoidStation ${esc(ver)}${ch}<br>${st}`;
 }
-function setXserver(id) {
-  if (JOBS_BUSY()) return toast(T('common.busy'));
-  if (sett.xserver && sett.xserver.active === id) return toast(T('xs.already', { name: id === 'xlibre' ? 'XLibre' : 'X.Org' }));
-  const txt = id === 'xlibre' ? T('xs.xlibreText') : T('xs.xorgText');
-  adlg(id === 'xlibre' ? T('xs.toXlibre') : T('xs.toXorg'), txt + '\n\n' + T('xs.reboot'),
-    [[T('xs.switch'), async () => {
-      try { jobState = await api('/api/xserver', { target: id }); } catch (e) { return toast(e.message, true); }
-      watchJob();
-    }], [T('common.cancel')]]);
+async function setSsh(on) {
+  if (!!sett.ssh === on) return;
+  toast(T(on ? 'settings.sshTurningOn' : 'settings.sshTurningOff'));
+  try { const r = await api('/api/settings/ssh', { on }); sett.ssh = r.ssh; }
+  catch (e) { return toast(T('common.failedMsg', { msg: e.message }), true); }
+  renderSettings();
+  toast(sett.ssh ? T('settings.sshOn', { host: sett.net.addresses[0]?.ip || sett.net.hostname }) : T('settings.sshOff'));
 }
 async function setChannel(ch) {
   if (ch === 'main' && !(vsState && vsState.channel === 'main')) toast(T('channel.testWarn'));
@@ -1061,9 +1059,7 @@ async function selfUpdate() {
     [[T('upd.now'), () => jobStart('selfupdate')], [T('common.cancel')]]);
 }
 function rebootPrompt(action) {
-  const [title, text] = action === 'xserver'
-    ? [T('xs.doneTitle'), T('xs.doneText')]
-    : [T('upd.doneTitle'), T('upd.doneText')];
+  const [title, text] = [T('upd.doneTitle'), T('upd.doneText')];
   adlg(title, text, [[T('upd.rebootNow'), () => power('reboot')], [T('common.later')]]);
 }
 
@@ -1270,7 +1266,7 @@ function watchJob() {
   const tick = async () => {
     try { jobState = await getJSON('/api/apps/job'); } catch { return; }
     const name = L(jobState.name);
-    const what = ['install', 'remove', 'update', 'check', 'selfupdate', 'xserver'].includes(jobState.action) ? T('job.' + jobState.action, { name }) : name;
+    const what = ['install', 'remove', 'update', 'check', 'selfupdate'].includes(jobState.action) ? T('job.' + jobState.action, { name }) : name;
     $('#jobTitle').textContent = what + T(jobState.state === 'running' ? 'job.running' : jobState.state === 'done' ? 'job.done' : 'job.failed');
     $('#jobSpin').style.display = jobState.state === 'running' ? '' : 'none';
     $('#jobLog').textContent = (jobState.log || []).slice(-6).join('\n');

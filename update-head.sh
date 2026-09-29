@@ -142,8 +142,8 @@ if [ -n "$SIGNERS" ]; then
 fi
 
 # ---------------------------------------------------------------------
-say "X-Server: XLibre (Rueckfall auf X.Org, falls nicht verfuegbar)"
-sh /usr/local/sbin/voidstation-pkg xserver auto || warn "XLibre nicht eingerichtet – es bleibt vorerst bei X.Org"
+say "Grafik-Server: XLibre (ersetzt ein noch vorhandenes X.Org)"
+sh /usr/local/sbin/voidstation-pkg xserver ensure || warn "XLibre nicht eingerichtet – naechstes Update versucht es erneut"
 
 say "4/8  Rechte ohne Passwort: Ausschalten, WLAN, AppCenter"
 rm -f /etc/sudoers.d/voidstation /etc/sudoers.d/tvstart /etc/sudoers.d/zz-tvstart

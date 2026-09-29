@@ -41,7 +41,7 @@ for d in /sys/bus/pci/devices/*; do
     0x10de) echo "GPU: NVIDIA (nouveau)"; GPU_PKGS="$GPU_PKGS mesa-nouveau-dri" ;;
   esac
 done
-PKGS="xorg-minimal xinit xset xrandr setxkbmap $GPU_PKGS \
+PKGS="xinit xauth xset xrandr setxkbmap $GPU_PKGS \
   openbox dbus elogind xrdb pulseaudio-utils curl python3 python3-evdev wmctrl unclutter-xfixes \
   firefox vlc mpv mgba-qt samba flatpak adwaita-qt adwaita-qt6 gnome-themes-extra xsetroot python3-gobject libwebkit2gtk41 pcmanfm gvfs xterm \
   pipewire wireplumber alsa-utils \
@@ -316,8 +316,11 @@ if [ -n "$SIGNERS" ]; then
 fi
 
 # ---------------------------------------------------------------------
-say "X-Server: XLibre (Rueckfall auf X.Org, falls nicht verfuegbar)"
-sh /usr/local/sbin/voidstation-pkg xserver auto || warn "XLibre nicht eingerichtet – es bleibt vorerst bei X.Org"
+say "Grafik-Server: XLibre"
+if ! sh /usr/local/sbin/voidstation-pkg xserver ensure; then
+  warn "XLibre konnte nicht installiert werden – ohne Grafik-Server startet die Oberflaeche nicht."
+  warn "Internetverbindung pruefen und nochmal starten:  sudo /usr/local/sbin/voidstation-pkg xserver ensure"
+fi
 
 say "Extra: Freigabe-Ordner $SHARE"
 for d in ROMs/gba ROMs/nes ROMs/snes ROMs/psx ROMs/psp ROMs/nds ROMs/gamecube ROMs/dreamcast \
