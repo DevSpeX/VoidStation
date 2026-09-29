@@ -4,6 +4,14 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.7.0 – 2026-09-29
+- Grafik-Server ist nur noch XLibre – X.Org wird beim Update entfernt, die Auswahl in den Einstellungen entfällt
+- Startet die Oberfläche zweimal nicht, wird XLibre einmal neu installiert; danach folgt eine Rettungskonsole
+- Fernzugriff (SSH) lässt sich unter Einstellungen → System ein- und ausschalten
+- Update-Kanäle heißen jetzt in beiden Sprachen „Stable“ und „Testing“
+- htop, nano, fastfetch und der Editor Mousepad sind jetzt immer dabei
+- Neu: Live-ISO mit Installer im Kacheldesign – ganze SSD, neben Windows oder Linux, in freien Platz oder selbst einteilen mit GParted
+
 ## 0.6.1 – 2026-09-28
 - Programme wie VLC, Dateimanager und YouTube starten in der gewählten Sprache
 - Pfeile oben rechts zeigen, dass es links oder rechts weitergeht; ein Punkt je Gruppe

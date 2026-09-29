@@ -252,7 +252,7 @@ for v in Ice Classic; do
   d="/usr/share/icons/Bibata-Modern-$v"
   if [ ! -d "$d/cursors" ]; then
     tmp="$(mktemp -d)"
-    if curl -fsSL -o "$tmp/c.tar.xz" "https://github.com/ful1e5/Bibata_Cursor/releases/download/v2.0.7/Bibata-Modern-$v.tar.xz" \
+    if curl -fsSL -m 90 -o "$tmp/c.tar.xz" "https://github.com/ful1e5/Bibata_Cursor/releases/download/v2.0.7/Bibata-Modern-$v.tar.xz" \
        && python3 -c "import sys,tarfile; tarfile.open(sys.argv[1]).extractall('/usr/share/icons')" "$tmp/c.tar.xz"; then
       echo "Mauszeiger Bibata-Modern-$v installiert"
     else
@@ -355,6 +355,8 @@ chown -R "$VSUSER:$VSUSER" "$SHARE"
 
 say "Extra: Samba (Zugriff vom Windows-PC)"
 HOST="$(cat /etc/hostname 2>/dev/null || hostname)"
+# Vom Installer: Passwort aus einer Datei (0600), damit es nicht in der Prozessliste steht
+if [ -n "${SMBPASS_FILE:-}" ] && [ -r "$SMBPASS_FILE" ]; then SMBPASS="$(cat "$SMBPASS_FILE")"; fi
 if [ -f /etc/samba/smb.conf ] && ! grep -q 'VoidStation' /etc/samba/smb.conf; then
   cp /etc/samba/smb.conf /etc/samba/smb.conf.vor-voidstation
 fi
@@ -398,7 +400,8 @@ else
     read -r -s -p "Nochmal: " PW2 </dev/tty; echo
     [ -n "$PW1" ] && [ "$PW1" = "$PW2" ] && PW="$PW1" || warn "Leer oder nicht gleich – bitte nochmal."
   done
-  printf '%s\n%s\n' "$PW" "$PW" | smbpasswd -s -a "$VSUSER" >/dev/null && echo "Freigabe-Passwort gesetzt."
+  if printf '%s\n%s\n' "$PW" "$PW" | smbpasswd -s -a "$VSUSER" >/dev/null; then echo "Freigabe-Passwort gesetzt."
+  else warn "Freigabe-Passwort konnte nicht gesetzt werden – spaeter:  sudo smbpasswd -a $VSUSER"; fi
 fi
 for s in smbd nmbd; do
   [ "$LIVE" = 1 ] && break

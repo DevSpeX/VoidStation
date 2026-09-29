@@ -1,0 +1,23 @@
+VoidStation – Live-System mit Installer
+=======================================
+
+Starten
+  Stick einstecken, im Startmenü des PCs (meist F12, F11 oder Esc) den Eintrag
+  mit „UEFI:“ davor wählen. Im BIOS muss UEFI an sein (CSM/Legacy aus) und
+  Secure Boot aus.
+
+Startmenü
+  VoidStation                 Live-System auf Deutsch (nichts wird installiert)
+  VoidStation installieren    startet gleich mit dem Installer
+  … (English)                 dasselbe auf Englisch
+
+Installieren
+  Kachel „VoidStation installieren“ – oder im Terminal: sudo voidstation-installer text
+  Mindestens: 64-Bit-PC, UEFI, 4 GB RAM, 16 GB auf der SSD.
+  Wege: ganze SSD, neben Windows/Linux (verkleinern), in freien Platz, selbst einteilen (GParted).
+
+Protokoll
+  /run/voidstation-installer/install.log (im Live-System),
+  /var/log/voidstation-install.log (im installierten System)
+
+Projekt: https://github.com/Panther92/VoidStation

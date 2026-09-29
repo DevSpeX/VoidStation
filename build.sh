@@ -4,7 +4,7 @@
 #    install.sh              – VoidStation auf ein bestehendes Void installieren
 #    update.sh               – VoidStation aktualisieren (behaelt eigene Kacheln/Favoriten)
 #    voidstation-install.sh  – komplette Neuinstallation von der offiziellen Void-ISO aus
-#    build-iso.sh            – eigene Live-ISO mit Installer bauen (auf einem Void-System)
+#    build-iso.sh            – Live-ISO mit Installer im Kacheldesign bauen (auf einem Void-System)
 #    version.json            – Versionsnummer, Build-Kennung, Aenderungen (fuer die Geraete)
 #    version.txt             – nur die Build-Kennung (fuer aeltere Geraete)
 #
@@ -101,11 +101,13 @@ echo "$BUILD" > "$OUT/version.txt"
 # Einzeldatei fuer die offizielle Void-ISO
 { cat iso/voidstation-install; echo '__INSTALLER_BELOW__'; base64 -w 76 "$OUT/install.sh"; } > "$OUT/voidstation-install.sh"
 
-# ISO-Bauskript
+# ISO-Bauskript (Live-System mit Installer): install.sh, Installer und die Live-Teile im Anhang
 mkdir "$tmp/iso"
-cp iso/voidstation-install iso/99-voidstation-live.sh iso/voidstation-live-profile.sh "$OUT/install.sh" "$tmp/iso/"
+cp iso/postsetup.sh iso/99-voidstation-live.sh iso/sudoers-installer iso/grub-entries.py iso/LIESMICH.txt iso/README.txt \
+   launcher/voidstation-installer launcher/voidstation-pkg "$OUT/install.sh" "$tmp/iso/"
+python3 -m py_compile launcher/voidstation-installer iso/grub-entries.py
 (cd "$tmp/iso" && tar --owner=0 --group=0 --sort=name --mtime='2026-01-01' -czf "$tmp/iso.tgz" .)
-{ cat iso/build-iso-head.sh; base64 -w 76 "$tmp/iso.tgz"; } > "$OUT/build-iso.sh"
+{ sed "s|__VS_RELEASE__|$VERSION|g" iso/build-iso-head.sh; base64 -w 76 "$tmp/iso.tgz"; } > "$OUT/build-iso.sh"
 
 chmod +x "$OUT"/*.sh
 for f in "$OUT"/*.sh; do bash -n "$f"; done

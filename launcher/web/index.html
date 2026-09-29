@@ -628,7 +628,7 @@ function instHints() {
 async function load() {
   try { cfg = offline ? DEMO : await getJSON('/tiles.json'); } catch { cfg = DEMO; }
   $('#title').textContent = L(cfg.title) || T('home.title');
-  $('#user').textContent = cfg.user || '';
+  $('#user').textContent = L(cfg.user) || '';
   if (cfg.background) { document.body.classList.add('has-wall'); document.body.style.backgroundImage = `url("${cfg.background}")`; }
   const track = $('#track');
   track.innerHTML = '';
@@ -1511,10 +1511,14 @@ function instFresh(probe) {
         status: null, t0: 0 };
 }
 const loginOf = n => {
+  const taken = new Set(I?.probe?.users || []);
   const m = { 'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss', 'Ä': 'ae', 'Ö': 'oe', 'Ü': 'ue' };
   let s = String(n).replace(/[äöüßÄÖÜ]/g, c => m[c]).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
   s = s.replace(/^[^a-z_]+/, '').slice(0, 31);
-  return ['root', 'tv', 'nobody'].includes(s) ? s + '1' : s;
+  if (!s) return s;
+  let out = s, k = 1;
+  while (['root', 'tv', 'nobody'].includes(out) || taken.has(out)) out = s.slice(0, 29) + (k++);   // Systemkonten meiden
+  return out;
 };
 
 /* ---- Oeffnen, Schritte, Grundgeruest */
@@ -1778,7 +1782,9 @@ function rFree() {
 /* ---- B2c Selbst einteilen (GParted + Rollen) */
 function rolesFor(p) {
   const r = [p.os ? 'keep' : 'none'];
-  if (p.fstype === 'vfat' || p.role === 'esp') { if (p.fstype === 'vfat') r.push('esp_keep'); if (p.size >= 100 * 1024 ** 2) r.push('esp_format'); }
+  // Formatieren nur, wenn kein anderes System seinen Startmanager darauf hat
+  const foreign = (p.loaders || []).some(l => !['voidstation', 'boot'].includes(l.vendor));
+  if (p.fstype === 'vfat' || p.role === 'esp') { if (p.fstype === 'vfat') r.push('esp_keep'); if (p.size >= 100 * 1024 ** 2 && !foreign) r.push('esp_format'); }
   if (p.size >= MIN_ROOT - 512 * 1024 ** 2 && p.role !== 'esp') r.push('root');
   return r;
 }
@@ -1991,8 +1997,9 @@ function instSummary() {
     { k: T('inst.sumAccount'), html: `<b>${esc(I.name)}</b> · ${esc(T('inst.sumLogin', { login: loginOf(I.name) }))}` },
     { k: T('inst.sumDevice'), html: `<b>${esc(I.host)}</b> · ${esc(I.lang === 'en' ? 'English' : 'Deutsch')} · ${esc(tzLabel(I.tz).split(' · ')[0])}` + (I.probe.screen ? ` · ${esc(I.probe.screen.mode.replace('x', '×'))}` : '') },
     { k: T('inst.sumUpdates'), v: T('inst.sumChannel', { channel: T('channel.' + (I.channel === 'main' ? 'main' : 'stable')) }) },
-    { k: T('inst.sumExtras'), v: extras.join(', ') || T('inst.sumNone') }
-  ];
+    { k: T('inst.sumExtras'), v: extras.join(', ') || T('inst.sumNone') },
+    I.probe.bitlocker && I.mode !== 'whole' ? { k: 'BitLocker', v: T('inst.bitlocker') } : null
+  ].filter(Boolean);
 }
 function rConfirm() {
   const tr = instShell(T('inst.confirm'), '', 4);

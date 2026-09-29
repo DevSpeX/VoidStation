@@ -3,6 +3,14 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.7.0 – 2026-09-29
+- XLibre is now the only display server – the update removes X.Org, and the choice in Settings is gone
+- If the interface fails to start twice, XLibre gets reinstalled once; after that a rescue console follows
+- Remote access (SSH) can be switched on and off under Settings → System
+- The update channels are now called “Stable” and “Testing” in both languages
+- htop, nano, fastfetch and the Mousepad editor are now always included
+- New: live ISO with an installer in the tile design – whole SSD, next to Windows or Linux, into free space, or partition manually with GParted
+
 ## 0.6.1 – 2026-09-28
 - Programs like VLC, the file manager and YouTube start in the selected language
 - Arrows at the top right show that there is more to the left or right; one dot per group

@@ -1494,7 +1494,7 @@ class Installer:
 
     def start(self, cfg=None, resume=False, alt=False):
         with self.lock:
-            if self.running():
+            if self.running() or (self.state and self.state.get("detached")):
                 raise RuntimeError("Installation laeuft bereits")
             args = ["run"] + (["--resume"] if resume else []) + (["--alt"] if alt else [])
             if not resume:

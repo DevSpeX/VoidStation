@@ -1,0 +1,2 @@
+# VoidStation Live-System: die Oberflaeche startet den Installer als root
+tv ALL=(root) NOPASSWD: /usr/local/sbin/voidstation-installer

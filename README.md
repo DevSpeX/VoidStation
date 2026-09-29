@@ -80,10 +80,29 @@ und denselben Eintrag auf Englisch in `CHANGELOG.en.md` – fehlt er, bricht `bu
 Forks tragen ihre eigene Adresse in `update-url` ein und legen einen eigenen Schlüssel an.
 Ist ein Remote `codeberg` eingerichtet, pflegt `publish.sh` ihn als Spiegel mit (früherer Standort des Projekts).
 
-## Eigene Live-ISO bauen (optional, für Installation ohne Internet-Download des Skripts)
+## Live-ISO mit Installer
 
-Auf einem Void-System: `sudo bash dist/build-iso.sh`. Die ISO landet unter `~/share/ISO/`.
-Sie enthält `voidstation-install`, `nmtui` für WLAN, SSH mit root/voidlinux und die eigenen Radio- und TV-Favoriten.
+Die Live-ISO ist eine komplette VoidStation zum Ausprobieren (YouTube, Fernsehen, Radio, VLC) mit der Kachel
+**VoidStation installieren**. Der Installer läuft im selben Kacheldesign, auf Deutsch oder Englisch, und kopiert
+das Live-System auf die SSD – dafür braucht er kein Internet.
+
+- **Wege:** ganze SSD · neben Windows oder Linux (NTFS, ext4 oder btrfs wird verkleinert) · in freien Platz
+  (z. B. neben FreeBSD) · selbst einteilen mit GParted. Bei mehreren Systemen gibt es ein kurzes GRUB-Startmenü;
+  neben Windows läuft die Hardware-Uhr auf Ortszeit.
+- **Mindestens:** 64-Bit-PC, UEFI (Secure Boot aus), 4 GB RAM, 16 GB auf der SSD. Fehlt etwas, sagt der Installer, was zu tun ist.
+- **Startmenü des Sticks:** VoidStation · VoidStation installieren · dasselbe auf Englisch.
+- **Fehler:** Jeder Schritt lässt sich wiederholen, der Startmanager auch „anders“ (Standard-Starter statt NVRAM-Eintrag).
+  Protokoll: `/run/voidstation-installer/install.log`, lässt sich auf einen USB-Stick speichern.
+- **Terminal:** `sudo voidstation-installer text` (nur ganze SSD) · `probe` zeigt, was der Installer erkennt.
+
+Bauen auf einem Void-System (z. B. einer VoidStation), dauert 20–40 Minuten:
+
+```sh
+sudo bash dist/build-iso.sh
+```
+
+Die ISO landet unter `~/share/ISO/` (mit `.sha256`), eigene Radio- und TV-Favoriten kommen mit.
+Auf einen Ventoy-Stick kopieren oder mit Rufus/balenaEtcher schreiben.
 
 ## Bedienung
 
@@ -131,7 +150,8 @@ Neue Texte gehören immer in **beide** Dateien – `build.sh` bricht ab, wenn in
 | `launcher/openbox/`, `launcher/firefox/` | Openbox-Konfiguration, Firefox-Profile und Richtlinien |
 | `install-head.sh`, `update-head.sh` | Kopf der Installations- und Update-Skripte (Payload wird angehängt) |
 | `docs/` | Screenshots und der Starter `vs` (GitHub Pages) |
-| `iso/` | Neuinstallation (`voidstation-install`) und ISO-Bau |
+| `launcher/voidstation-installer` | Installer (root, nur im Live-System): prüft das Gerät, partitioniert, kopiert, richtet ein |
+| `iso/` | ISO-Bau (`build-iso-head.sh`, `postsetup.sh`, Startmenü) und Neuinstallation von der offiziellen Void-ISO (`voidstation-install`) |
 | `tools/` | `publish.sh` (Bundle einspielen und pushen), `screenshots.py` (README-Bilder) |
 | `update-url` | Update-Quelle der Geräte (`{channel}` = stable/main) |
 | `CHANGELOG.md`, `CHANGELOG.en.md` | Versionsnummer und Änderungen, deutsch und englisch (erscheinen im Update-Dialog) |
