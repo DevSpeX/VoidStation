@@ -222,6 +222,139 @@
   .hint .updnote b { color: #f5d27a; font-weight: 600; }
   .hint .updnote .k { color: rgba(236,235,232,.72); }
 
+  /* ---------- Installer (nur Live-System) ---------- */
+  #inst { --iu: var(--u); --gap: calc(10px * var(--f)); }
+  #inst h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-bottom: .08em; }
+  #inst .htitle { flex: 1; }
+  button.tile { border: 0; padding: 0; font: inherit; text-align: left; color: var(--text); }
+  #inst .tile .label { white-space: normal; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  #inst .isub { margin: calc(-10px * var(--f)) 0 0; padding: 0 var(--pad-x) calc(20px * var(--f)); font-size: calc(16px * var(--f)); color: rgba(236,235,232,.72); flex: none; }
+  #inst .isub:empty { display: none; }
+  .steps { text-align: right; flex: none; }
+  .steps .sn { font-size: calc(14px * var(--f)); color: var(--text-dim); }
+  .steps .sb { margin-top: calc(8px * var(--f)); display: flex; gap: calc(6px * var(--f)); justify-content: flex-end; }
+  .steps .sb i { width: calc(40px * var(--f)); height: calc(4px * var(--f)); background: rgba(255,255,255,.18); }
+  .steps .sb i.on { background: var(--text); }
+  .igrid { display: grid; grid-template-rows: repeat(var(--ir, 3), var(--iu)); grid-auto-columns: var(--iu); grid-auto-flow: column dense; gap: var(--gap); }
+  .igrid.r2 { --ir: 2; }
+  .igrid.r1 { --ir: 1; }
+  #inst .tile { --c: #2f3238; }
+  #inst .tile .label { font-size: calc(var(--iu) * .105); }
+  #inst .tile .sub { font-size: calc(var(--iu) * .08); }
+  #inst .tile.large .label { font-size: calc(var(--iu) * .15); }
+  #inst .tile.off { opacity: .4; }
+  .itile.itinfo { cursor: default; --c: #23272c; }
+  .itile .ic { position: absolute; left: 9%; top: 10%; width: calc(var(--iu) * .2); height: calc(var(--iu) * .2); }
+  .itile .ic svg { width: 100%; height: 100%; display: block; }
+  .itile .ok, .itile .bad { position: absolute; right: 8%; top: 9%; width: calc(var(--iu) * .14); height: calc(var(--iu) * .14); }
+  .itile .ok { color: #8fd1ad; } .itile .bad { color: #f08a7a; }
+  .itile .ok svg, .itile .bad svg { width: 100%; height: 100%; }
+  .itile .bigv { position: absolute; left: 9%; top: 10%; right: 22%; font-size: calc(var(--iu) * .15); font-weight: 300; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .itile .cap { position: absolute; left: 9%; right: 7%; bottom: 8%; }
+  .itile .cap .k { font-size: calc(var(--iu) * .081); color: var(--text-dim); }
+  .itile .cap .v { font-size: calc(var(--iu) * .095); margin-top: 2px; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .itile.bad-state { box-shadow: inset 0 0 0 2px rgba(240,138,122,.55); }
+  /* Einstellungs-Kachel (B4): Titel oben, Wert gross, Erklaerung unten */
+  .stile .k { position: absolute; left: 7%; top: 9%; right: 7%; font-size: calc(var(--iu) * .085); color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stile .v { position: absolute; left: 7%; top: 30%; right: 7%; font-size: calc(var(--iu) * .16); font-weight: 300; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stile .d { position: absolute; left: 7%; right: 7%; bottom: 9%; font-size: calc(var(--iu) * .075); color: var(--text-dim); line-height: 1.3; }
+  /* Platten */
+  .dtile .bus { position: absolute; right: 6%; top: 8%; font-size: calc(var(--iu) * .08); color: rgba(255,255,255,.75); }
+  .dtile .dic { position: absolute; left: 7%; top: 7%; width: calc(var(--iu) * .24); height: calc(var(--iu) * .24); }
+  .dtile .dic svg { width: 100%; height: 100%; }
+  .dtile .gb { position: absolute; left: 7%; top: 32%; font-size: calc(var(--iu) * .3); font-weight: 300; line-height: 1; }
+  .dtile .model { position: absolute; left: 7%; right: 7%; top: 53%; font-size: calc(var(--iu) * .105); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dtile .pb { position: absolute; left: 7%; right: 7%; bottom: 8%; }
+  .pbar { display: flex; height: calc(10px * var(--f)); gap: 2px; }
+  .pbar i { min-width: 3px; background: rgba(255,255,255,.5); }
+  .pbar i.esp { background: rgba(255,255,255,.9); } .pbar i.swap, .pbar i.reserved, .pbar i.recovery { background: rgba(255,255,255,.28); }
+  .pbar i.free { background: transparent; border: 2px dashed rgba(255,255,255,.4); }
+  .pleg { margin-top: calc(7px * var(--f)); font-size: calc(var(--iu) * .08); color: rgba(255,255,255,.78); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .icolw { display: inline-flex; flex-direction: column; gap: var(--gap); }
+  .warnband { display: flex; align-items: center; gap: calc(16px * var(--f)); min-height: calc(var(--iu) * .43); padding: 0 calc(22px * var(--f)); background: #4a2323; font-size: calc(17px * var(--f)); }
+  .warnband svg { width: calc(26px * var(--f)); height: calc(26px * var(--f)); flex: none; }
+  /* Tafel mit Zeilen (Zusammenfassung, Erklaerungen) */
+  .ipanel { width: calc(var(--iu) * 2.05); min-height: calc(var(--iu) * 2); box-sizing: border-box; padding: calc(22px * var(--f)); background: #1b1e22; display: flex; flex-direction: column; gap: calc(15px * var(--f)); font-size: calc(15px * var(--f)); line-height: 1.4; }
+  .ipanel.wide { width: calc(var(--iu) * 3.1); }
+  .ipanel .kk { font-size: calc(12.5px * var(--f)); color: var(--text-dim); }
+  .ipanel .foot { margin-top: auto; font-size: calc(13px * var(--f)); color: var(--text-dim); }
+  .ipanel b { font-weight: 600; }
+  .ipanel ol { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: calc(14px * var(--f)); }
+  .ipanel ol li { display: flex; gap: calc(12px * var(--f)); align-items: baseline; }
+  .ipanel ol li .n { flex: none; width: calc(24px * var(--f)); height: calc(24px * var(--f)); border-radius: 50%; background: #2f3238; display: grid; place-items: center; font-size: calc(13px * var(--f)); }
+  .ipanel .st { display: flex; gap: calc(10px * var(--f)); align-items: baseline; }
+  .ipanel .st .m { flex: none; width: 1.1em; text-align: center; }
+  .ipanel .st.ok .m { color: #8fd1ad; } .ipanel .st.bad .m { color: #f08a7a; } .ipanel .st.keep .m { color: var(--text-dim); }
+  .mono { font: calc(12.5px * var(--f))/1.4 "DejaVu Sans Mono", monospace; color: var(--text-dim); white-space: pre-wrap; word-break: break-word; max-height: calc(var(--iu) * .9); overflow: hidden; }
+  /* Aufteilen (neben einem System) */
+  .split { position: relative; display: flex; gap: 3px; width: calc(var(--iu) * 4.2); height: calc(var(--iu) * 1.25); cursor: pointer; outline: none; }
+  .split > .a, .split > .b { position: relative; overflow: hidden; min-width: 22%; padding: calc(14px * var(--f)); box-sizing: border-box; transition: flex-basis .2s var(--ease); }
+  .split .a { background: #2d3763; } .split .b { background: #2f6d4f; }
+  .split .nm { font-size: calc(15px * var(--f)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .split .sz { font-size: calc(var(--iu) * .26); font-weight: 300; line-height: 1.15; }
+  .split .ds { font-size: calc(13px * var(--f)); color: rgba(255,255,255,.75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .split.focus { box-shadow: 0 0 0 calc(3px * var(--f)) var(--bg), 0 0 0 calc(6px * var(--f)) var(--focus); }
+  .split .grip { position: absolute; top: 50%; transform: translate(-50%, -50%); width: calc(34px * var(--f)); height: calc(34px * var(--f)); border-radius: 50%; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: calc(15px * var(--f)); z-index: 2; pointer-events: none; }
+  .split.locked .grip { display: none; }
+  .srow { display: flex; gap: var(--gap); margin-top: calc(14px * var(--f)); align-items: center; }
+  /* Selbst einteilen: Liste der Partitionen */
+  .plist { display: flex; flex-direction: column; gap: calc(8px * var(--f)); width: calc(var(--iu) * 4.4); }
+  .prow { display: flex; align-items: center; gap: calc(14px * var(--f)); min-height: calc(46px * var(--f)); padding: 0 calc(16px * var(--f)); background: #22262b; border: 2px solid transparent; cursor: pointer; outline: none; font-size: calc(15px * var(--f)); text-align: left; color: var(--text); }
+  .prow.focus { border-color: var(--focus); }
+  .prow .pn { width: 18%; flex: none; font-weight: 600; }
+  .prow .pi { flex: 1; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prow .pr { flex: none; padding: calc(3px * var(--f)) calc(10px * var(--f)); background: #2f3238; }
+  .prow .pr.root { background: #2f6d4f; } .prow .pr.esp_keep, .prow .pr.esp_format { background: #39414d; }
+  .prow[disabled] { opacity: .45; cursor: default; }
+  #inst .pill.off { opacity: .45; }
+  .dlbl { font-size: calc(13px * var(--f)); color: var(--text-faint); margin-top: calc(6px * var(--f)); }
+  /* Bildschirmtastatur */
+  .ofields { display: flex; flex-direction: column; gap: calc(9px * var(--f)); width: calc(var(--iu) * 2.3); }
+  .ofield { display: block; width: 100%; text-align: left; padding: calc(7px * var(--f)) calc(12px * var(--f)); background: #1b1e22; border: 2px solid #2c3035; color: var(--text); cursor: pointer; outline: none; }
+  .ofield .k { font-size: calc(12.5px * var(--f)); color: var(--text-dim); }
+  .ofield .v { font-size: calc(19px * var(--f)); min-height: 1.35em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ofield.cur { border-color: rgba(255,255,255,.5); }
+  .ofield.cur .v::after { content: ""; display: inline-block; width: 2px; height: 1.05em; margin-left: 2px; vertical-align: -0.15em; background: var(--text); animation: blink 1s steps(1) infinite; }
+  .ofield.focus { border-color: var(--focus); }
+  .ofield.ro { cursor: default; background: transparent; border-color: transparent; }
+  .ofield.bad { border-color: #b8574a; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .osk { display: grid; grid-template-columns: repeat(12, calc(var(--iu) * .3)); grid-auto-rows: calc(var(--iu) * .3); gap: calc(5px * var(--f)); }
+  .key { display: grid; place-items: center; background: #22262b; color: var(--text); border: 2px solid transparent; font-size: calc(17px * var(--f)); cursor: pointer; outline: none; padding: 0; }
+  .key.focus { border-color: var(--focus); background: #3a3f46; }
+  .key.wide4 { grid-column: span 4; } .key.wide3 { grid-column: span 3; } .key.wide5 { grid-column: span 5; } .key.w2 { grid-column: span 2; }
+  .key.on { background: #4a5260; }
+  .key.go { background: #2f6d4f; }
+  .kbrow { display: flex; gap: calc(8px * var(--f)); margin-bottom: calc(10px * var(--f)); }
+  .preview { width: calc(var(--iu) * 1.9); padding: calc(16px * var(--f)); background: #1b1e22; display: flex; justify-content: space-between; align-items: flex-end; }
+  .preview .t { font-size: calc(28px * var(--f)); font-weight: 300; }
+  .preview .w { text-align: right; } .preview .w .n { font-size: calc(16px * var(--f)); font-weight: 300; } .preview .w .c { font-size: calc(12px * var(--f)); color: var(--text-dim); }
+  .icol { display: flex; flex-direction: column; gap: calc(12px * var(--f)); }
+  .icol .info { max-width: calc(var(--iu) * 1.9); font-size: calc(14px * var(--f)); }
+  /* Halten zum Installieren */
+  .tile.hold .ring { position: absolute; right: 7%; top: 8%; width: calc(var(--iu) * .34); height: calc(var(--iu) * .34); border-radius: 50%;
+    background: conic-gradient(var(--text) calc(var(--p, 0) * 360deg), rgba(255,255,255,.22) 0); display: grid; place-items: center; }
+  .tile.hold .ring::before { content: ""; position: absolute; inset: 12%; border-radius: 50%; background: var(--c); }
+  .tile.hold .ring b { position: relative; font-size: calc(var(--iu) * .13); font-weight: 600; }
+  /* Fortschritt */
+  .phl { display: flex; flex-direction: column; gap: calc(6px * var(--f)); width: calc(var(--iu) * 3.2); }
+  .ph { position: relative; display: flex; align-items: center; gap: calc(14px * var(--f)); min-height: calc(var(--iu) * .36); padding: 0 calc(16px * var(--f)); background: #1b1e22; color: var(--text-dim); font-size: calc(16px * var(--f)); overflow: hidden; }
+  .ph .m { width: calc(20px * var(--f)); flex: none; text-align: center; }
+  .ph .nm { flex: 1; }
+  .ph .dt { font-size: calc(13px * var(--f)); color: var(--text-faint); }
+  .ph .pc { font-size: calc(14px * var(--f)); }
+  .ph.run { color: var(--text); background: #23272c; }
+  .ph.run .phbar { position: absolute; left: 0; bottom: 0; height: calc(3px * var(--f)); background: var(--text); transition: width .5s; }
+  .ph.done { color: var(--text); } .ph.done .m { color: #8fd1ad; }
+  .ph.error { color: #f3b0a5; background: #3a2222; }
+  .ptotal { margin-top: calc(14px * var(--f)); }
+  .ptotal .tb { height: calc(6px * var(--f)); background: #2a2e33; } .ptotal .tb b { display: block; height: 100%; background: #8fd1ad; transition: width .5s; }
+  .ptotal .tt { margin-top: calc(8px * var(--f)); font-size: calc(14px * var(--f)); color: var(--text-dim); }
+  .tile.iradio .now { position: absolute; left: 7%; right: 7%; top: 30%; }
+  .tile.iradio .now .st { font-size: calc(var(--iu) * .14); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile.iradio .now .ti { margin-top: 4px; font-size: calc(var(--iu) * .09); color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .iload { padding: 0 var(--pad-x); color: var(--text-dim); font-size: calc(18px * var(--f)); display: flex; align-items: center; gap: calc(14px * var(--f)); }
+
   @media (prefers-reduced-motion: reduce) { .tile { animation: none; opacity: 1; } .track, .tile, .splash, .layer { transition: none; } }
 </style>
 </head>
@@ -235,6 +368,13 @@
   </div>
 </header>
 <div class="stage" id="home"><div class="track" id="track"></div></div>
+
+<!-- Installer (nur Live-System) -->
+<section class="layer" id="inst">
+  <header><div class="htitle"><button class="round inav" data-act="back" aria-label="Zurück" data-i18n-aria="common.back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1 id="iTitle" data-i18n="inst.title">VoidStation installieren</h1></div><div class="steps" id="iSteps"></div></header>
+  <p class="isub" id="iSub"></p>
+  <div class="stage"><div class="track" id="iTrack"></div></div>
+</section>
 
 <!-- Radio -->
 <section class="layer" id="radio">
@@ -406,6 +546,7 @@ function layout() {
   root.setProperty('--rows', rows);
   root.setProperty('--srows', Math.max(1, Math.min(3, rows)));
   fitGrids();
+  if (instOpen()) instLayout();
   if (focusEl) setFocus(focusEl, true);
   updScroll();
 }
@@ -447,9 +588,10 @@ function layer() {
   if ($('#apps').classList.contains('open')) return 'apps';
   if ($('#radio').classList.contains('open')) return 'radio';
   if ($('#settings').classList.contains('open')) return 'settings';
+  if ($('#inst').classList.contains('open')) return 'inst';                 // Installer liegt unter den anderen Ebenen
   return 'home';
 }
-const SCOPE = { home: '.nav', radio: '.rnav', settings: '.snav', dialog: '.dnav', tv: '.tnav', apps: '.anav', adlg: '.adnav' };
+const SCOPE = { home: '.nav', radio: '.rnav', settings: '.snav', dialog: '.dnav', tv: '.tnav', apps: '.anav', adlg: '.adnav', inst: '.inav' };
 function navItems() { return $$(SCOPE[layer()]).filter(e => !e.disabled && e.offsetParent !== null); }
 function updateHint() {
   const h = {
@@ -459,7 +601,8 @@ function updateHint() {
     tv:       [T('hint.tvOn'), T('hint.fav'), T('hint.homeShort'), T('hint.back')],
     apps:     [T('hint.appInstall'), T('hint.back')],
     adlg:     [T('hint.cancel')],
-    dialog:   [T('hint.cancel')]
+    dialog:   [T('hint.cancel')],
+    inst:     instHints()
   }[layer()];
   const tr = curTrack();
   if (tr && tr.scrollWidth - innerWidth > 4) h.splice(h.length - (layer() === 'home' ? 0 : 1), 0, T('hint.pages'));
@@ -473,6 +616,13 @@ function updateHint() {
   if (hintH !== null && hh !== hintH) { hintH = hh; layout(); } else hintH = hh;
 }
 let hintH = null;
+function instHints() {
+  const b = T('hint.back');
+  return ({ welcome: [T('hint.instSelect'), T('hint.instBackLive')], disk: [T('hint.instSelect'), b], beside: [T('hint.instSize'), T('hint.instContinue'), b],
+    free: [T('hint.instContinue'), b], manual: [T('hint.instRole'), b], account: [T('hint.instType'), T('hint.instDel'), T('hint.instFields'), b],
+    host: [T('hint.instType'), T('hint.instDel'), b], device: [T('hint.instChange'), T('hint.instNext'), b], confirm: [T('hint.instHold'), b],
+    progress: [T('hint.instOpen'), T('hint.instVol')], error: [T('hint.instSelect'), T('hint.instBackLive')], done: [T('hint.instReboot')] })[I?.step] || [T('hint.instSelect'), b];
+}
 
 /* ============================================================ Startseite */
 async function load() {
@@ -543,7 +693,7 @@ function setFocus(el, instant) {
   updScroll();
 }
 /* ---- Blaettern: Pfeile oben rechts, Gruppenspruenge mit LT/RT bzw. Bild auf/ab */
-const TRACKS = { home: '#track', radio: '#rTrack', tv: '#tTrack', apps: '#aTrack', settings: '#sTrack' };
+const TRACKS = { home: '#track', radio: '#rTrack', tv: '#tTrack', apps: '#aTrack', settings: '#sTrack', inst: '#iTrack' };
 function curTrack() { const sel = TRACKS[layer()]; return sel ? $(sel) : null; }
 let lastScrollable = null;
 function updScroll() {
@@ -553,7 +703,7 @@ function updScroll() {
   const max = tr ? Math.max(0, tr.scrollWidth - innerWidth) : 0;
   if (!host || max < 4) ind.hidden = true;
   else {
-    if (ind.parentElement !== host) { if (l === 'home') host.prepend(ind); else host.insertBefore(ind, host.querySelector('.nowline')); }
+    if (ind.parentElement !== host) { if (l === 'home') host.prepend(ind); else host.insertBefore(ind, host.querySelector('.nowline, .steps')); }
     ind.hidden = false;
     const x = Number(tr.dataset.x || 0);
     const [pl, pr] = ind.querySelectorAll('.sarr');
@@ -596,6 +746,7 @@ function keepVisible(track, el, instant) {
 }
 function move(dir) {
   if (splashTile) return;
+  if (focusEl?._adj && (dir === 'left' || dir === 'right') && layer() === 'inst') return focusEl._adj(dir === 'left' ? -1 : 1);
   const items = navItems();
   if (!focusEl || !items.includes(focusEl)) return setFocus(items[0]);
   const a = focusEl.getBoundingClientRect();
@@ -624,7 +775,7 @@ function activate(el = focusEl) {
   if (el.id === 'power') return openDialog();
   if (el.dataset.close !== undefined) return closeDialog();
   if (el.dataset.power) return power(el.dataset.power);
-  if (act === 'back') return closeLayer();
+  if (act === 'back') return layer() === 'inst' ? instBack() : closeLayer();
   if (act === 'stop') return radioStop();
   if (act === 'fav') return toggleFav();
   if (act === 'volup') return volume('up');
@@ -638,6 +789,7 @@ function activate(el = focusEl) {
   if (el._tile?.type === 'settings') return openLayer('settings');
   if (el._tile?.type === 'tv') return openLayer('tv');
   if (el._tile?.type === 'apps') return openLayer('apps');
+  if (el._tile?.type === 'install') return openInstaller();
   if (act === 'tvstop') return tvStop();
   if (act === 'checkupd') return jobStart('check');
   if (act === 'doupd') return confirmUpdate();
@@ -655,6 +807,7 @@ function back() {
   else if (l === 'tv' && tvQuery) { tvQuery = ''; $('#tSearch').value = ''; tvSearch(); }
   else if (l === 'radio' && results) { results = null; $('#rSearch').value = ''; renderStations(); }
   else if (l === 'settings' && wifiPick) { wifiPick = null; renderSettings(); }
+  else if (l === 'inst') instBack();
   else if (l !== 'home') closeLayer();
 }
 function secondary() {
@@ -667,6 +820,7 @@ function secondary() {
   }
   if (l === 'radio' && focusEl?._station) toggleFav(focusEl._station);
   if (l === 'tv' && focusEl?._chan) tvFav(focusEl._chan);
+  if (l === 'inst' && ['account', 'host'].includes(I?.step)) oskDel();
 }
 
 /* ============================================================ Programme */
@@ -773,7 +927,12 @@ function closeLayer() {
   if (!el) return;
   el.classList.remove('shown');
   document.activeElement?.blur();
-  setTimeout(() => { el.classList.remove('open'); setFocus(lastFocus.home || $('#track .tile.nav')); updateHint(); }, 200);
+  setTimeout(() => {
+    el.classList.remove('open');
+    const l = layer(), f = lastFocus[l];                   // zurueck auf die Ebene darunter (Startseite oder Installer)
+    if (l === 'inst') { instRender(); return; }
+    setFocus(f && document.contains(f) && f.offsetParent !== null ? f : $('#track .tile.nav')); updateHint();
+  }, 200);
 }
 
 /* ============================================================ Radio */
@@ -992,19 +1151,23 @@ function renderSettings() {
   rsys.append(rl, rb, po);
   const vi = document.createElement('div'); vi.className = 'info'; vi.id = 'vsInfo';
   s.appendChild(vi);
-  const rvs = row(s);
-  const vu = pill(esc(T('settings.selfupdate')), selfUpdate); vu.dataset.key = 'selfupd';
-  rvs.appendChild(vu);
+  if (!sett.live) {                                        // im Live-System gibt es keine Updates
+    const rvs = row(s);
+    const vu = pill(esc(T('settings.selfupdate')), selfUpdate); vu.dataset.key = 'selfupd';
+    rvs.appendChild(vu);
+  }
   if (sett.ssh !== undefined) {
     const rs2 = row(s, T('settings.ssh'));
     for (const on of [true, false]) {
       const b = pill(esc(T(on ? 'common.on' : 'common.off')), () => setSsh(on), !!sett.ssh === on); b.dataset.key = 'ssh' + on; rs2.appendChild(b);
     }
   }
-  const rch = row(s, T('settings.channel'));
-  const cur = (vsState && vsState.channel) || 'stable';
-  for (const [id, lab] of [['stable', T('channel.stable')], ['main', T('channel.main')]]) {
-    const b = pill(lab, () => setChannel(id), cur === id); b.dataset.key = 'ch' + id; rch.appendChild(b);
+  if (!sett.live) {
+    const rch = row(s, T('settings.channel'));
+    const cur = (vsState && vsState.channel) || 'stable';
+    for (const [id, lab] of [['stable', T('channel.stable')], ['main', T('channel.main')]]) {
+      const b = pill(lab, () => setChannel(id), cur === id); b.dataset.key = 'ch' + id; rch.appendChild(b);
+    }
   }
   showVs();
 
@@ -1300,9 +1463,719 @@ function toast(msg, err) {
   clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), Math.max(err ? 5000 : 2800, msg.length * 55));
 }
 
+/* ============================================================ Installer (nur Live-System)
+   Schritte: welcome → disk (+ beside | free | manual) → account → device → confirm → progress → done | error
+   Die ganze Arbeit macht voidstation-installer (root); hier nur Auswahl, Anzeige und Tastatur. */
+const IICON = {
+  install: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M24 5v19M16.5 17l7.5 7.5 7.5-7.5"/><rect x="5" y="30" width="38" height="13" rx="3"/><circle cx="35" cy="36.5" r="1.8" fill="currentColor"/><path d="M11 36.5h10"/></svg>',
+  cpu: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><rect x="12" y="12" width="24" height="24" rx="2"/><rect x="19" y="19" width="10" height="10"/><path d="M18 5v7M24 5v7M30 5v7M18 36v7M24 36v7M30 36v7M5 18h7M5 24h7M5 30h7M36 18h7M36 24h7M36 30h7"/></svg>',
+  gpu: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><rect x="5" y="8" width="38" height="26" rx="3"/><path d="M17 41h14M24 34v7"/></svg>',
+  ram: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><rect x="4" y="14" width="40" height="18" rx="2"/><path d="M10 20h4v6h-4zM20 20h4v6h-4zM30 20h4v6h-4zM8 32v5M16 32v5M24 32v5M32 32v5M40 32v5"/></svg>',
+  lan: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><rect x="10" y="8" width="28" height="22" rx="2"/><path d="M17 30v6h14v-6M24 36v7M17 16v6M22 16v6M26 16v6M31 16v6"/></svg>',
+  wifi: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 19c10.5-9 25.5-9 36 0M12 26c7-6 17-6 24 0M18 33c3.5-3 8.5-3 12 0"/><circle cx="24" cy="39" r="1.8" fill="currentColor"/></svg>',
+  sata: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="5" y="14" width="38" height="20" rx="3"/><circle cx="36" cy="24" r="1.8" fill="currentColor"/><path d="M11 24h12"/></svg>',
+  nvme: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="4" y="17" width="40" height="14" rx="2"/><path d="M10 22h6v4h-6zM20 22h6v4h-6z"/><circle cx="38" cy="24" r="1.6" fill="currentColor"/></svg>',
+  back: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12L8 24l12 12M9 24h31"/></svg>',
+  beside: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><rect x="3" y="12" width="42" height="24" rx="2"/><path d="M26 12v24"/><path d="M30 20h11M30 25h11" stroke-linecap="round"/></svg>',
+  free: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><rect x="3" y="12" width="42" height="24" rx="2"/><path d="M22 12v24"/><path d="M27 18h13v12H27z" stroke-dasharray="3 3"/></svg>',
+  manual: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="12" width="42" height="24" rx="2"/><path d="M13 12v24M31 12v24"/></svg>',
+  restart: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M38 24a14 14 0 1 1-4.1-9.9"/><path d="M36 6v9h-9"/></svg>',
+  log: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M12 5h17l9 9v29H12z"/><path d="M29 5v9h9M18 24h14M18 30h14M18 36h9"/></svg>',
+  usb: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><rect x="15" y="18" width="18" height="25" rx="2"/><path d="M18 18V6h12v12M21 11h2M25 11h2"/></svg>',
+  home: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><rect x="6" y="6" width="15" height="15"/><rect x="27" y="6" width="15" height="15"/><rect x="6" y="27" width="15" height="15"/><rect x="27" y="27" width="15" height="15"/></svg>',
+  alt: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 34h10l12-20h10M34 8l6 6-6 6M8 14h10l3 5M30 34h10M34 28l6 6-6 6"/></svg>',
+  ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  bad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h0"/></svg>'
+};
+ICONS.install = IICON.install;
+const GiB = 1024 ** 3, MIN_ROOT = 16 * GiB;
+const gb = b => { const v = b / 1e9; return (v < 10 ? v.toLocaleString(loc(), { maximumFractionDigits: 1 }) : num(Math.round(v))) + ' GB'; };
+const TZS = ['Europe/Berlin', 'Europe/Vienna', 'Europe/Zurich', 'Europe/Amsterdam', 'Europe/Paris', 'Europe/London', 'Europe/Warsaw',
+  'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Australia/Sydney', 'UTC'];
+const OSK = {
+  de: ['1234567890ß', 'qwertzuiopü', 'asdfghjklöä', 'yxcvbnm,.-'],
+  us: ['1234567890-', 'qwertyuiop@', "asdfghjkl;'", 'zxcvbnm,./'],
+  sym: ['!"§$%&/()=?', '€@{}[]\\~*+#', ':;_<>|^°\'`´', '²³µ«»¿¡¬¦']
+};
+OSK.gb = OSK.us;
+let I = null, instPoll = null, gpPoll = null, instTipN = 0;
+function instOpen() { return $('#inst').classList.contains('open'); }
+
+function instFresh(probe) {
+  const lang = probe?.lang || LANG;
+  I = { step: 'welcome', probe, disk: null, mode: null, opt: null, newSize: 0, region: null, roles: {},
+        name: '', pw: '', pw2: '', host: 'tv', field: 0, shift: false, sym: false, hostEdit: null,
+        keymap: lang === 'en' ? 'us' : 'de', lang, tz: lang === 'en' ? 'America/New_York' : 'Europe/Berlin', channel: 'stable',
+        wifi: !!(probe?.wifi_saved || []).length, share: true, favs: !!(probe && (probe.favs.radio + probe.favs.tv)), rtc: false,
+        status: null, t0: 0 };
+}
+const loginOf = n => {
+  const m = { 'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss', 'Ä': 'ae', 'Ö': 'oe', 'Ü': 'ue' };
+  let s = String(n).replace(/[äöüßÄÖÜ]/g, c => m[c]).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
+  s = s.replace(/^[^a-z_]+/, '').slice(0, 31);
+  return ['root', 'tv', 'nobody'].includes(s) ? s + '1' : s;
+};
+
+/* ---- Oeffnen, Schritte, Grundgeruest */
+async function openInstaller() {
+  $('#inst').classList.add('open');
+  requestAnimationFrame(() => $('#inst').classList.add('shown'));
+  let st = null;
+  try { st = offline ? { state: 'idle' } : await getJSON('/api/install/status'); } catch {}
+  if (st && ['running', 'error', 'done'].includes(st.state)) {
+    if (!I) instFresh(null);
+    I.status = st; I.step = st.state === 'running' ? 'progress' : st.state;
+    instRender(); if (st.state === 'running') instWatch();
+    return;
+  }
+  if (!I || ['done', 'error', 'progress'].includes(I.step)) instFresh(null);
+  if (!I.probe) await instProbe();
+  instRender();
+}
+async function instProbe(force) {
+  instShell(T('inst.title'), '', null);
+  $('#iTrack').innerHTML = `<div class="iload"><div class="spin"></div>${esc(T('inst.probing'))}</div>`;
+  try {
+    const p = offline ? DEMO_PROBE : await getJSON('/api/install/probe' + (force ? '?force=1' : ''));
+    if (!I.probe) { const keep = I; instFresh(p); if (keep.name) Object.assign(I, { name: keep.name, pw: keep.pw, pw2: keep.pw2 }); }
+    else I.probe = p;
+  } catch (e) { $('#iTrack').innerHTML = `<div class="iload">${esc(T('inst.probeFailed', { msg: e.message }))}</div>`; setFocus(null); return false; }
+  return true;
+}
+function instClose() {
+  clearInterval(instPoll); clearInterval(gpPoll);
+  const el = $('#inst'); el.classList.remove('shown');
+  setTimeout(() => { el.classList.remove('open'); setFocus(lastFocus.home || $('#track .tile.nav'), true); updateHint(); }, 200);
+}
+const STEPNO = { disk: 1, beside: 1, free: 1, manual: 1, account: 2, host: 3, device: 3, confirm: 4, progress: 5, error: 5 };
+function instShell(title, sub, stepNo) {
+  $('#iTitle').textContent = title;
+  $('#iSub').textContent = sub || '';
+  $('#iSteps').innerHTML = stepNo ? `<div class="sn">${esc(T('inst.step', { n: stepNo, total: 5 }))}</div><div class="sb">${[1, 2, 3, 4, 5].map(n => `<i${n <= stepNo ? ' class="on"' : ''}></i>`).join('')}</div>` : '';
+  const tr = $('#iTrack'); tr.innerHTML = ''; tr.dataset.x = 0; tr.style.transform = 'none';
+  instLayout();
+  return tr;
+}
+// Kachelgroesse im Installer: drei Reihen muessen zwischen Kopf und Hinweiszeile passen
+// Der Installer ist dichter als die anderen Seiten: Schrift hoechstens so gross wie Skalierung 1,15
+function instLayout() {
+  const el = $('#inst'); if (!el.classList.contains('open')) return;
+  const r = innerHeight / 768, fi = Math.min(scale, 1.15) * r;
+  el.style.setProperty('--f', fi);
+  const stage = el.querySelector('.stage');
+  const avail = $('#hint').getBoundingClientRect().top - stage.getBoundingClientRect().top - 46 * fi - 2 * 10 * fi;
+  el.style.setProperty('--iu', Math.max(70, Math.min(170 * r, avail / 3)) + 'px');
+}
+function itile(o) {
+  const el = document.createElement(o.nav === false ? 'div' : 'button');
+  el.className = `tile itile ${o.size || 'medium'} ${o.nav === false ? 'itinfo' : 'inav'} ${o.cls || ''}`;
+  el.style.setProperty('--c', o.color || '#2f3238');
+  el.style.animationDelay = ((o.i || 0) * 35) + 'ms';
+  el.innerHTML = o.html ?? ((o.icon ? `<div class="icon">${IICON[o.icon] || ICONS[o.icon] || ''}</div>` : '') +
+    (o.sub ? `<div class="sub">${esc(o.sub)}</div>` : '') + `<div class="label">${esc(o.label || '')}</div>`);
+  if (o.fn) el._set = o.fn;
+  if (o.key) el.dataset.key = o.key;
+  if (o.disabled) el.classList.add('off');
+  return el;
+}
+function infoTile(icon, k, v, state, big) {
+  return itile({ nav: false, cls: state === 'bad' ? 'bad-state' : '', html:
+    (big ? `<div class="bigv">${esc(big)}</div>` : `<div class="ic">${IICON[icon] || ''}</div>`) +
+    (state ? `<div class="${state}">${IICON[state]}</div>` : '') +
+    `<div class="cap"><div class="k">${esc(k)}</div><div class="v">${esc(v || '–')}</div></div>` });
+}
+function grid(cls, children) { const g = document.createElement('div'); g.className = 'igrid ' + (cls || ''); children.filter(Boolean).forEach(c => g.appendChild(c)); return g; }
+function panel(rows, cls) {
+  const p = document.createElement('div'); p.className = 'ipanel ' + (cls || '');
+  p.innerHTML = rows.filter(Boolean).map(r => typeof r === 'string' ? r : `<div>${r.k ? `<div class="kk">${esc(r.k)}</div>` : ''}${r.html ?? esc(r.v)}</div>`).join('');
+  return p;
+}
+function instFocus(sel) {
+  const keep = focusEl && focusEl.dataset.key && $(`#iTrack [data-key="${CSS.escape(focusEl.dataset.key)}"]`);
+  setFocus(keep || (sel && $(sel)) || $('#iTrack .inav'), true);
+  updateHint();
+}
+function instGo(step) {
+  if (I.step !== step) focusEl = null;
+  I.step = step; instRender();
+}
+function instRender() {
+  if (!I) return;
+  clearInterval(gpPoll);
+  ({ welcome: rWelcome, disk: rDisk, beside: rBeside, free: rFree, manual: rManual, account: rAccount, host: rHost,
+     device: rDevice, confirm: rConfirm, progress: rProgress, error: rError, done: rDone })[I.step]();
+}
+function instBack() {
+  const s = I?.step;
+  if (s === 'progress') return toast(T('inst.busy'));
+  if (s === 'welcome' || s === 'done' || s === 'error' || !s) return instClose();
+  if (s === 'host') { I.hostEdit = null; return instGo('device'); }
+  instGo({ disk: 'welcome', beside: 'disk', free: 'disk', manual: 'disk', account: I.mode === 'whole' ? 'disk' : I.mode, device: 'account', confirm: 'device' }[s] || 'welcome');
+}
+
+/* ---- B1 Willkommen / was fehlt */
+function instBlockers(p) {
+  const b = [];
+  if (p.arch !== 'x86_64') b.push('arch');
+  if (!p.uefi || p.secureboot) b.push('fw');
+  if (p.ram && p.ram < 3.5 * GiB) b.push('ram');
+  if (!p.disks.some(d => d.size >= MIN_ROOT + 1.5 * GiB)) b.push('disk');
+  return b;
+}
+function rWelcome() {
+  const p = I.probe, bl = instBlockers(p);
+  const tr = instShell(T('inst.title'), bl.length ? (bl.includes('fw') ? T('inst.almost') : T('inst.cantHere')) : T('inst.offlineOk'));
+  const ramTxt = gb(p.ram * 1e9 / GiB);
+  const screen = p.screen ? `${p.screen.mode.replace('x', '×')}${p.screen.rate ? ' · ' + Math.round(p.screen.rate) + ' Hz' : ''}` : '–';
+  const maxDisk = Math.max(0, ...p.disks.map(d => d.size));
+  const tiles = [
+    infoTile('cpu', T('inst.cpu'), p.cpu),
+    infoTile('gpu', T('inst.gpu'), (p.gpu || [])[0]),
+    bl.includes('ram') ? infoTile('ram', T('inst.ram'), `${ramTxt} · ${T('inst.ramLow')}`, 'bad')
+      : infoTile('ram', T('inst.ram'), p.ram < 7.8 * GiB ? T('inst.ramSwap', { ram: ramTxt }) : ramTxt),
+    p.uefi && !p.secureboot ? infoTile(null, T('inst.bootMode'), T('inst.sbOff'), 'ok', 'UEFI')
+      : infoTile(null, T('inst.bootMode'), p.uefi ? T('inst.sbOn') : T('inst.uefiNeeded'), 'bad', p.uefi ? 'UEFI' : 'BIOS'),
+    bl.length ? infoTile(null, T('inst.ssd'), T('inst.ssdMin'), bl.includes('disk') ? 'bad' : 'ok', maxDisk ? gb(maxDisk) : '–')
+      : infoTile(p.net === 'wifi' ? 'wifi' : 'lan', T('inst.network'), T({ lan: 'inst.netLan', wifi: 'inst.netWifi' }[p.net] || 'inst.netNone'), p.net !== 'none' ? 'ok' : null),
+    bl.length ? infoTile(null, T('inst.arch'), '64 Bit', bl.includes('arch') ? 'bad' : 'ok', p.arch)
+      : infoTile(null, T('inst.screen'), screen, null, p.screen ? p.screen.mode.split('x')[1] + 'p' : '–')
+  ];
+  section(tr, T('inst.thisDevice'), grid('', tiles));
+  const go = bl.length
+    ? [bl.includes('fw') ? itile({ label: T('inst.reboot'), icon: 'restart', color: '#2f6d4f', size: 'wide', fn: () => power('reboot'), key: 'reboot' }) : null,
+       itile({ label: T('inst.back'), icon: 'back', color: '#3a3f46', fn: instClose, key: 'back' })]
+    : [itile({ label: T('inst.start'), sub: T('inst.minutes'), icon: 'install', size: 'large', color: '#2f6d4f', fn: () => instGo('disk'), key: 'start' }),
+       itile({ label: T('inst.back'), icon: 'back', color: '#3a3f46', fn: instClose, key: 'back' }),
+       itile({ label: T('inst.wifi'), icon: 'wifi', color: '#2f3238', fn: () => openLayer('settings'), key: 'wifi' })];
+  section(tr, T('inst.letsGo'), grid('', go));
+  if (bl.length) {
+    const rows = [];
+    if (bl.includes('fw')) rows.push(`<ol>${['inst.fw1', 'inst.fw2', 'inst.fw3', 'inst.fw4'].map((k, i) => `<li><span class="n">${i + 1}</span><span>${T(k)}</span></li>`).join('')}</ol><div class="foot">${esc(T('inst.fwStick'))}</div>`);
+    for (const k of ['ram', 'disk', 'arch']) if (bl.includes(k)) rows.push({ v: T({ ram: 'inst.needRam', disk: 'inst.needDisk', arch: 'inst.needArch' }[k]) });
+    section(tr, T('inst.howTo'), panel(rows));
+  } else {
+    section(tr, T('inst.onSsd'), panel([{ k: T('inst.whatUi'), v: T('inst.whatUiText') }, { k: T('inst.whatShare'), v: T('inst.whatShareText') },
+      { k: T('inst.whatUpd'), v: T('inst.whatUpdText') }, { k: T('inst.whatLater'), v: T('inst.whatLaterText') }, `<div class="foot">${esc(T('inst.minSsd'))}</div>`]));
+  }
+  instFocus('#iTrack [data-key="start"]');
+}
+
+/* ---- B2 Ziel-SSD und Wege */
+const BUS = { sata: 'SATA', ata: 'SATA', nvme: 'NVMe', virtio: 'VirtIO', scsi: 'SCSI', mmc: 'eMMC', sas: 'SAS' };
+function partName(p) {
+  if (p.role === 'esp') return 'EFI';
+  if (p.role === 'swap') return 'Swap';
+  if (p.role === 'recovery') return T('inst.recovery');
+  if (p.role === 'reserved') return null;
+  if (p.os) return `${p.os}${p.fstype ? ` (${fsName(p.fstype)})` : ''}`;
+  return `${p.label || fsName(p.fstype)} ${gb(p.size)}`;
+}
+function diskBar(d) {
+  const segs = [...d.parts.map(p => ({ s: p.start, n: p.sectors, cls: p.role })), ...(d.free || []).filter(r => r.bytes > GiB).map(r => ({ s: r.start, n: r.sectors, cls: 'free' }))].sort((a, b) => a.s - b.s);
+  const tot = segs.reduce((a, x) => a + x.n, 0) || 1;
+  const bar = segs.length ? segs.map(x => `<i class="${x.cls}" style="flex:${Math.max(0.015, x.n / tot)}"></i>`).join('') : '<i class="free" style="flex:1"></i>';
+  const names = d.parts.map(partName).filter(Boolean);
+  const fr = (d.free || []).filter(r => r.bytes >= 2 * GiB).reduce((a, r) => a + r.bytes, 0);
+  if (fr && names.length) names.push(T('inst.freeGB', { size: gb(fr) }));
+  return `<div class="pbar">${bar}</div><div class="pleg">${esc(names.length ? names.join(' · ') : T('inst.empty'))}</div>`;
+}
+const diskName = d => d.model || d.path.replace('/dev/', '');
+const FSNAME = { vfat: 'FAT32', zfs_member: 'ZFS', crypto_LUKS: 'LUKS', LVM2_member: 'LVM', BitLocker: 'BitLocker', swap: 'Swap' };
+const fsName = f => FSNAME[f] || (f || '–').toUpperCase();
+function rDisk() {
+  const p = I.probe;
+  const tr = instShell(T('inst.disk'), '', 1);
+  const disks = p.disks.filter(d => d.options.whole);
+  const multi = p.disks.length > 1;
+  if (!disks.length) section(tr, T('inst.whole'), (() => { const e = document.createElement('div'); e.className = 'empty'; e.textContent = T('inst.noDisks'); return e; })());
+  else {
+    const w = document.createElement('div'); w.className = 'icolw';
+    w.appendChild(grid('r2', disks.map((d, i) => itile({ size: 'large', color: i ? '#2f3238' : '#39414d', i, key: 'disk' + d.path, cls: 'dtile',
+      fn: () => { Object.assign(I, { disk: d, mode: 'whole', opt: null }); instGo('account'); },
+      html: `<div class="dic">${d.tran === 'nvme' ? IICON.nvme : IICON.sata}</div><div class="bus">${esc(BUS[d.tran] || (d.tran || '').toUpperCase())}</div>` +
+        `<div class="gb">${esc(gb(d.size))}</div><div class="model">${esc(diskName(d))}</div><div class="pb">${diskBar(d)}</div>` }))));
+    const band = document.createElement('div'); band.className = 'warnband'; band.innerHTML = IICON.warn + `<div>${esc(T('inst.wipeWarn'))}</div>`;
+    w.appendChild(band);
+    section(tr, T('inst.whole'), w);
+  }
+  const ways = [];
+  for (const d of p.disks) {
+    for (const o of d.options.beside || []) {
+      const sub = o.blocked ? T(o.blocked === 'hibernated' ? 'inst.blockedHib' : 'inst.blockedDirty')
+        : multi ? `${diskName(d)} · ${fsName(o.fstype)}` : `${fsName(o.fstype)} · ${T('inst.willShrink')}`;
+      ways.push(itile({ size: 'wide', color: /windows/i.test(o.os) ? '#2d3763' : '#34464f', icon: 'beside', key: 'b' + o.part, cls: o.blocked ? 'off' : '',
+        label: T('inst.besideOs', { os: o.os }), sub,
+        fn: () => o.blocked ? adlg(T(o.blocked === 'hibernated' ? 'inst.blockedHib' : 'inst.blockedDirty'), T(o.blocked === 'hibernated' ? 'inst.blockedHibText' : 'inst.blockedDirtyText'), [[T('common.ok')]])
+          : (Object.assign(I, { disk: d, mode: 'beside', opt: o, newSize: I.opt?.part === o.part ? I.newSize : o.default }), instGo('beside')) }));
+    }
+    for (const r of d.options.free || []) {
+      ways.push(itile({ size: 'wide', color: '#34464f', icon: 'free', key: 'f' + d.path + r.start,
+        label: T('inst.freeSpace', { size: gb(r.bytes) }), sub: multi || !d.systems.length ? diskName(d) : T('inst.nextTo', { os: d.systems[0] }),
+        fn: () => { Object.assign(I, { disk: d, mode: 'free', region: r }); instGo('free'); } }));
+    }
+  }
+  ways.push(itile({ size: 'wide', color: '#2f3238', icon: 'manual', label: T('inst.manual'), sub: T('inst.withGparted'), key: 'manual',
+    fn: () => { I.mode = 'manual'; instGo('manual'); } }));
+  section(tr, T('inst.otherWays'), grid('', ways));
+  instFocus(I.disk && `#iTrack [data-key="disk${CSS.escape(I.disk.path)}"]`);
+}
+
+/* ---- B2b Neben einem System (verkleinern) */
+function rBeside() {
+  const o = I.opt, d = I.disk;
+  const tr = instShell(T('inst.besideOs', { os: o.os }), T('inst.splitSub', { model: diskName(d), size: gb(d.size) }), 1);
+  const step = o.max_new - MIN_ROOT > 200 * GiB ? 5 * GiB : GiB;
+  const wrap = document.createElement('div');
+  const sp = document.createElement('div'); sp.className = 'split inav'; sp.tabIndex = -1; sp.dataset.key = 'split';
+  const draw = () => {
+    const vs = I.newSize, rest = o.size - vs - (d.esp ? 0 : 512 * 1024 ** 2);
+    const fa = Math.max(0.22, Math.min(0.78, rest / o.size));
+    sp.innerHTML = `<div class="a" style="flex:0 0 calc(${fa * 100}% - 2px)"><div class="nm">${esc(o.os)} · ${esc(fsName(o.fstype))}</div><div class="sz">${esc(gb(rest))}</div>` +
+      `<div class="ds">${o.used ? esc(T('inst.usedOf', { used: gb(o.used) })) : ''}</div></div>` +
+      `<div class="b" style="flex:1"><div class="nm">VoidStation</div><div class="sz">${esc(gb(vs))}</div><div class="ds">${esc(T('inst.newPart'))}</div></div>` +
+      `<div class="grip" style="left:${fa * 100}%">‹›</div>`;
+  };
+  // dir = Richtung des Griffs: nach links (−1) bekommt VoidStation mehr Platz, nach rechts (+1) weniger
+  sp._adj = dir => { I.newSize = Math.max(MIN_ROOT, Math.min(o.max_new, Math.round((I.newSize - dir * step) / GiB) * GiB)); draw(); };
+  sp._set = () => instGo('account');
+  sp.addEventListener('click', e => { const r = sp.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width;
+    I.newSize = Math.max(MIN_ROOT, Math.min(o.max_new, Math.round(o.size * (1 - x) / GiB) * GiB)); draw(); e.stopPropagation(); setFocus(sp); });
+  draw();
+  const rowb = document.createElement('div'); rowb.className = 'srow';
+  const mk = (txt, fn, key) => { const b = document.createElement('button'); b.className = 'pill inav'; b.textContent = txt; b._set = fn; b.dataset.key = key; return b; };
+  rowb.append(mk('− VoidStation', () => sp._adj(1), 'minus'), mk('+ VoidStation', () => sp._adj(-1), 'plus'), mk(T('inst.continue'), () => instGo('account'), 'next'));
+  wrap.append(sp, rowb);
+  section(tr, T('inst.split'), wrap);
+  section(tr, T('inst.whatHappens'), panel([{ k: T('inst.atBoot'), v: T('inst.bootMenu', { os: o.os }) },
+    { k: T('inst.unchanged'), v: T('inst.keepsBeside', { os: o.os }) },
+    { k: T('inst.beforeShrink'), v: T('inst.checkFirst', { os: o.os }) },
+    o.fstype === 'ntfs' ? { v: T('inst.ntfsNote') } : null]));
+  instFocus('#iTrack .split');
+}
+
+/* ---- B2d Freier Bereich */
+function rFree() {
+  const d = I.disk, r = I.region, os = d.systems.join(' / ');
+  const tr = instShell(d.systems.length === 1 ? T('inst.besideOs', { os }) : T('inst.freeTitle'), T('inst.freeSub', { model: diskName(d), size: gb(d.size) }), 1);
+  const used = d.parts.reduce((a, p) => a + p.size, 0);
+  const wrap = document.createElement('div');
+  const sp = document.createElement('div'); sp.className = 'split locked';
+  const fa = Math.max(0.3, Math.min(0.7, used / (used + r.bytes)));
+  sp.innerHTML = `<div class="a" style="flex:0 0 calc(${fa * 100}% - 2px);background:#34464f"><div class="nm">${esc(os || T('inst.othersKeep'))}</div><div class="sz">${esc(gb(used))}</div><div class="ds">${esc(T('inst.stays'))}</div></div>` +
+    `<div class="b" style="flex:1"><div class="nm">VoidStation</div><div class="sz">${esc(gb(r.bytes))}</div><div class="ds">${esc(T('inst.wholeFree'))}</div></div>`;
+  const rowb = document.createElement('div'); rowb.className = 'srow';
+  const nx = document.createElement('button'); nx.className = 'pill inav'; nx.textContent = T('inst.continue'); nx._set = () => instGo('account'); nx.dataset.key = 'next';
+  rowb.appendChild(nx);
+  wrap.append(sp, rowb);
+  section(tr, T('inst.split'), wrap);
+  section(tr, T('inst.whatHappens'), panel([os ? { k: T('inst.atBoot'), v: T('inst.bootMenu', { os }) } : null,
+    { k: T('inst.unchanged'), v: os ? T('inst.keepsFree', { os }) : T('inst.othersKeep') },
+    { k: T('inst.moreSpace'), v: T('inst.moreSpaceText') }]));
+  instFocus('#iTrack [data-key="next"]');
+}
+
+/* ---- B2c Selbst einteilen (GParted + Rollen) */
+function rolesFor(p) {
+  const r = [p.os ? 'keep' : 'none'];
+  if (p.fstype === 'vfat' || p.role === 'esp') { if (p.fstype === 'vfat') r.push('esp_keep'); if (p.size >= 100 * 1024 ** 2) r.push('esp_format'); }
+  if (p.size >= MIN_ROOT - 512 * 1024 ** 2 && p.role !== 'esp') r.push('root');
+  return r;
+}
+function rManual() {
+  const tr = instShell(T('inst.manual'), '', 1);
+  section(tr, T('inst.tool'), grid('', [
+    itile({ size: 'wide', color: '#2d3763', icon: 'manual', label: T('inst.gparted'), sub: T('inst.gpartedSub'), key: 'gparted', fn: instGparted }),
+    itile({ color: '#2f3238', icon: 'restart', label: T('inst.rescan'), key: 'rescan', fn: async () => { if (await instProbe(true)) instGo('manual'); } })]));
+  const list = document.createElement('div'); list.className = 'plist';
+  for (const d of I.probe.disks) {
+    const l = document.createElement('div'); l.className = 'dlbl'; l.textContent = `${diskName(d)} · ${gb(d.size)}`; list.appendChild(l);
+    for (const p of d.parts) {
+      if (p.role === 'reserved') continue;
+      const roles = rolesFor(p);
+      const cur = I.roles[p.path] || roles[0];
+      const b = document.createElement('button'); b.className = 'prow inav'; b.dataset.key = 'p' + p.path;
+      b.innerHTML = `<span class="pn">${esc(p.path.replace('/dev/', ''))}</span><span class="pi">${esc([fsName(p.fstype), gb(p.size), p.os || p.label].filter(Boolean).join(' · '))}</span>` +
+        `<span class="pr ${cur}">${esc(T('inst.role.' + cur))}</span>`;
+      if (roles.length < 2) b.disabled = true;
+      b._set = () => {
+        const nx = roles[(roles.indexOf(I.roles[p.path] || roles[0]) + 1) % roles.length];
+        const isEsp = x => x === 'esp_keep' || x === 'esp_format';
+        for (const k of Object.keys(I.roles)) if (k !== p.path && (I.roles[k] === nx || (isEsp(nx) && isEsp(I.roles[k])))) delete I.roles[k];
+        I.roles[p.path] = nx; rManual();
+      };
+      list.appendChild(b);
+    }
+  }
+  const need = document.createElement('div'); need.className = 'info'; need.style.maxWidth = 'none'; need.style.marginTop = '8px'; need.textContent = T('inst.manualNeed');
+  const root = Object.keys(I.roles).find(k => I.roles[k] === 'root'), esp = Object.keys(I.roles).find(k => /^esp/.test(I.roles[k]));
+  const nx = document.createElement('button'); nx.className = 'pill inav'; nx.textContent = T('inst.continue'); nx.dataset.key = 'next';
+  nx.style.alignSelf = 'flex-start'; nx.style.marginTop = '6px';
+  if (!(root && esp)) nx.classList.add('off');
+  nx._set = () => {
+    if (!(root && esp)) return toast(T('inst.manualMissing'), true);
+    const d = I.probe.disks.find(x => x.parts.some(p => p.path === root));
+    Object.assign(I, { disk: d, mode: 'manual', manual: { root, esp, format_esp: I.roles[esp] === 'esp_format' } });
+    instGo('account');
+  };
+  list.append(need, nx);
+  section(tr, T('inst.whichPart'), list);
+  instFocus();
+}
+async function instGparted() {
+  try { if (!offline) await api('/api/install/gparted'); } catch (e) { return toast(T('inst.gpartedFailed', { msg: e.message }), true); }
+  toast(T('inst.gpartedOpen'));
+  clearInterval(gpPoll);
+  let seen = false;
+  gpPoll = setInterval(async () => {
+    let r; try { r = await getJSON('/api/install/gparted'); } catch { return; }
+    if (r.running) { seen = true; return; }
+    if (!seen && r.running === false) seen = true;              // schon wieder zu (oder nie sichtbar gewesen)
+    clearInterval(gpPoll);
+    if (await instProbe(true)) { I.roles = {}; instGo('manual'); }
+  }, 2000);
+}
+
+/* ---- Bildschirmtastatur (B3 Konto, Rechnername) */
+function oskFields() {
+  return I.step === 'host' ? [{ id: 'hostEdit', label: T('inst.hostname'), max: 15, filter: /[A-Za-z0-9-]/ }]
+    : [{ id: 'name', label: T('inst.name'), max: 60, filter: /[^:,=\\]/ }, { id: 'pw', label: T('inst.password'), max: 200, secret: true },
+       { id: 'pw2', label: T('inst.password2'), max: 200, secret: true }];
+}
+function oskType(ch) {
+  const f = oskFields()[I.field]; if (!f) return;
+  if (f.filter && !f.filter.test(ch)) return;
+  if ((I[f.id] || '').length >= f.max) return;
+  I[f.id] = (I[f.id] || '') + ch;
+  if (I.shift) { I.shift = false; oskKeys(); }
+  oskFieldsDraw();
+}
+function oskDel() { const f = oskFields()[I.field]; if (!f) return; I[f.id] = (I[f.id] || '').slice(0, -1); oskFieldsDraw(); }
+function oskNextField(dir = 1) {
+  const n = oskFields().length;
+  if (dir > 0 && I.field >= n - 1) return oskDone();
+  I.field = (I.field + dir + n) % n; oskFieldsDraw();
+}
+function oskFieldsDraw() {
+  const box = $('#iFields'); if (!box) return;
+  const fs = oskFields();
+  box.innerHTML = '';
+  fs.forEach((f, i) => {
+    const b = document.createElement('button'); b.className = 'ofield inav' + (i === I.field ? ' cur' : ''); b.dataset.key = 'f' + f.id;
+    const v = I[f.id] || '';
+    b.innerHTML = `<div class="k">${esc(f.label)}</div><div class="v">${esc(f.secret ? '•'.repeat(v.length) : v)}</div>`;
+    b._set = () => { I.field = i; oskFieldsDraw(); };
+    box.appendChild(b);
+    if (f.id === 'name') {
+      const l = document.createElement('div'); l.className = 'ofield ro';
+      l.innerHTML = `<div class="k">${esc(T('inst.login'))}</div><div class="v">${esc(loginOf(I.name))}</div>`;
+      box.appendChild(l);
+    }
+  });
+  const pv = $('#iPrevName'); if (pv) pv.textContent = I.name;
+  if (focusEl && !document.contains(focusEl)) setFocus($(`#iFields [data-key="f${fs[I.field].id}"]`));
+}
+function oskKeys() {
+  const k = $('#iOsk'); if (!k) return;
+  const keep = focusEl?.dataset?.key;
+  const rows = I.sym ? OSK.sym : OSK[I.keymap] || OSK.de;
+  k.innerHTML = '';
+  const add = (label, fn, cls, key) => { const b = document.createElement('button'); b.className = 'key inav ' + (cls || ''); b.textContent = label; b._set = () => { I.phys = false; fn(); }; b.dataset.key = key; k.appendChild(b); };
+  rows.forEach((r, ri) => {
+    if (ri === 3) add('⇧', () => { I.shift = !I.shift; oskKeys(); }, I.shift ? 'on' : '', 'kshift');
+    [...r].forEach((c, ci) => { const ch = I.shift ? c.toUpperCase() : c; add(ch, () => oskType(ch), '', `k${ri}-${ci}`); });
+    if (ri === 0) add('⌫', oskDel, '', 'kdel');
+    else if (ri === 3) add('⌫', oskDel, '', 'kdel2');
+    else add(ri === 1 ? '+' : '#', () => oskType(ri === 1 ? '+' : '#'), '', `kx${ri}`);
+  });
+  add(I.sym ? 'abc' : '&123', () => { I.sym = !I.sym; oskKeys(); }, 'w2', 'ksym');
+  add(T('inst.space'), () => oskType(' '), 'wide5', 'kspace');
+  add('@', () => oskType('@'), '', 'kat');
+  add(T('inst.continue'), oskDone, 'wide4 go', 'kgo');
+  const again = keep && $(`#iOsk [data-key="${CSS.escape(keep)}"]`);
+  if (again) setFocus(again, true);
+}
+function oskDone() {
+  if (I.step === 'host') {
+    if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,13}[A-Za-z0-9])?$/.test(I.hostEdit || '')) return toast(T('inst.errHost'), true);
+    I.host = I.hostEdit; I.hostEdit = null; return instGo('device');
+  }
+  const login = loginOf(I.name);
+  if (!I.name.trim() || !/^[a-z_][a-z0-9_-]{0,30}$/.test(login)) { I.field = 0; oskFieldsDraw(); return toast(T('inst.errName'), true); }
+  if (!I.pw) { I.field = 1; oskFieldsDraw(); return toast(T('inst.errPw'), true); }
+  if (I.pw !== I.pw2) { I.field = 2; I.pw2 = ''; oskFieldsDraw(); return toast(T('inst.errPw2'), true); }
+  I.name = I.name.trim();
+  instGo('device');
+}
+function oskStep(title, sub) {
+  const tr = instShell(title, sub, STEPNO[I.step]);
+  const left = document.createElement('div'); left.className = 'icol';
+  const f = document.createElement('div'); f.className = 'ofields'; f.id = 'iFields'; left.appendChild(f);
+  section(tr, I.step === 'host' ? T('inst.editHost') : T('inst.account'), left);
+  const right = document.createElement('div');
+  const kb = document.createElement('div'); kb.className = 'kbrow';
+  for (const km of ['de', 'us', 'gb']) {
+    const b = document.createElement('button'); b.className = 'pill inav' + (I.keymap === km ? ' on' : ''); b.textContent = T('inst.kb.' + km); b.dataset.key = 'km' + km;
+    b._set = async () => { I.keymap = km; try { if (!offline) await api('/api/install/keymap', { keymap: km }); } catch {} rAccountOrHost(); };
+    kb.appendChild(b);
+  }
+  const osk = document.createElement('div'); osk.className = 'osk'; osk.id = 'iOsk';
+  right.append(kb, osk);
+  section(tr, T('inst.keyboard'), right);
+  if (I.step === 'account') {
+    const c = document.createElement('div'); c.className = 'icol';
+    c.innerHTML = `<div class="preview"><div class="t">${esc(L(cfg?.title) || T('home.title'))}</div><div class="w"><div class="n" id="iPrevName"></div><div class="c">${esc($('#hdrTime').textContent)}</div></div></div>` +
+      `<div class="info">${esc(T('inst.pwInfo'))}</div><div class="info">${esc(T('inst.usbKb'))}</div>`;
+    section(tr, T('inst.greets'), c);
+  }
+  oskFieldsDraw(); oskKeys();
+  instFocus('#iFields .ofield.cur');
+}
+const rAccountOrHost = () => (I.step === 'host' ? rHost() : rAccount());
+function rAccount() { oskStep(T('inst.account')); }
+function rHost() { if (I.hostEdit === null) I.hostEdit = I.host; I.field = 0; oskStep(T('inst.device')); }
+// Tastatur des Geraets: Buchstaben tippen direkt in das aktive Feld
+function instKey(e) {
+  if (!I || !['account', 'host'].includes(I.step) || e.ctrlKey || e.altKey || e.metaKey) return false;
+  if (e.key === 'Backspace') { e.preventDefault(); oskDel(); return true; }
+  if (e.key === 'Tab') { e.preventDefault(); oskNextField(e.shiftKey ? -1 : 1); return true; }
+  // Enter nach Tippen auf der echten Tastatur: naechstes Feld bzw. weiter (auch wenn die Maus auf einer Taste steht)
+  if (e.key === 'Enter' && (I.phys || focusEl?.classList.contains('ofield'))) { e.preventDefault(); oskNextField(1); return true; }
+  if (e.key.length === 1) { e.preventDefault(); I.phys = true; oskType(e.key); return true; }
+  return false;
+}
+
+/* ---- B4 Geraet */
+const tzLabel = tz => { let t = ''; try { t = new Intl.DateTimeFormat(loc(), { timeZone: tz, hour: 'numeric', minute: '2-digit' }).format(new Date()); } catch {} return `${tz.split('/').pop().replace(/_/g, ' ')}${t ? ' · ' + t : ''}`; };
+function stile(k, v, d, fn, key, i) {
+  return itile({ size: 'wide', color: '#23272c', cls: 'stile', key, fn, i, nav: fn ? undefined : false,
+    html: `<div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="d">${esc(d)}</div>` });
+}
+function rDevice() {
+  const p = I.probe;
+  if (!I._rtcSet) { I.rtc = !!p.windows && I.mode !== 'whole'; I._rtcSet = true; }
+  const tr = instShell(T('inst.device'), T('inst.deviceSub'), 3);
+  const cyc = (list, cur) => list[(list.indexOf(cur) + 1) % list.length];
+  const ws = p.wifi_saved || [];
+  const favN = (p.favs?.radio || 0) + (p.favs?.tv || 0);
+  const tiles = [
+    stile(T('inst.hostname'), I.host, T('inst.hostSub', { host: I.host }), () => { I.hostEdit = null; instGo('host'); }, 'host'),
+    stile(T('inst.channel'), T('channel.' + (I.channel === 'main' ? 'main' : 'stable')), T(I.channel === 'main' ? 'inst.chTestSub' : 'inst.chStableSub'), () => { I.channel = I.channel === 'main' ? 'stable' : 'main'; rDevice(); }, 'ch'),
+    ws.length ? stile(T('inst.wifiTake'), I.wifi ? ws[0] : T('common.off'), I.wifi ? T('inst.wifiSub') : T('inst.wifiOffSub'), () => { I.wifi = !I.wifi; rDevice(); }, 'wifi') : null,
+    stile(T('inst.share'), T(I.share ? 'common.on' : 'common.off'), T('inst.shareSub'), () => { I.share = !I.share; rDevice(); }, 'share'),
+    stile(T('inst.language'), I.lang === 'en' ? 'English' : 'Deutsch', T('inst.langSub'), () => { I.lang = I.lang === 'en' ? 'de' : 'en'; rDevice(); }, 'lang'),
+    stile(T('inst.timezone'), tzLabel(I.tz), T('inst.tzSub'), () => { I.tz = cyc(TZS, I.tz); rDevice(); }, 'tz'),
+    favN ? stile(T('inst.favs'), I.favs ? T('inst.favCount', { n: favN }) : T('common.off'), T('inst.favSub'), () => { I.favs = !I.favs; rDevice(); }, 'favs') : null,
+    p.windows ? stile(T('inst.rtc'), T(I.rtc ? 'inst.rtcLocal' : 'inst.rtcUtc'), T(I.rtc ? 'inst.rtcSub' : 'inst.rtcUtcSub'), () => { I.rtc = !I.rtc; rDevice(); }, 'rtc') : null,
+    p.screen ? stile(T('inst.screen'), p.screen.mode.replace('x', '×'), T('inst.screenSub')) : null,
+    itile({ size: 'wide', color: '#2f6d4f', icon: 'install', label: T('inst.continue'), key: 'next', fn: () => instGo('confirm') })
+  ].filter(Boolean);
+  tiles.forEach((t, i) => t.style.animationDelay = (i * 35) + 'ms');
+  section(tr, T('inst.device'), grid('', tiles));
+  instFocus('#iTrack [data-key="host"]');
+}
+
+/* ---- B5 Bestaetigen (A/Enter 2 s halten) */
+function instSummary() {
+  const d = I.disk;
+  const what = d.systems.join(', ');
+  let eff;
+  if (I.mode === 'whole') eff = what ? T('inst.sumWholeWith', { what }) : T('inst.sumWhole');
+  else if (I.mode === 'beside') eff = T('inst.sumBeside', { os: I.opt.os, old: gb(I.opt.size - I.newSize), size: gb(I.newSize) });
+  else if (I.mode === 'free') eff = T('inst.sumFree', { size: gb(I.region.bytes) });
+  else eff = T('inst.sumManual', { root: I.manual.root, esp: I.manual.esp });
+  const extras = [(I.probe.wifi_saved || []).length && I.wifi ? T('inst.wifi') : null, I.share ? T('inst.whatShare') : null,
+    I.favs && (I.probe.favs.radio + I.probe.favs.tv) ? T('inst.favCount', { n: I.probe.favs.radio + I.probe.favs.tv }) : null].filter(Boolean);
+  return [
+    { k: T('inst.sumDisk'), html: `<b>${esc(diskName(d))} · ${esc(gb(d.size))}</b><br>${esc(eff)}` },
+    { k: T('inst.sumAccount'), html: `<b>${esc(I.name)}</b> · ${esc(T('inst.sumLogin', { login: loginOf(I.name) }))}` },
+    { k: T('inst.sumDevice'), html: `<b>${esc(I.host)}</b> · ${esc(I.lang === 'en' ? 'English' : 'Deutsch')} · ${esc(tzLabel(I.tz).split(' · ')[0])}` + (I.probe.screen ? ` · ${esc(I.probe.screen.mode.replace('x', '×'))}` : '') },
+    { k: T('inst.sumUpdates'), v: T('inst.sumChannel', { channel: T('channel.' + (I.channel === 'main' ? 'main' : 'stable')) }) },
+    { k: T('inst.sumExtras'), v: extras.join(', ') || T('inst.sumNone') }
+  ];
+}
+function rConfirm() {
+  const tr = instShell(T('inst.confirm'), '', 4);
+  section(tr, T('inst.summary'), panel(instSummary(), 'wide'));
+  const whole = I.mode === 'whole';
+  const h = itile({ size: 'large', color: whole ? '#6e2b2b' : '#2f6d4f', cls: 'hold', key: 'hold',
+    html: `<div class="ring"><b>A</b></div><div class="sub" style="left:7%;right:auto">${esc(whole ? T('inst.eraseSub') : '')}</div>` +
+      `<div class="icon">${IICON.install}</div><div class="label" style="bottom:15%">${esc(whole ? T('inst.eraseInstall') : T('inst.justInstall'))}</div>` +
+      `<div class="label" style="font-size:calc(var(--iu) * .075);color:rgba(255,255,255,.75)">${esc(T('inst.hold'))}</div>` });
+  h._hold = true; h._set = () => holdStart(h);
+  section(tr, T('inst.install'), grid('', [h, itile({ color: '#3a3f46', icon: 'back', label: T('inst.change'), key: 'change', fn: instBack })]));
+  instFocus('#iTrack [data-key="hold"]');
+}
+let hold = null;
+const held = { key: false, mouse: false };
+function holdStart(el) {
+  if (hold) return;
+  hold = { el, t0: performance.now() };
+  requestAnimationFrame(holdTick);
+}
+function holdTick() {
+  if (!hold) return;
+  const p = Math.min(1, (performance.now() - hold.t0) / 2000);
+  hold.el.style.setProperty('--p', p);
+  if (!(held.key || held.mouse || pad.held.a)) { hold.el.style.setProperty('--p', 0); hold = null; if (p < 1) toast(T('inst.holdHint')); return; }
+  if (p >= 1) { hold.el.style.setProperty('--p', 0); hold = null; held.key = held.mouse = false; return instStart(); }
+  requestAnimationFrame(holdTick);
+}
+function instConfig() {
+  const c = { mode: I.mode, disk: I.disk.path, user: { name: I.name, login: loginOf(I.name), password: I.pw }, hostname: I.host,
+    lang: I.lang, keymap: I.keymap, timezone: I.tz, channel: I.channel, wifi: I.wifi && !!(I.probe.wifi_saved || []).length,
+    share: I.share, favorites: I.favs, rtc_local: I.rtc && !!I.probe.windows };
+  if (I.mode === 'beside') Object.assign(c, { part: I.opt.part, new_size: I.newSize });
+  if (I.mode === 'free') c.region = { start: I.region.start, sectors: I.region.sectors };
+  if (I.mode === 'manual') c.manual = I.manual;
+  return c;
+}
+async function instStart() {
+  I.t0 = Date.now();
+  try { I.status = offline ? { state: 'running', pct: 0, phases: {} } : await api('/api/install/start', { config: instConfig() }); }
+  catch (e) { return toast(T('inst.startFailed', { msg: e.message }), true); }
+  instGo('progress'); instWatch();
+}
+
+/* ---- B6 Fortschritt */
+function instWatch() {
+  clearInterval(instPoll);
+  instPoll = setInterval(async () => {
+    if (offline) return;
+    let st; try { st = await getJSON('/api/install/status'); } catch { return; }
+    I.status = st;
+    if (st.state === 'done' || st.state === 'error') { clearInterval(instPoll); if (instOpen()) instGo(st.state); else I.step = st.state; return; }
+    if (I.step === 'progress' && instOpen() && layer() === 'inst') rProgressUpdate();
+  }, 1000);
+}
+const PHGROUPS = mode => [...(mode === 'beside' ? [['shrink', ['check', 'shrink']]] : []), ['partition', mode === 'beside' ? ['partition', 'format'] : ['check', 'partition', 'format']],
+  ['copy', ['copy']], ['configure', ['configure']], ['boot', ['boot']], ['cleanup', ['cleanup']]];
+function rProgress() {
+  const tr = instShell(T('inst.installing'), '', 5);
+  const box = document.createElement('div');
+  box.innerHTML = '<div class="phl" id="iPh"></div><div class="ptotal"><div class="tb"><b id="iTotBar"></b></div><div class="tt" id="iTot"></div></div>';
+  section(tr, T('inst.installing'), box);
+  const rt = itile({ size: 'wide', color: '#3b2f4f', cls: 'iradio', key: 'radio', fn: () => openLayer('radio'), html: `<div class="sub" id="iRadioSub"></div><div class="now"><div class="st" id="iRadioSt"></div><div class="ti" id="iRadioTi"></div></div><div class="label">${esc(T('radio.title'))}</div>` });
+  const tip = itile({ size: 'wide', nav: false, color: '#23272c', html: `<div class="stile"><div class="k">${esc(T('inst.goodToKnow'))}</div></div><div class="d" id="iTip" style="position:absolute;left:7%;right:7%;top:30%;font-size:calc(var(--iu) * .1);line-height:1.4"></div>` });
+  const lg = itile({ color: '#2f3238', icon: 'log', label: T('inst.log'), key: 'log', fn: instShowLog });
+  section(tr, ' ', grid('', [rt, tip, lg]));
+  rProgressUpdate();
+  instFocus('#iTrack [data-key="radio"]');
+}
+function rProgressUpdate() {
+  const st = I.status || {}, ph = st.phases || {};
+  const box = $('#iPh'); if (!box) return;
+  box.innerHTML = PHGROUPS(st.mode || I.mode).map(([id, members]) => {
+    const states = members.map(m => ph[m]);
+    const state = states.includes('error') ? 'error' : states.every(s => s === 'done') ? 'done' : states.some(s => s === 'running' || s === 'done') ? 'run' : '';
+    let dt = '', pc = '';
+    if (id === 'copy' && state === 'run' && st.copy?.total) { dt = T('inst.copyOf', { done: gb(st.copy.done || 0), total: gb(st.copy.total) }); pc = pct(Math.round(st.phase_pct || 0)); }
+    else if (state === 'run' && members.includes(st.phase) && st.phase_pct) pc = pct(Math.round(st.phase_pct));
+    if (id === 'boot') dt = (st.mode || I.mode) === 'whole' ? T('inst.bootStub') : T('inst.bootMenuShort');
+    return `<div class="ph ${state}"><span class="m">${state === 'done' ? '✓' : state === 'error' ? '✕' : state === 'run' ? '<span class="spin" style="display:inline-block"></span>' : '·'}</span>` +
+      `<span class="nm">${esc(T('inst.ph.' + id))}</span><span class="dt">${esc(dt)}</span><span class="pc">${esc(pc)}</span>` +
+      (state === 'run' ? `<span class="phbar" style="width:${Math.round(st.phase_pct || 0)}%"></span>` : '') + '</div>';
+  }).join('');
+  const p = Math.round(st.pct || 0);
+  $('#iTotBar').style.width = p + '%';
+  const eta = st.copy?.eta;
+  const tail = st.phase === 'copy' && eta ? (eta > 90 ? T('inst.eta', { min: Math.max(2, Math.round((eta + 60) / 60)) }) : T('inst.etaSoon')) : T('inst.dontOff');
+  $('#iTot').textContent = `${T('inst.total', { pct: pct(p) })} · ${tail}`;
+  const r = radioState.station;
+  $('#iRadioSub').textContent = r ? T('inst.radioOn') : '';
+  $('#iRadioSt').textContent = r ? r.name : T('inst.radioOff');
+  $('#iRadioTi').textContent = r ? (radioState.title || T('common.live')) : '';
+  const tips = ['inst.tip1', 'inst.tip2', 'inst.tip3', 'inst.tip4'];
+  instTipN = (instTipN + 1) % (tips.length * 8);
+  $('#iTip').innerHTML = T(tips[Math.floor(instTipN / 8)], { host: esc(I.host) });
+}
+async function instShowLog() {
+  let txt = '';
+  try { txt = offline ? '(Demo)' : (await getJSON('/api/install/log')).log || ''; } catch (e) { txt = e.message; }
+  adlg(T('inst.logTitle'), txt.trim().split('\n').slice(-18).join('\n'), [[T('common.close')], [T('inst.logSave'), instSaveLog]]);
+}
+async function instSaveLog() {
+  let r; try { r = offline ? { ok: false } : await api('/api/install/savelog'); } catch { r = { ok: false }; }
+  toast(r.ok ? T('inst.logSaved', { file: r.file }) : T('inst.noUsb'), !r.ok);
+}
+
+/* ---- B6e Fehler */
+function rError() {
+  const st = I.status || {}, e = st.error || {};
+  const tr = instShell(T('inst.failed'), '', 5);
+  const phase = e.phase && T('inst.ph.' + e.phase, null, e.phase);
+  section(tr, T('inst.whatHappened'), panel([{ html: `<b>${esc(phase || '')}</b><br>${esc(T('inst.err.' + e.code, null, T('inst.err.generic')))}` },
+    e.msg && e.msg !== e.code ? `<div class="mono">${esc(String(e.msg).slice(-500))}</div>` : null,
+    `<div class="foot">${esc(T('inst.logAt', { path: '/run/voidstation-installer/install.log' }))}</div>`]));
+  const done = e.done || Object.keys(st.phases || {}).filter(k => st.phases[k] === 'done');
+  const systems = I.disk?.systems?.join(', ');
+  const mode = st.mode || I.mode;
+  const lines = [];
+  if (done.includes('shrink') && I.opt) lines.push(['ok', T('inst.stateShrunk', { os: I.opt.os })]);
+  if (done.includes('partition')) lines.push(['ok', mode === 'whole' ? T('inst.stateErased') : T('inst.statePart')]);
+  if (done.includes('copy')) lines.push(['ok', T('inst.stateCopied')]);
+  if (done.includes('configure')) lines.push(['ok', T('inst.stateConfigured')]);
+  if (e.phase === 'boot') lines.push(['bad', T('inst.stateNoBoot')]);
+  if (!lines.length) lines.push(['keep', T('inst.stateNothing')]);
+  if (mode !== 'whole' && e.foreign_untouched !== false) lines.push(['keep', systems ? T('inst.stateUntouched', { os: systems }) : T('inst.stateOthers')]);
+  section(tr, T('inst.diskState'), panel(lines.map(([c, t]) => `<div class="st ${c}"><span class="m">${c === 'ok' ? '✓' : c === 'bad' ? '✕' : '–'}</span><span>${esc(t)}</span></div>`)));
+  const early = !done.includes('copy');
+  const fresh = !done.filter(x => x !== 'check').length;
+  const acts = [
+    e.alt ? itile({ size: 'wide', color: '#2f6d4f', icon: 'alt', label: T('inst.alt'), sub: T('inst.altSub'), key: 'alt', fn: () => instRetry(true) }) : null,
+    itile({ size: 'wide', color: e.alt ? '#2f3238' : '#2f6d4f', icon: 'restart', label: T('inst.retry'), sub: early ? T('inst.retrySubEarly') : T('inst.retrySub'), key: 'retry', fn: () => instRetry(false) }),
+    fresh && I.probe ? itile({ size: 'wide', color: '#2f3238', icon: 'back', label: T('inst.redo'), sub: T('inst.redoSub'), key: 'redo', fn: async () => { await instProbe(true); I.step = 'disk'; instRender(); } }) : null,
+    itile({ color: '#2f3238', icon: 'log', label: T('inst.log'), key: 'log', fn: instShowLog }),
+    itile({ color: '#2f3238', icon: 'usb', label: T('inst.saveLog'), sub: T('inst.saveLogSub'), key: 'save', fn: instSaveLog }),
+    e.alt || fresh ? null : itile({ color: '#3a3f46', icon: 'home', label: T('inst.home'), key: 'home', fn: instClose })   // sonst: Esc / B
+  ];
+  section(tr, T('inst.whatNow'), grid('', acts));
+  instFocus('#iTrack [data-key="' + (e.alt ? 'alt' : 'retry') + '"]');
+}
+async function instRetry(alt) {
+  try { I.status = await api('/api/install/retry', { alt }); } catch (e) { return toast(T('inst.startFailed', { msg: e.message }), true); }
+  instGo('progress'); instWatch();
+}
+
+/* ---- B7 Fertig */
+function rDone() {
+  const st = I.status || {}, r = st.result || {};
+  const tr = instShell(T('inst.done'), T('inst.doneSub'));
+  section(tr, T('inst.whatNow'), grid('', [
+    itile({ size: 'large', color: '#2f6d4f', icon: 'restart', label: T('inst.rebootNow'), key: 'reboot', fn: () => power('reboot') }),
+    itile({ color: '#3a3f46', icon: 'home', label: T('inst.stayLive'), key: 'stay', fn: instClose }),
+    itile({ color: '#2f3238', icon: 'log', label: T('inst.log'), key: 'log', fn: instShowLog })]));
+  const secs = r.seconds || Math.round((Date.now() - (I.t0 || Date.now())) / 1000);
+  const host = r.hostname || I.host, login = r.login || loginOf(I.name);
+  section(tr, T('inst.afterReboot'), panel([
+    { k: T('inst.loginAuto'), v: T('inst.loginAutoText', { name: r.user || I.name }) },
+    I.share !== false ? { k: T('inst.whatShare'), v: T('inst.shareText', { host, login }) } : null,
+    { k: T('inst.sumUpdates'), v: T('inst.updText', { channel: T('channel.' + (I.channel === 'main' ? 'main' : 'stable')) }) },
+    secs ? { k: T('inst.duration'), v: T('inst.durationText', { min: Math.floor(secs / 60), sec: secs % 60 }) } : null,
+    { k: T('inst.tip'), v: T('inst.tipText') }], 'wide'));
+  instFocus('#iTrack [data-key="reboot"]');
+}
+
+// Beispieldaten fuer die Vorschau ohne Geraet (file://) und fuer Screenshots
+const DEMO_PROBE = { uefi: true, secureboot: false, arch: 'x86_64', ram: 3.7 * GiB, cpu: 'Intel Core i3-6100T', gpu: ['Intel HD Graphics 530'], net: 'lan',
+  screen: { mode: '1280x720', rate: 60 }, favs: { radio: 2, tv: 1 }, wifi_saved: ['Zuhause-5G'], windows: false, lang: 'de',
+  disks: [
+    { path: '/dev/sda', size: 128e9, model: 'Samsung SSD MZ7TE128', tran: 'sata', label: 'gpt', esp: '/dev/sda1', systems: ['Ubuntu 24.04 LTS'],
+      parts: [{ path: '/dev/sda1', start: 2048, sectors: 1048576, size: 536870912, fstype: 'vfat', role: 'esp' },
+              { path: '/dev/sda2', start: 1050624, sectors: 243000000, size: 124416000000, fstype: 'ext4', role: 'os', os: 'Ubuntu 24.04 LTS' },
+              { path: '/dev/sda3', start: 244050624, sectors: 4000000, size: 2048000000, fstype: 'swap', role: 'swap' }],
+      free: [], options: { whole: true, beside: [{ part: '/dev/sda2', os: 'Ubuntu 24.04 LTS', fstype: 'ext4', size: 124416000000, used: 41e9, min: 40e9, max_new: 78e9, default: 59 * GiB }] } },
+    { path: '/dev/nvme0n1', size: 500e9, model: 'Crucial P3', tran: 'nvme', label: 'gpt', esp: '/dev/nvme0n1p1', systems: ['FreeBSD'],
+      parts: [{ path: '/dev/nvme0n1p1', start: 2048, sectors: 532480, size: 272629760, fstype: 'vfat', role: 'esp' },
+              { path: '/dev/nvme0n1p2', start: 534528, sectors: 777000000, size: 397824000000, fstype: 'zfs_member', role: 'os', os: 'FreeBSD', locked: true }],
+      free: [{ start: 777534528, sectors: 199000000, bytes: 101888000000 }], options: { whole: true, free: [{ start: 777534528, sectors: 199000000, bytes: 101888000000 }] } }] };
+
 /* ============================================================ Eingabe: Tastatur */
 const KEYMAP = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
 addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) held.key = true;
+  if (e.repeat && focusEl?._hold) return e.preventDefault();
+  if (layer() === 'inst' && instKey(e)) return;
   const inp = document.activeElement?.tagName === 'INPUT' ? document.activeElement : null;
   if (inp) {
     if (e.key === 'Enter') { e.preventDefault(); if (inp.id === 'rSearch') search(inp.value); else if (inp.id === 'tSearch') { tvQuery = inp.value.trim(); tvSearch(); } else if (inp.id === 'wifiPw') wifiConnect(wifiPick.ssid, inp.value); }
@@ -1321,6 +2194,8 @@ addEventListener('keydown', e => {
   else if (e.key === '-' || e.key === 'AudioVolumeDown') volume('down');
 });
 
+addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') held.key = false; });
+
 /* ============================================================ Eingabe: Maus */
 document.addEventListener('mouseover', e => { const el = e.target.closest(SCOPE[layer()]); if (el && el !== focusEl) setFocus(el); });
 document.addEventListener('click', e => {
@@ -1330,9 +2205,15 @@ document.addEventListener('click', e => {
   const x = e.target.closest('.x');
   if (x) { e.stopPropagation(); return closeApp(x.closest('.tile')._tile); }
   const el = e.target.closest(SCOPE[layer()]);
+  if (el?._hold) return;                                  // Installieren: gedrueckt halten (mousedown)
   if (el) { setFocus(el); activate(el); }
   else if (layer() === 'dialog' && e.target.id === 'dialog') closeDialog();
 });
+document.addEventListener('mousedown', e => {
+  const h = e.button === 0 && e.target.closest('.tile.hold');
+  if (h && layer() === 'inst') { held.mouse = true; setFocus(h); holdStart(h); }
+});
+addEventListener('mouseup', () => { held.mouse = false; });
 document.addEventListener('contextmenu', e => {
   e.preventDefault();
   const t = e.target.closest('.tile');
@@ -1365,6 +2246,9 @@ function padLoop(ts) {
 function fire(k) {
   const inInput = document.activeElement?.tagName === 'INPUT';
   if (inInput && k !== 'b') return;
+  const osk = layer() === 'inst' && ['account', 'host'].includes(I?.step);
+  if (osk && (k === 'lb' || k === 'rb')) return oskNextField(k === 'lb' ? -1 : 1);
+  if (k === 'start' && layer() === 'inst' && ['device', 'manual'].includes(I?.step)) return $('#iTrack [data-key="next"]')?._set();
   if (k === 'a') activate();
   else if (k === 'b') inInput ? document.activeElement.blur() : back();
   else if (k === 'y' || k === 'x') secondary();
@@ -1387,6 +2271,13 @@ document.fonts?.ready.then(() => layout());
   await loadLang(lang);
   document.documentElement.style.setProperty('--f', scale * innerHeight / 768);
   await loadFavs(); await load(); poll(); requestAnimationFrame(padLoop);
+  // Live-System: Installer gleich zeigen, wenn mit "voidstation.install" gestartet oder eine Installation laeuft/lief
+  if (!offline) try {
+    if ((await getJSON('/api/status')).live) {
+      const st = await getJSON('/api/install/status');
+      if (st.autostart || ['running', 'error', 'done'].includes(st.state)) openInstaller();
+    }
+  } catch {}
 })();
 </script>
 </body>

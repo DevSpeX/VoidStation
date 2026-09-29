@@ -1439,12 +1439,173 @@ def ssh_state():
 
 def settings_payload():
     s = settings_load()
-    return {"version": vs_version(), "ssh": ssh_state(), "lang": ui_lang(s), "langs": LANGS,
+    return {"version": vs_version(), "ssh": ssh_state(), "live": LIVE, "lang": ui_lang(s), "langs": LANGS,
             "scale": s["scale"], "scales": SCALES,
             "cursor": {"theme": s.get("cursor_theme"), "size": s.get("cursor_size"),
                        "themes": [{"id": t, "label": CURSOR_NAMES[t]} for t in cursor_themes()],
                        "sizes": CURSOR_SIZES}, "displays": xrandr_info(),
             "audio": audio_info(), "volume": volume_get(), "net": net_info(), "share": share_info()}
+
+
+# ---------------------------------------------------------------------------
+#  Live-System und Installer (voidstation-installer laeuft als root per sudo)
+# ---------------------------------------------------------------------------
+LIVE = Path("/etc/voidstation-live").exists()
+INSTALLER = "/usr/local/sbin/voidstation-installer"
+
+
+def cmdline_flag(name):
+    try:
+        return name in Path("/proc/cmdline").read_text().split()
+    except OSError:
+        return False
+
+
+class Installer:
+    """Startet den Installer, liest seine JSON-Zeilen und haelt den Stand fuer die Oberflaeche bereit."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.proc = None
+        self.state = None
+        self.autostart = LIVE and cmdline_flag("voidstation.install")
+        self.probe_cache = None
+
+    def _root(self, args, timeout=180, stdin=None):
+        return subprocess.run(["sudo", "-n", INSTALLER] + args, input=stdin, capture_output=True, text=True, timeout=timeout)
+
+    def probe(self, force=False):
+        if self.probe_cache and not force:
+            return self.probe_cache
+        r = self._root(["probe"])
+        if r.returncode != 0:
+            raise RuntimeError((r.stdout + r.stderr).strip()[-300:] or "probe fehlgeschlagen")
+        p = json.loads(r.stdout)
+        disp = xrandr_info()
+        p["screen"] = {"name": disp[0]["name"], "mode": disp[0]["current"], "rate": disp[0].get("rate")} if disp else None
+        p["favs"] = {"radio": len(favs_load()), "tv": len(tvfavs_load())}
+        p["live_home"] = str(Path.home())
+        p["lang"] = ui_lang()
+        self.probe_cache = p
+        return p
+
+    def running(self):
+        return bool(self.proc and self.proc.poll() is None)
+
+    def start(self, cfg=None, resume=False, alt=False):
+        with self.lock:
+            if self.running():
+                raise RuntimeError("Installation laeuft bereits")
+            args = ["run"] + (["--resume"] if resume else []) + (["--alt"] if alt else [])
+            if not resume:
+                cfg = dict(cfg or {})
+                cfg["live_home"] = str(Path.home())
+                self.state = {"state": "running", "pct": 0, "phase": None, "phases": {}, "detail": None,
+                              "started": time.time(), "mode": cfg.get("mode")}
+            else:
+                self.state = dict(self.state or {"phases": {}, "started": time.time()}, state="running", error=None, detached=False)
+            # eigene Sitzung: laeuft auch weiter, wenn die Startseite neu startet
+            self.proc = subprocess.Popen(["sudo", "-n", INSTALLER] + args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                         stderr=subprocess.DEVNULL, text=True, start_new_session=True)
+            try:
+                self.proc.stdin.write(json.dumps(cfg) if not resume else "")
+                self.proc.stdin.close()
+            except OSError:
+                pass
+            threading.Thread(target=self._read, args=(self.proc,), daemon=True).start()
+            log("Installation gestartet", "(neuer Versuch)" if resume else "", "(Ausweichweg)" if alt else "")
+            return self.status()
+
+    def _read(self, proc):
+        for line in proc.stdout:
+            try:
+                ev = json.loads(line)
+            except ValueError:
+                continue
+            with self.lock:
+                st = self.state
+                kind = ev.get("ev")
+                if kind == "progress":
+                    st.update(pct=ev.get("pct", st.get("pct")), phase=ev.get("phase"),
+                              phase_pct=ev.get("phase_pct"), copy={k: ev[k] for k in ("done", "total", "eta") if k in ev} or st.get("copy"),
+                              detail=ev.get("detail"))
+                elif kind == "phase":
+                    st["phases"][ev["phase"]] = ev["state"]
+                    st["phase"] = ev["phase"]
+                elif kind == "error":
+                    st.update(state="error", error={k: ev.get(k) for k in ("phase", "code", "msg", "done", "foreign_untouched", "log", "alt")})
+                    if ev.get("phase"):
+                        st["phases"][ev["phase"]] = "error"
+                elif kind == "done":
+                    st.update(state="done", pct=100, result=ev)
+        proc.wait()
+        with self.lock:
+            if self.state and self.state.get("state") == "running":
+                self.state.update(state="error", error={"code": "internal", "msg": f"Installer beendet (Code {proc.returncode})",
+                                                        "phase": self.state.get("phase"), "done": [], "log": [], "alt": False})
+        log("Installation:", self.state.get("state") if self.state else "?")
+
+    def status(self):
+        if self.proc is None and LIVE and (self.state is None or self.state.get("detached")):
+            self._reattach()
+        with self.lock:
+            return dict(self.state or {"state": "idle"}, running=self.running() or bool(self.state and self.state.get("detached")))
+
+    def _reattach(self):
+        """Startseite wurde neu gestartet: Stand beim Installer abfragen (laeuft er noch, als 'detached')."""
+        try:
+            st = json.loads(self._root(["status"], timeout=20).stdout or "{}")
+        except (OSError, ValueError, subprocess.SubprocessError):
+            st = {}
+        if not st.get("config"):
+            return
+        alive = subprocess.run(["pgrep", "-f", INSTALLER + " run"], capture_output=True).returncode == 0
+        done = st.get("done", [])
+        weights = {"check": 2, "shrink": 8, "partition": 2, "format": 3, "copy": 60, "configure": 15, "boot": 7, "cleanup": 3}
+        err = st.get("error")
+        state = "done" if st.get("finished") else "running" if alive else "error"
+        phases = {p: "done" for p in done}
+        if alive and st.get("current"):
+            phases[st["current"]] = "running"
+        if err and not alive:
+            phases[err.get("phase")] = "error"
+        cfg = st["config"]
+        self.state = {
+            "state": state, "detached": alive, "phases": phases, "phase": st.get("current"), "mode": cfg.get("mode"),
+            "pct": 100 if st.get("finished") else round(sum(weights.get(p, 0) for p in done) / sum(weights.values()) * 100),
+            "started": st.get("started"),
+            "error": None if state != "error" else dict(err or {"code": "internal", "msg": "abgebrochen", "phase": st.get("current")},
+                                                        done=done, log=[], alt=(err or {}).get("phase") == "boot"),
+            "result": {"user": cfg.get("user", {}).get("name"), "login": cfg.get("user", {}).get("login"),
+                       "hostname": cfg.get("hostname"), "seconds": int(st["finished"] - (st.get("started") or st["finished"]))}
+            if st.get("finished") else None}
+
+    def gparted(self):
+        disp = os.environ.get("DISPLAY", ":0")
+        xa = os.environ.get("XAUTHORITY") or str(Path.home() / ".Xauthority")
+        r = self._root(["gparted", disp, xa], timeout=30)
+        if r.returncode != 0:
+            raise RuntimeError((r.stdout + r.stderr).strip()[-300:] or "GParted startet nicht")
+        self.probe_cache = None
+
+    @staticmethod
+    def gparted_running():
+        return subprocess.run(["pgrep", "-x", "gparted"], capture_output=True).returncode == 0 or \
+            subprocess.run(["pgrep", "-f", "gpartedbin"], capture_output=True).returncode == 0
+
+    def savelog(self):
+        r = self._root(["savelog"], timeout=60)
+        try:
+            return json.loads(r.stdout.strip().splitlines()[-1])
+        except (ValueError, IndexError):
+            return {"ok": False, "code": "no_usb"}
+
+    def log_text(self):
+        return self._root(["log"], timeout=20).stdout
+
+
+INSTALL = Installer()
+KEYMAPS = {"de": ["de"], "us": ["us"], "gb": ["gb"]}
 
 
 # ---------------------------------------------------------------------------
@@ -1488,8 +1649,9 @@ class Handler(BaseHTTPRequestHandler):
             running = APPS.running()
             vs = vs_state()
             return self._json(200, {"running": running, "starting": APPS.starting(), "radio": RADIO.status(),
-                                    "update": {"available": vs["available"], "version": vs["remote"]},
-                                    "tv": TV.now if "tv" in running else None})
+                                    "update": {"available": vs["available"] and not LIVE, "version": vs["remote"]},
+                                    "tv": TV.now if "tv" in running else None, "live": LIVE,
+                                    "install": INSTALL.state.get("state") if INSTALL.state else None})
         if path == "/api/tv/status":
             TV.ensure()
             return self._json(200, TV.status())
@@ -1520,6 +1682,27 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, volume_get() or {})
         if path == "/api/settings":
             return self._json(200, settings_payload())
+        if path == "/api/install/probe":
+            if not LIVE:
+                return self._json(404, {"error": "nur im Live-System"})
+            try:
+                force = urllib.parse.parse_qs(url.query).get("force", [""])[0] == "1"
+                return self._json(200, INSTALL.probe(force))
+            except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as e:
+                return self._json(502, {"error": str(e)})
+        if path == "/api/install/status":
+            st = INSTALL.status()
+            if INSTALL.autostart:
+                st["autostart"] = True
+                INSTALL.autostart = False                 # nur beim ersten Aufruf
+            return self._json(200, st)
+        if path == "/api/install/gparted":
+            return self._json(200, {"running": INSTALL.gparted_running()})
+        if path == "/api/install/log":
+            try:
+                return self._json(200, {"log": INSTALL.log_text()})
+            except (OSError, subprocess.SubprocessError) as e:
+                return self._json(502, {"error": str(e)})
         if path == "/api/wifi/scan":
             try:
                 return self._json(200, wifi_scan())
@@ -1596,6 +1779,29 @@ class Handler(BaseHTTPRequestHandler):
                     favs.append(e)
                 tvfavs_save(favs)
                 return self._json(200, [IPTV.public(f) for f in favs])
+            if parts[:2] == ["api", "install"] and len(parts) == 3:
+                if not LIVE:
+                    return self._json(404, {"error": "nur im Live-System"})
+                b = self._body()
+                try:
+                    if parts[2] == "start":
+                        return self._json(200, INSTALL.start(b.get("config") or {}))
+                    if parts[2] == "retry":
+                        return self._json(200, INSTALL.start(resume=True, alt=bool(b.get("alt"))))
+                    if parts[2] == "gparted":
+                        INSTALL.gparted()
+                        return self._json(200, {"running": True})
+                    if parts[2] == "savelog":
+                        return self._json(200, INSTALL.savelog())
+                    if parts[2] == "keymap":
+                        km = str(b.get("keymap", ""))
+                        if km not in KEYMAPS:
+                            return self._json(400, {"error": "unbekannte Tastatur"})
+                        subprocess.run(["setxkbmap"] + KEYMAPS[km], capture_output=True, timeout=10)
+                        return self._json(200, {"keymap": km})
+                except RuntimeError as e:
+                    return self._json(409, {"error": str(e)})
+                return self._send(404)
             if parts == ["api", "settings", "ssh"]:
                 on = bool(self._body().get("on"))
                 r = subprocess.run(["sudo", "-n", PKG_HELPER, "ssh", "on" if on else "off"],
@@ -1741,7 +1947,8 @@ def main():
     apply_appearance(s)
     apply_resolution(s.get("resolution"))
     threading.Thread(target=gamepad_watcher, daemon=True).start()
-    threading.Thread(target=vs_background_check, daemon=True).start()
+    if not LIVE:                                    # im Live-System gibt es keine Updates
+        threading.Thread(target=vs_background_check, daemon=True).start()
     httpd = ThreadingHTTPServer((HOST, PORT), Handler)
     log(f"laeuft auf http://{HOST}:{PORT}/")
     try:

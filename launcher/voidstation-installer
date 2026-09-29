@@ -11,6 +11,8 @@ damit Kachel-Oberflaeche und Terminal (voidstation-installer text) dasselbe tun.
   run --resume [--alt]      nach einem Fehler ab dem fehlgeschlagenen Schritt weitermachen (--alt: Ausweichweg)
   gparted DISPLAY XAUTH     GParted als root auf dem Bildschirm oeffnen
   savelog                   Protokoll auf einen eingesteckten USB-Stick kopieren
+  status                    Stand der letzten Installation (JSON, ohne Passwort)
+  log                       Protokoll ausgeben
   text                      Installation im Terminal (Rueckfall, nur "ganze SSD")
 
 Schritte von "run":  check → shrink → partition → format → copy → configure → boot → cleanup
@@ -77,7 +79,10 @@ def log(*a):
 
 
 def emit(**ev):
-    print(json.dumps(ev, ensure_ascii=False), flush=True)
+    try:
+        print(json.dumps(ev, ensure_ascii=False), flush=True)
+    except (BrokenPipeError, OSError):
+        pass                                          # Oberflaeche weg (z. B. neu gestartet): Installation laeuft weiter
     if ev.get("ev") != "progress":
         log("EVENT", json.dumps(ev, ensure_ascii=False))
 
@@ -477,7 +482,23 @@ def probe():
             disk["options"]["beside"] = beside
         res["disks"].append(disk)
     res["disks"].sort(key=lambda x: (x["tran"] == "usb", x["path"]))
+    res["wifi_saved"] = saved_wifi()
     return res
+
+
+def saved_wifi():
+    """WLAN-Netze, die im Live-System gespeichert sind (werden auf Wunsch uebernommen)."""
+    out = []
+    d = Path("/etc/NetworkManager/system-connections")
+    for f in sorted(d.glob("*")) if d.is_dir() else []:
+        try:
+            txt = f.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        m = re.search(r"^\[wifi\][^\[]*?^ssid=(.+)$", txt, re.M | re.S)
+        if m and m.group(1).strip() not in out:
+            out.append(m.group(1).strip())
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -921,13 +942,20 @@ class Run:
             s = json.loads(sj.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             s = {}
+        live = Path(c.get("live_home") or "/home/tv") / ".local/share/voidstation"
+        try:                                           # Bildschirm-Einstellungen aus dem Live-System mitnehmen
+            ls = json.loads((live / "settings.json").read_text(encoding="utf-8"))
+            for k in ("scale", "resolution", "cursor_theme", "cursor_size"):
+                if ls.get(k) is not None:
+                    s[k] = ls[k]
+        except (OSError, ValueError):
+            pass
         s["lang"] = lang
         sj.write_text(json.dumps(s, indent=2), encoding="utf-8")
         if c.get("favorites"):
-            live_home = Path("/home/tv/.local/share/voidstation")
             for f in ("radio.json", "tvfavs.json"):
-                if (live_home / f).is_file():
-                    shutil.copy2(live_home / f, vs / f)
+                if (live / f).is_file():
+                    shutil.copy2(live / f, vs / f)
         chroot(["chown", "-R", f"{login}:{login}", f"/home/{login}/.local"])
         sv = T / "etc/runit/runsvdir/default"
         for s_ in ("sshd",) + (() if c.get("share", True) else ("smbd", "nmbd")):
@@ -1107,6 +1135,8 @@ def validate(cfg):
         return "bad_hostname"
     if cfg.get("lang", "de") not in ("de", "en") or cfg.get("keymap", "de") not in ("de", "us", "gb"):
         return "bad_config"
+    if cfg.get("live_home") and not re.fullmatch(r"/home/[a-z_][a-z0-9_-]{0,30}", str(cfg["live_home"])):
+        return "bad_config"
     if mode == "beside":
         part = cfg.get("part", "")
         if not re.fullmatch(r"/dev/[A-Za-z0-9/_-]+", part) or disk_of(part) != disk:
@@ -1253,6 +1283,10 @@ def main(argv):
         return cmd_gparted(args)
     if cmd == "savelog":
         return cmd_savelog(args)
+    if cmd == "status":
+        st = read_json_state() or {}
+        st.get("config", {}).get("user", {}).pop("password", None)
+        print(json.dumps(st, ensure_ascii=False)); return 0
     if cmd == "log":
         try:
             print(LOG.read_text(encoding="utf-8")[-20000:])
