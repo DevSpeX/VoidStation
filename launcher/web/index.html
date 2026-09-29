@@ -55,6 +55,15 @@
   .scrollind .gdots i { width: calc(7px * var(--f)); height: calc(7px * var(--f)); border-radius: 50%; background: rgba(255,255,255,.25); transition: background .2s, transform .2s; }
   .scrollind .gdots i.on { background: var(--text); transform: scale(1.3); }
   #adText { white-space: pre-line; }
+  /* Langer Text (z. B. "Was ist neu") scrollt, Titel und Knoepfe bleiben stehen */
+  #adlg .band { display: flex; flex-direction: column; max-height: calc(100vh - 2 * var(--hint, 60px)); box-sizing: border-box; }
+  #adlg.open ~ .hint, .hint { z-index: 31; }                 /* Hinweiszeile bleibt ueber Dialogen lesbar */
+  #adlg #adText { flex: 0 1 auto; min-height: 0; overflow-y: auto; padding-right: calc(10px * var(--f)); scroll-behavior: smooth;
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent); }
+  #adlg #adText.fits { mask-image: none; }
+  #adlg .btns, #adlg h3 { flex: none; }
+  #adlg #adText::-webkit-scrollbar { width: calc(6px * var(--f)); }
+  #adlg #adText::-webkit-scrollbar-thumb { background: rgba(255,255,255,.3); }
   .who .name { font-size: calc(21px * var(--f)); font-weight: 300; }
   .who .time { font-size: calc(15px * var(--f)); color: var(--text-dim); }
   .round {
@@ -614,7 +623,7 @@ function updateHint() {
     settings: [T('hint.select'), T('hint.back')],
     tv:       [T('hint.tvOn'), T('hint.fav'), T('hint.homeShort'), T('hint.back')],
     apps:     [T('hint.appInstall'), T('hint.back')],
-    adlg:     [T('hint.cancel')],
+    adlg:     [...($('#adText').classList.contains('fits') ? [] : [T('hint.scrollText')]), T('hint.cancel')],
     dialog:   [T('hint.cancel')],
     inst:     instHints()
   }[layer()];
@@ -760,6 +769,9 @@ function keepVisible(track, el, instant) {
 }
 function move(dir) {
   if (splashTile) return;
+  if (layer() === 'adlg' && (dir === 'up' || dir === 'down')) {   // langer Dialogtext: hoch/runter blaettert den Text
+    const at = $('#adText'); at.scrollTop += (dir === 'down' ? 1 : -1) * at.clientHeight * 0.6; return;
+  }
   if (focusEl?._adj && (dir === 'left' || dir === 'right') && layer() === 'inst') return focusEl._adj(dir === 'left' ? -1 : 1);
   const items = navItems();
   if (!focusEl || !items.includes(focusEl)) return setFocus(items[0]);
@@ -1413,6 +1425,9 @@ function renderApps() {
 }
 function adlg(title, text, buttons) {
   $('#adTitle').textContent = title; $('#adText').textContent = text;
+  const at = $('#adText'); at.scrollTop = 0;
+  at.classList.add('fits');
+  requestAnimationFrame(() => { at.classList.toggle('fits', at.scrollHeight <= at.clientHeight + 2); updateHint(); });
   const b = $('#adBtns'); b.innerHTML = '';
   for (const [label, fn, cls] of buttons) { const x = document.createElement('button'); x.className = 'btn adnav' + (cls ? ' ' + cls : ''); x.textContent = label; x._ad = () => { closeAdlg(); fn && fn(); }; b.appendChild(x); }
   $('#adlg').classList.add('open'); setFocus(b.querySelector('.adnav')); updateHint();
@@ -2265,7 +2280,7 @@ document.addEventListener('contextmenu', e => {
   const t = e.target.closest('.tile');
   if (layer() === 'home' && t?._tile && running.includes(t._tile.id)) closeApp(t._tile); else back();
 });
-addEventListener('wheel', e => { if (layer() !== 'dialog') move((e.deltaY || e.deltaX) > 0 ? 'right' : 'left'); }, { passive: true });
+addEventListener('wheel', e => { if (layer() !== 'dialog' && layer() !== 'adlg') move((e.deltaY || e.deltaX) > 0 ? 'right' : 'left'); }, { passive: true });
 
 /* ============================================================ Eingabe: Gamepad */
 const pad = { held: {}, next: {} };

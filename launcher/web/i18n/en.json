@@ -29,6 +29,7 @@
   "hint.homeShort": "<b>Win / Guide</b> home",
   "hint.appInstall": "<b>A</b> install / open",
   "hint.cancel": "<b>Esc / B</b> cancel",
+  "hint.scrollText": "<b>↑ ↓</b> scroll text",
   "hint.pages": "<b>LT / RT · PgUp/PgDn</b> jump",
   "home.title": "Start",
   "home.power": "Power",

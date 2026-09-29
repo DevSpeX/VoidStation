@@ -29,6 +29,7 @@
   "hint.homeShort": "<b>Win / Guide</b> Startseite",
   "hint.appInstall": "<b>A</b> installieren / öffnen",
   "hint.cancel": "<b>Esc / B</b> abbrechen",
+  "hint.scrollText": "<b>↑ ↓</b> Text blättern",
   "hint.pages": "<b>LT / RT · Bild ↑↓</b> blättern",
   "home.title": "Start",
   "home.power": "Ausschalten",
