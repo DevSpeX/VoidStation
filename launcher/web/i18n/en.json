@@ -125,6 +125,7 @@
   "settings.sshOn": "Remote access on – e.g. with PuTTY to {host}",
   "settings.sshOff": "Remote access off",
   "settings.channel": "Update channel",
+  "settings.liveInfo": "Live system – updates are available after installation",
   "wifi.scanning": "Searching for Wi-Fi networks …",
   "wifi.scanFailed": "Wi-Fi search failed: {msg}",
   "wifi.connecting": "Connecting to “{ssid}” …",

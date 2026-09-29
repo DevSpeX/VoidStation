@@ -1370,7 +1370,7 @@ def vs_update_status(force=False):
         base = vs_update_base()
     except (OSError, IndexError):
         base = None
-    if base and (force or time.time() - _VCACHE["t"] > 600 or _VCACHE["key"] != base):
+    if base and not LIVE and (force or time.time() - _VCACHE["t"] > 600 or _VCACHE["key"] != base):
         try:
             _VCACHE.update(remote=_fetch_remote(base), error=None)
         except Exception as e:  # noqa: BLE001
@@ -1381,10 +1381,23 @@ def vs_update_status(force=False):
     return vs_state()
 
 
+def vtuple(v):
+    """"0.7.2" -> (0, 7, 2); unbekannt -> None"""
+    try:
+        return tuple(int(x) for x in str(v).split("."))
+    except (TypeError, ValueError):
+        return None
+
+
 def vs_state():
     """Stand aus dem Zwischenspeicher, ohne Netzwerk (fuer /api/status)."""
     local, remote = vs_version(), _VCACHE["remote"]
     available = bool(remote and remote.get("build") and remote["build"] != local.get("build"))
+    lv, rv = vtuple(local.get("version")), vtuple(remote.get("version")) if remote else None
+    if available and lv and rv and rv < lv:
+        available = False                             # nie auf eine aeltere Version "aktualisieren" (z. B. Stable hinter Testing)
+    if LIVE:
+        available = False
     changes = []
     if available:
         seen = {e.get("version") for e in (local.get("history") or [])}
