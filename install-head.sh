@@ -373,6 +373,9 @@ if [ -f /etc/samba/smb.conf ] && ! grep -q 'VoidStation' /etc/samba/smb.conf; th
   cp /etc/samba/smb.conf /etc/samba/smb.conf.vor-voidstation
 fi
 mkdir -p /etc/samba /var/log/samba
+# smbpasswd braucht diese Ordner; im chroot des Installers (und im frischen System vor dem
+# ersten Start von smbd) fehlen sie – dann schlug das Setzen des Freigabe-Passworts still fehl
+mkdir -p /run/lock/samba /var/lib/samba/private /var/cache/samba
 cat > /etc/samba/smb.conf <<EOF
 # VoidStation: Freigabe fuer den Windows-PC
 [global]
