@@ -62,22 +62,6 @@
       ]
     },
     {
-      "name": "Spiele",
-      "tiles": [
-        {
-          "id": "gba",
-          "label": "Game Boy Advance",
-          "sub": "mGBA",
-          "size": "wide",
-          "color": "#2d3763",
-          "icon": "handheld",
-          "cmd": [
-            "mgba-qt"
-          ]
-        }
-      ]
-    },
-    {
       "name": "System",
       "tiles": [
         {

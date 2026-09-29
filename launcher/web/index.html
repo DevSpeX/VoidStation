@@ -1386,7 +1386,7 @@ function renderApps() {
       el.style.setProperty('--ac', a.color);
       el._app = a;
       el.innerHTML = `<div class="aicon">${ICONS[a.icon] || ICONS.globe}</div><div class="aname">${esc(L(a.name))}</div>` +
-        `<div class="astate">${esc(a.installed ? T('apps.installed') : T('apps.type.' + a.type, null, T('apps.type.xbps')))}</div>` +
+        `<div class="astate">${esc(a.type === 'local' ? (a.tile ? T('apps.hasTile') : T('apps.noTile')) : a.installed ? T('apps.installed') : T('apps.type.' + a.type, null, T('apps.type.xbps')))}</div>` +
         `<div class="adesc">${esc(appDesc(a))}</div>`;
       g.appendChild(el);
     });
@@ -1404,8 +1404,20 @@ function adlg(title, text, buttons) {
   $('#adlg').classList.add('open'); setFocus(b.querySelector('.adnav')); updateHint();
 }
 function closeAdlg() { $('#adlg').classList.remove('open'); const l = layer(); setFocus(lastFocus[l] || $(`#${l} ${SCOPE[l]}`)); updateHint(); }
-const appDesc = a => T('app.' + a.id + '.desc', null, a.desc);
+const appDesc = a => a.type === 'local' ? (a.desc || T('apps.localDesc')) : T('app.' + a.id + '.desc', null, a.desc);
+async function localTile(a, on) {
+  try { appsData = await api('/api/apps/localtile', { id: a.id, on }); } catch (e) { return toast(T('common.failedMsg', { msg: e.message }), true); }
+  toast(on ? T('apps.tileAdded', { name: a.name }) : T('apps.tileRemoved', { name: a.name }));
+  await load(); renderApps();
+}
 function appDialog(a) {
+  if (a.type === 'local') {                               // ausserhalb des AppCenters installiert: nur Kachel an/aus
+    const tile = a.tile && cfg.groups.flatMap(g => g.tiles).find(t => t.id === a.id);
+    return adlg(a.name, appDesc(a) + '\n\n' + T('apps.localHint'), [
+      ...(tile ? [[T('apps.open'), () => { closeLayer(); setTimeout(() => launch(tile, $(`#track [data-id="${CSS.escape(a.id)}"]`) || document.body), 250); }]] : []),
+      a.tile ? [T('apps.removeTile'), () => localTile(a, false), 'danger'] : [T('apps.addTile'), () => localTile(a, true)],
+      [T('common.cancel')]]);
+  }
   if (JOBS_BUSY()) return toast(T('common.busy'));
   if (a.installed) {
     const tile = cfg.groups.flatMap(g => g.tiles).find(t => t.id === a.id);

@@ -3,6 +3,12 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.7.4 – 2026-09-29
+- Installer: “Erase and install” got stuck – fixed
+- mGBA is no longer preinstalled but available in the AppCenter (Games); existing installations keep it
+- AppCenter: new section “On this device” – programs installed in a terminal can get a tile
+- Image viewer (GPicView) with a black background
+
 ## 0.7.3 – 2026-09-29
 - No more “update” to an older version (e.g. when Stable is still behind the installed version)
 - Live system: no update status in Settings

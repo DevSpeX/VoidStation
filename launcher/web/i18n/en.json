@@ -177,6 +177,14 @@
   "apps.open": "Open",
   "apps.remove": "Remove",
   "apps.install": "Install",
+  "apps.hasTile": "✓ tile",
+  "apps.noTile": "no tile",
+  "apps.addTile": "Add tile",
+  "apps.removeTile": "Remove tile",
+  "apps.tileAdded": "Tile “{name}” added",
+  "apps.tileRemoved": "Tile “{name}” removed",
+  "apps.localDesc": "Installed outside the AppCenter.",
+  "apps.localHint": "This program was installed outside the AppCenter (e.g. in a terminal). “Update everything” keeps it up to date; remove it in a terminal.",
   "apps.installQ": "Install {name}?",
   "apps.flatpakNote": " (Flatpak – the first download takes longer.)",
   "apps.isInstalled": "{name} is installed",
@@ -490,6 +498,7 @@
   "app.retroarch.desc": "All-in-one emulator for a huge number of consoles. RetroArch downloads emulator cores itself through its online menu.",
   "app.duckstation.desc": "PlayStation 1. Very accurate and fast, needs BIOS files in the folder share/bios.",
   "app.ppsspp.desc": "PlayStation Portable. Many games run smoothly even on older computers.",
+  "app.gba.desc": "Game Boy, Game Boy Color and Game Boy Advance. Put games into the share/ROMs/gba folder.",
   "app.snes9x.desc": "Super Nintendo. Lightweight and proven.",
   "app.nestopia.desc": "NES / Famicom.",
   "app.melonds.desc": "Nintendo DS. Both screens side by side or on top of each other.",
@@ -534,6 +543,8 @@
     "Systemmonitor": "System monitor",
     "YouTube TV-Oberfläche": "YouTube TV interface",
     "Hell": "Light",
-    "Dunkel": "Dark"
+    "Dunkel": "Dark",
+    "Auf diesem Gerät": "On this device",
+    "Programme": "Programs"
   }
 }

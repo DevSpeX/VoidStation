@@ -53,7 +53,7 @@ for d in /sys/bus/pci/devices/*; do
 done
 PKGS="xinit xauth xset xrandr setxkbmap $GPU_PKGS \
   openbox dbus elogind xrdb pulseaudio-utils curl python3 python3-evdev wmctrl unclutter-xfixes \
-  firefox vlc mpv mgba-qt samba flatpak adwaita-qt adwaita-qt6 gnome-themes-extra xsetroot python3-gobject libwebkit2gtk41 pcmanfm gvfs xterm \
+  firefox vlc mpv samba flatpak adwaita-qt adwaita-qt6 gnome-themes-extra xsetroot python3-gobject libwebkit2gtk41 pcmanfm gvfs xterm \
   pipewire wireplumber alsa-utils \
   noto-fonts-ttf noto-fonts-emoji noto-fonts-cjk dejavu-fonts-ttf \
   NetworkManager chrony htop nano fastfetch mousepad"
