@@ -102,6 +102,27 @@
       }
     },
     {
+      "id": "gba",
+      "name": "mGBA",
+      "cat": "Spiele",
+      "desc": "Game Boy, Game Boy Color und Game Boy Advance. Spiele in den Ordner share/ROMs/gba legen.",
+      "source": {
+        "type": "xbps",
+        "pkg": "mgba-qt"
+      },
+      "cmd": [
+        "mgba-qt"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "wide",
+        "color": "#2d3763",
+        "icon": "handheld",
+        "sub": "mGBA",
+        "label": "Game Boy Advance"
+      }
+    },
+    {
       "id": "ppsspp",
       "name": "PPSSPP",
       "cat": "Spiele",

@@ -4,6 +4,19 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.7.6 – 2026-09-29
+- Intel-PCs bekommen beim Start den aktuellen CPU-Microcode (intel-ucode) – behebt Hänger älterer Skylake-Geräte mit altem BIOS; auch in der Live-ISO
+
+## 0.7.5 – 2026-09-29
+- Installer: nach dem Halten erscheint sofort der Fortschritt (große Kachel mit Prozent, Schritten und Erklärung) – zurück geht es erst nach dem Neustart
+- Installer fertig: nur noch „Jetzt neu starten“
+
+## 0.7.4 – 2026-09-29
+- Installer: „Löschen und installieren“ blieb hängen – behoben
+- mGBA ist nicht mehr vorinstalliert, sondern im AppCenter (Spiele); vorhandene Installationen bleiben
+- AppCenter: neuer Bereich „Auf diesem Gerät“ – im Terminal installierte Programme bekommen auf Wunsch eine Kachel
+- Bildbetrachter (GPicView) mit schwarzem Hintergrund
+
 ## 0.7.3 – 2026-09-29
 - Kein „Update“ mehr auf eine ältere Version (z. B. wenn Stable noch hinter dem installierten Stand liegt)
 - Live-System: keine Update-Anzeige in den Einstellungen

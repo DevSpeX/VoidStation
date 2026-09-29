@@ -3,6 +3,19 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.7.6 – 2026-09-29
+- Intel PCs load the current CPU microcode at boot (intel-ucode) – fixes freezes on older Skylake machines with an old BIOS; also in the live ISO
+
+## 0.7.5 – 2026-09-29
+- Installer: the progress screen appears right after holding (large tile with percentage, steps and explanation) – no going back until the restart
+- Installer finished: only “Restart now” remains
+
+## 0.7.4 – 2026-09-29
+- Installer: “Erase and install” got stuck – fixed
+- mGBA is no longer preinstalled but available in the AppCenter (Games); existing installations keep it
+- AppCenter: new section “On this device” – programs installed in a terminal can get a tile
+- Image viewer (GPicView) with a black background
+
 ## 0.7.3 – 2026-09-29
 - No more “update” to an older version (e.g. when Stable is still behind the installed version)
 - Live system: no update status in Settings

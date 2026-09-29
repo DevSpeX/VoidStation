@@ -53,7 +53,7 @@ for d in /sys/bus/pci/devices/*; do
 done
 PKGS="xinit xauth xset xrandr setxkbmap $GPU_PKGS \
   openbox dbus elogind xrdb pulseaudio-utils curl python3 python3-evdev wmctrl unclutter-xfixes \
-  firefox vlc mpv mgba-qt samba flatpak adwaita-qt adwaita-qt6 gnome-themes-extra xsetroot python3-gobject libwebkit2gtk41 pcmanfm gvfs xterm \
+  firefox vlc mpv samba flatpak adwaita-qt adwaita-qt6 gnome-themes-extra xsetroot python3-gobject libwebkit2gtk41 pcmanfm gvfs xterm \
   pipewire wireplumber alsa-utils \
   noto-fonts-ttf noto-fonts-emoji noto-fonts-cjk dejavu-fonts-ttf \
   NetworkManager chrony htop nano fastfetch mousepad"
@@ -67,6 +67,18 @@ done
 if [ -z "$MISSING" ]; then echo "alles schon installiert"
 elif [ "$OFFLINE" = 1 ]; then warn "offline, spaeter nachzuinstallieren:$MISSING"
 else xbps-install -Sy $MISSING; fi
+
+# Intel-CPU: aktueller Microcode beim Start (behebt u. a. Haenger aelterer Skylake-CPUs mit altem BIOS)
+if grep -q GenuineIntel /proc/cpuinfo 2>/dev/null && ! xbps-query intel-ucode >/dev/null 2>&1 && [ "${VOIDSTATION_OFFLINE:-0}" != 1 ]; then
+  xbps-query void-repo-nonfree >/dev/null 2>&1 || xbps-install -Sy void-repo-nonfree || true
+  if xbps-install -Sy intel-ucode; then
+    UKV="$(ls /usr/lib/modules 2>/dev/null | sort -V | tail -1)"
+    [ -n "$UKV" ] && xbps-reconfigure -f "linux$(echo "$UKV" | cut -d. -f1-2)" >/dev/null 2>&1 \
+      && echo "Intel-Microcode eingerichtet (wirkt nach dem Neustart)" || warn "Initramfs mit Microcode nicht neu erzeugt"
+  else
+    warn "intel-ucode konnte nicht installiert werden"
+  fi
+fi
 
 # Sprachen der Oberflaeche: deutsches und englisches Locale erzeugen (VLC, Dateimanager usw. folgen der UI-Sprache)
 if [ -f /etc/default/libc-locales ]; then

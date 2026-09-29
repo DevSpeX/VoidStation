@@ -19,6 +19,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import signal
 import socket
@@ -1433,6 +1434,101 @@ def shutil_which(name):
 JOBS = Jobs()
 
 
+# ---------------------------------------------------------------------------
+#  Programme, die ausserhalb des AppCenters installiert wurden (z. B. per xbps-install im Terminal):
+#  werden ueber ihre .desktop-Dateien gefunden und lassen sich als Kachel anlegen
+# ---------------------------------------------------------------------------
+DESKTOP_DIRS = [Path("/usr/share/applications"), Path("/usr/local/share/applications"),
+                Path("/var/lib/flatpak/exports/share/applications"),
+                Path.home() / ".local/share/flatpak/exports/share/applications",
+                Path.home() / ".local/share/applications"]
+# Teile des Systems, die keine eigene Kachel brauchen
+LOCAL_SKIP = {"openbox", "obconf", "xterm", "uxterm", "pcmanfm-desktop-pref", "libfm-pref-apps", "lxshortcut",
+              "gparted", "voidstation", "org.gnome.zenity", "mpv", "vlc", "firefox", "nm-connection-editor",
+              "pavucontrol", "xdg-desktop-portal-gtk", "gcr-prompter", "gcr-viewer", "org.gnome.gcr",
+              "display-im6.q16", "cups", "htop", "nano", "mousepad", "fastfetch", "pcmanfm", "flatpak",
+              "org.freedesktop.impl.portal"}
+FIELD_CODES = re.compile(r"%[fFuUdDnNickvm]")
+LOCAL_ICONS = [("Game", "gamepad"), ("Emulator", "gamepad"), ("Audio", "music"), ("Video", "film"), ("AudioVideo", "film"),
+               ("Graphics", "image"), ("Photography", "image"), ("WebBrowser", "globe"), ("Network", "globe"),
+               ("Office", "chart"), ("Education", "store"), ("Development", "terminal"), ("System", "terminal"), ("FileManager", "folder"), ("Utility", "store")]
+
+
+def _desktop_entry(path):
+    try:
+        txt = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    e, sect = {}, None
+    for line in txt.splitlines():
+        line = line.strip()
+        if line.startswith("["):
+            sect = line
+            continue
+        if sect == "[Desktop Entry]" and "=" in line and not line.startswith("#"):
+            k, v = line.split("=", 1)
+            e.setdefault(k.strip(), v.strip())
+    return e
+
+
+def local_apps():
+    """Programme mit .desktop-Datei, die weder im Katalog noch als eigene Kachel vorkommen."""
+    lang = ui_lang()
+    cat = catalog()
+    known_bins = {Path(str(a["cmd"][0])).name for a in cat["apps"] if a.get("cmd")}
+    known_bins |= {a["source"].get("pkg") for a in cat["apps"] if a["source"].get("pkg")}
+    tiles = {t.get("id"): t for g in load_config().get("groups", []) for t in g.get("tiles", [])}
+    tile_bins = {Path(str(t["cmd"][0])).name for t in tiles.values() if isinstance(t.get("cmd"), list) and t["cmd"]}
+    out, seen = [], set()
+    for d in DESKTOP_DIRS:
+        for f in sorted(d.glob("*.desktop")) if d.is_dir() else []:
+            stem = f.stem
+            if stem in seen or stem.lower() in LOCAL_SKIP or stem.startswith(("org.gnome.Settings", "vim", "nvim")):
+                continue
+            e = _desktop_entry(f)
+            if not e or e.get("Type") != "Application" or e.get("NoDisplay") == "true" or e.get("Hidden") == "true":
+                continue
+            if e.get("OnlyShowIn") or not e.get("Exec") or not e.get("Name"):
+                continue
+            try:
+                args = [a for a in shlex.split(FIELD_CODES.sub("", e["Exec"])) if a]
+            except ValueError:
+                continue
+            if not args or args[0] == "env" and len(args) < 2:
+                continue
+            binary = Path(args[0]).name
+            if e.get("TryExec") and not shutil.which(e["TryExec"]):
+                continue
+            if not (shutil.which(args[0]) or Path(args[0]).exists()):
+                continue
+            aid = "desk-" + re.sub(r"[^A-Za-z0-9_.-]", "_", stem)
+            if aid not in tiles and (binary in known_bins or binary in tile_bins):
+                continue                              # schon als Katalog-App oder Standard-Kachel vorhanden
+            seen.add(stem)
+            if e.get("Terminal") == "true":
+                args = ["xterm", "-fa", "DejaVu Sans Mono", "-fs", "14", "-e"] + args
+            cats = e.get("Categories", "")
+            icon = next((i for k, i in LOCAL_ICONS if k in cats.split(";")), "globe")
+            name = e.get(f"Name[{lang}]") or e["Name"]
+            desc = e.get(f"Comment[{lang}]") or e.get("Comment") or e.get(f"GenericName[{lang}]") or e.get("GenericName") or ""
+            out.append({"id": aid, "name": name, "desc": desc, "cmd": args, "icon": icon, "tile": aid in tiles,
+                        "game": "Game" in cats})
+    return sorted(out, key=lambda a: a["name"].lower())
+
+
+def local_tile(aid, on):
+    a = next((x for x in local_apps() if x["id"] == aid), None)
+    if not a:
+        raise RuntimeError("Programm nicht gefunden")
+    if not on:
+        tile_remove(aid)
+        return
+    palette = ["#2f3d57", "#3b2f4f", "#284843", "#4a3a2a", "#2d3763", "#453040"]
+    tile_add({"id": aid, "name": a["name"], "cmd": a["cmd"], "source": {"type": "local"},
+              "tile": {"group": "Spiele" if a["game"] else "Programme", "size": "medium", "icon": a["icon"],
+                       "color": palette[sum(map(ord, aid)) % len(palette)]}})
+
+
 def apps_payload():
     cat = catalog()
     apps = []
@@ -1443,7 +1539,16 @@ def apps_payload():
         item["icon"] = a.get("tile", {}).get("icon", "globe")
         item["color"] = a.get("tile", {}).get("color", "#2f3238")
         apps.append(item)
-    return {"categories": cat["categories"], "apps": apps, "job": JOBS.current()}
+    cats = list(cat["categories"])
+    try:
+        for a in local_apps():
+            apps.append({"id": a["id"], "name": a["name"], "desc": a["desc"], "cat": "Auf diesem Gerät", "type": "local",
+                         "installed": True, "tile": a["tile"], "icon": a["icon"], "color": "#2f3238"})
+            if "Auf diesem Gerät" not in cats:
+                cats.append("Auf diesem Gerät")
+    except Exception as e:  # noqa: BLE001 – eine kaputte .desktop-Datei darf das AppCenter nicht verhindern
+        log("Programme suchen:", e)
+    return {"categories": cats, "apps": apps, "job": JOBS.current()}
 
 
 def ssh_state():
@@ -1478,7 +1583,7 @@ class Installer:
     """Startet den Installer, liest seine JSON-Zeilen und haelt den Stand fuer die Oberflaeche bereit."""
 
     def __init__(self):
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()                   # start() ruft status() unter derselben Sperre auf
         self.proc = None
         self.state = None
         self.autostart = LIVE and cmdline_flag("voidstation.install")
@@ -1831,6 +1936,13 @@ class Handler(BaseHTTPRequestHandler):
                 if r.returncode != 0:
                     return self._json(500, {"error": (r.stdout + r.stderr).strip() or "fehlgeschlagen"})
                 return self._json(200, vs_update_status(force=True))
+            if parts == ["api", "apps", "localtile"]:
+                b = self._body()
+                try:
+                    local_tile(str(b.get("id", "")), bool(b.get("on")))
+                except RuntimeError as e:
+                    return self._json(404, {"error": str(e)})
+                return self._json(200, apps_payload())
             if parts[:2] == ["api", "apps"] and len(parts) == 3:
                 act = parts[2]
                 try:
@@ -1955,7 +2067,24 @@ def gamepad_watcher():
                 known.pop(dev.path, None)
 
 
+def app_prefs():
+    """Voreinstellungen fuer mitgelieferte Programme (nur Werte, die VoidStation vorgibt)."""
+    conf = Path.home() / ".config/gpicview/gpicview.conf"            # Bildbetrachter: schwarzer Hintergrund
+    try:
+        txt = conf.read_text(encoding="utf-8") if conf.exists() else "[General]\n"
+        for k in ("bg", "bg_full"):
+            if re.search(rf"^{k}=", txt, re.M):
+                txt = re.sub(rf"^{k}=.*$", f"{k}=#000000", txt, flags=re.M)
+            else:
+                txt = txt.replace("[General]\n", f"[General]\n{k}=#000000\n", 1)
+        conf.parent.mkdir(parents=True, exist_ok=True)
+        conf.write_text(txt, encoding="utf-8")
+    except OSError as e:
+        log("gpicview.conf:", e)
+
+
 def main():
+    app_prefs()
     s = settings_load()
     apply_appearance(s)
     apply_resolution(s.get("resolution"))
