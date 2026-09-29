@@ -164,8 +164,11 @@ say "4/6  Benutzer, Bootloader, Kernel"
 TVU="$TVU" VSNAME="$VSNAME" PW="$PW" chroot "$T" /bin/bash -euo pipefail <<'CHROOT'
 xbps-reconfigure -f glibc-locales
 useradd -m -U -s /bin/bash -G wheel -c "$VSNAME" "$TVU"
-printf '%s:%s\n' "$TVU" "$PW" | chpasswd
-printf 'root:%s\n' "$PW" | chpasswd
+# -c SHA512: sonst PAM-Weg, und Voids pam.d/chpasswd (pam_permit) schreibt nichts
+printf '%s:%s\nroot:%s\n' "$TVU" "$PW" "$PW" | chpasswd -c SHA512
+for a in "$TVU" root; do
+  case "$(getent shadow "$a" | cut -d: -f2)" in '$'*) ;; *) echo "Passwort fuer $a wurde nicht gesetzt" >&2; exit 1 ;; esac
+done
 echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
 chmod 440 /etc/sudoers.d/wheel
 # GRUB als Rueckfall: eigener Eintrag + Standardpfad EFI/BOOT (falls die Firmware Eintraege vergisst)

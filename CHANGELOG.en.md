@@ -3,6 +3,10 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.7.8 – 2026-09-29
+- Installer: the user and root passwords are now actually set – before, both accounts were left without a password and sudo and su failed; the installer now checks this and stops otherwise
+- Installed system: the live stick's greeting (“root:voidlinux …”) no longer appears on the text console
+
 ## 0.7.7 – 2026-09-29
 - Installer: the password for the Windows share “share” is now actually set – before, the share stayed locked (error 0x80004005)
 - Dialogs with long text (e.g. “What's new”): the text scrolls with ↑ ↓, the mouse wheel or the D-pad, the buttons always stay visible

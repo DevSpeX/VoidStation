@@ -114,6 +114,18 @@ def chroot(cmd, check=True, input=None):
               check=check, input=input, env={"PATH": "/usr/bin:/usr/sbin:/bin:/sbin", "LANG": "C"})
 
 
+def shadow_hash(root, user):
+    """Passwort-Feld aus <root>/etc/shadow ("" wenn Konto fehlt)."""
+    try:
+        for line in (Path(root) / "etc/shadow").read_text(encoding="utf-8", errors="replace").splitlines():
+            f = line.split(":")
+            if len(f) > 1 and f[0] == user:
+                return f[1]
+    except OSError:
+        pass
+    return ""
+
+
 def mounted(path):
     return os.path.ismount(str(path))
 
@@ -1033,6 +1045,12 @@ class Run:
             p = T / f
             if p.exists() or p.is_symlink():
                 p.unlink()
+        issue = T / "etc/issue"                            # Begruessung des Live-Sticks ("root:voidlinux …")
+        try:
+            if "Live" in issue.read_text(errors="replace"):
+                issue.write_text("VoidStation – Void Linux \\r (\\l)\n\n")
+        except OSError:
+            pass
         if chroot(["id", "tv"], check=False).returncode == 0 and login != "tv":
             chroot(["userdel", "-r", "tv"], check=False)
         if chroot(["xbps-query", "gparted"], check=False).returncode == 0:
@@ -1091,7 +1109,12 @@ class Run:
             groups = [g for g in ("wheel", "audio", "video", "input", "render", "network", "plugdev")
                       if chroot(["getent", "group", g], check=False).returncode == 0]
             chroot(["useradd", "-m", "-U", "-s", "/bin/bash", "-G", ",".join(groups), "-c", u["name"], login])
-        chroot(["chpasswd"], input=f"{login}:{u['password']}\nroot:{u['password']}\n")
+        # -c SHA512: ohne Verfahren nimmt chpasswd den PAM-Weg, und Voids pam.d/chpasswd hat dort nur
+        # pam_permit – meldet Erfolg, schreibt aber nichts (Konten blieben gesperrt)
+        chroot(["chpasswd", "-c", "SHA512"], input=f"{login}:{u['password']}\nroot:{u['password']}\n")
+        for acct in (login, "root"):
+            if not shadow_hash(T, acct).startswith("$"):
+                raise Fail("setup", f"Passwort fuer {acct} wurde nicht gesetzt")
         (T / "etc/sudoers.d").mkdir(exist_ok=True)
         (T / "etc/sudoers.d/wheel").write_text("%wheel ALL=(ALL:ALL) ALL\n")
         os.chmod(T / "etc/sudoers.d/wheel", 0o440)

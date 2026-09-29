@@ -4,6 +4,10 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.7.8 – 2026-09-29
+- Installer: Benutzer- und Root-Passwort werden jetzt wirklich gesetzt – bisher blieben beide Konten ohne Passwort, sudo und su schlugen fehl; der Installer prüft das jetzt und bricht sonst ab
+- Installiertes System: keine Begrüßung des Live-Sticks („root:voidlinux …“) mehr auf der Textkonsole
+
 ## 0.7.7 – 2026-09-29
 - Installer: das Passwort für die Windows-Freigabe „share“ wird jetzt wirklich gesetzt – vorher blieb die Freigabe gesperrt (Fehler 0x80004005)
 - Dialoge mit langem Text (z. B. „Was ist neu“): Text scrollt mit ↑ ↓, Mausrad oder Steuerkreuz, die Knöpfe bleiben immer sichtbar
