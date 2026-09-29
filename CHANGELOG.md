@@ -4,6 +4,9 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.7.2 – 2026-09-29
+- ISO-Bau: das Einrichtungsskript des Live-Systems ist jetzt ausführbar (Abbruch bei Schritt 7/13 behoben)
+
 ## 0.7.1 – 2026-09-29
 - ISO-Bau: Pakete, die es in den Void-Quellen nicht mehr gibt (z. B. mesa-vdpau), werden weggelassen statt den Bau abzubrechen
 
