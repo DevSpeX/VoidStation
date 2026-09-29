@@ -5,6 +5,10 @@
 #  Optional anderer Benutzer:   sudo VSUSER=name bash install.sh
 #  Optional EFISTUB (direkt booten, GRUB bleibt als Rueckfall):
 #                               sudo EFISTUB=1 bash install.sh
+#  Vom VoidStation-Installer (Live-Stick) und beim ISO-Bau gesetzt:
+#    VOIDSTATION_OFFLINE=1   nichts herunterladen (alle Pakete sind schon da)
+#    VOIDSTATION_LIVE=1      Live-System bauen: keine Auslagerungsdatei, keine Freigabe
+#    VOIDSTATION_NOSSH=1     SSH-Dienst nicht einschalten (spaeter: Einstellungen → System)
 # =====================================================================
 set -euo pipefail
 
@@ -14,6 +18,8 @@ TV="$HOMEDIR/.local/share/voidstation"
 # Dienste-Ordner: im laufenden System /var/service, bei Installation vom Stick (chroot) der Standard-Runlevel
 SVDIR="${SVDIR:-/var/service}"
 CHROOT="${VOIDSTATION_CHROOT:-0}"
+OFFLINE="${VOIDSTATION_OFFLINE:-0}"
+LIVE="${VOIDSTATION_LIVE:-0}"
 
 say()  { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m[!] %s\033[0m\n' "$*"; }
@@ -24,10 +30,14 @@ warn() { printf '\033[1;33m[!] %s\033[0m\n' "$*"; }
 say "Benutzer: $VSUSER ($HOMEDIR)"
 
 # ---------------------------------------------------------------------
-say "1/8  Nonfree-Repo und System-Update"
-xbps-query void-repo-nonfree >/dev/null 2>&1 || xbps-install -Sy void-repo-nonfree
-xbps-install -Syu xbps || true
-xbps-install -Syu || true
+if [ "$OFFLINE" = 1 ]; then
+  say "1/8  System-Update: uebersprungen (offline, spaeter ueber Einstellungen)"
+else
+  say "1/8  Nonfree-Repo und System-Update"
+  xbps-query void-repo-nonfree >/dev/null 2>&1 || xbps-install -Sy void-repo-nonfree
+  xbps-install -Syu xbps || true
+  xbps-install -Syu || true
+fi
 
 # ---------------------------------------------------------------------
 say "2/8  Pakete installieren"
@@ -46,14 +56,17 @@ PKGS="xinit xauth xset xrandr setxkbmap $GPU_PKGS \
   firefox vlc mpv mgba-qt samba flatpak adwaita-qt adwaita-qt6 gnome-themes-extra xsetroot python3-gobject libwebkit2gtk41 pcmanfm gvfs xterm \
   pipewire wireplumber alsa-utils \
   noto-fonts-ttf noto-fonts-emoji noto-fonts-cjk dejavu-fonts-ttf \
-  NetworkManager chrony"
+  NetworkManager chrony htop nano fastfetch mousepad"
 MISSING=""
 for p in $PKGS; do
   xbps-query "$p" >/dev/null 2>&1 && continue
+  if [ "$OFFLINE" = 1 ]; then MISSING="$MISSING $p"; continue; fi
   if xbps-query -R "$p" >/dev/null 2>&1; then MISSING="$MISSING $p"
   else warn "Paket nicht im Repo, uebersprungen: $p"; fi
 done
-if [ -n "$MISSING" ]; then xbps-install -Sy $MISSING; else echo "alles schon installiert"; fi
+if [ -z "$MISSING" ]; then echo "alles schon installiert"
+elif [ "$OFFLINE" = 1 ]; then warn "offline, spaeter nachzuinstallieren:$MISSING"
+else xbps-install -Sy $MISSING; fi
 
 # Sprachen der Oberflaeche: deutsches und englisches Locale erzeugen (VLC, Dateimanager usw. folgen der UI-Sprache)
 if [ -f /etc/default/libc-locales ]; then
@@ -162,7 +175,10 @@ if [ -f /etc/default/grub ]; then
   grep -q '^GRUB_TIMEOUT_STYLE' /etc/default/grub \
     && sed -i 's/^GRUB_TIMEOUT_STYLE=.*/GRUB_TIMEOUT_STYLE=hidden/' /etc/default/grub \
     || echo 'GRUB_TIMEOUT_STYLE=hidden' >> /etc/default/grub
-  update-grub >/dev/null 2>&1 || grub-mkconfig -o /boot/grub/grub.cfg
+  # vom Live-Stick aus richtet der Installer GRUB erst danach ein (dort gibt es /boot/grub noch nicht)
+  if [ "$LIVE" != 1 ] && [ -d /boot/grub ]; then
+    update-grub >/dev/null 2>&1 || grub-mkconfig -o /boot/grub/grub.cfg || warn "GRUB-Menue konnte nicht erneuert werden"
+  fi
 fi
 
 # ---------------------------------------------------------------------
@@ -369,7 +385,9 @@ cat > /etc/samba/smb.conf <<EOF
    create mask = 0664
    directory mask = 0775
 EOF
-if pdbedit -L 2>/dev/null | grep -q "^${VSUSER}:" && [ -z "${SMBPASS:-}" ]; then
+if [ "$LIVE" = 1 ]; then
+  echo "Live-System: Freigabe bleibt aus."
+elif pdbedit -L 2>/dev/null | grep -q "^${VSUSER}:" && [ -z "${SMBPASS:-}" ]; then
   echo "Freigabe-Benutzer $VSUSER existiert schon (Passwort bleibt)."
 elif [ -n "${VOIDSTATION_NONINTERACTIVE:-}" ] && [ -z "${SMBPASS:-}" ]; then
   warn "Freigabe-Passwort fehlt – einmal per SSH setzen:  sudo smbpasswd -a $VSUSER"
@@ -383,6 +401,7 @@ else
   printf '%s\n%s\n' "$PW" "$PW" | smbpasswd -s -a "$VSUSER" >/dev/null && echo "Freigabe-Passwort gesetzt."
 fi
 for s in smbd nmbd; do
+  [ "$LIVE" = 1 ] && break
   [ -d "/etc/sv/$s" ] && { [ -e "$SVDIR/$s" ] || ln -s "/etc/sv/$s" "$SVDIR/"; }
 done
 [ "$CHROOT" = 1 ] || sv restart smbd >/dev/null 2>&1 || true
@@ -395,7 +414,7 @@ chown -R "$VSUSER:$VSUSER" "$HOMEDIR/.config" "$HOMEDIR/.local" "$HOMEDIR/.xinit
 # Speicherdruck komplett ein, statt ein Programm zu beenden
 MEM_MB=$(( $(awk '/MemTotal/{print $2}' /proc/meminfo) / 1024 ))
 FREE_ROOT_MB=$(( $(df --output=avail -k / | tail -1) / 1024 ))
-if [ "$MEM_MB" -lt 7800 ] && [ -z "$(swapon --noheadings --show 2>/dev/null)" ] && [ ! -e /swapfile ] \
+if [ "$LIVE" != 1 ] && [ "$MEM_MB" -lt 7800 ] && [ -z "$(swapon --noheadings --show 2>/dev/null)" ] && [ ! -e /swapfile ] \
    && [ "$FREE_ROOT_MB" -gt 6000 ]; then
   say "Auslagerungsdatei: 2 GB (RAM: ${MEM_MB} MB)"
   if dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none && chmod 600 /swapfile && mkswap -q /swapfile; then
@@ -409,6 +428,7 @@ fi
 say "8/8  Dienste"
 for s in dbus elogind sshd chronyd; do
   [ -d "/etc/sv/$s" ] || continue
+  [ "$s" = sshd ] && [ "${VOIDSTATION_NOSSH:-0}" = 1 ] && continue
   [ -e "$SVDIR/$s" ] || ln -s "/etc/sv/$s" "$SVDIR/"
 done
 

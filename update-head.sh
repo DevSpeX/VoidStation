@@ -51,7 +51,8 @@ done
 
 say "1/8  Pakete"
 MISSING=""
-for p in curl elogind xrdb pulseaudio-utils mpv mgba-qt samba flatpak adwaita-qt adwaita-qt6 gnome-themes-extra xsetroot python3-gobject libwebkit2gtk41; do
+for p in curl elogind xrdb pulseaudio-utils mpv mgba-qt samba flatpak adwaita-qt adwaita-qt6 gnome-themes-extra xsetroot python3-gobject libwebkit2gtk41 \
+         htop nano fastfetch mousepad; do
   xbps-query "$p" >/dev/null 2>&1 || MISSING="$MISSING $p"
 done
 if [ -n "$MISSING" ]; then xbps-install -Sy $MISSING || warn "Paketinstallation fehlgeschlagen"; else echo "alles da"; fi

@@ -1,0 +1,1268 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""
+VoidStation-Installer (root) – nur im Live-System vorhanden.
+
+Die Oberflaeche (launcher.py) ruft dieses Skript per sudo auf; die ganze Logik steckt hier,
+damit Kachel-Oberflaeche und Terminal (voidstation-installer text) dasselbe tun.
+
+  probe                     Geraet pruefen: UEFI, RAM, Platten, Partitionen, fremde Systeme, moegliche Wege (JSON)
+  run                       installieren; Einstellungen als JSON auf stdin, Fortschritt als JSON-Zeilen auf stdout
+  run --resume [--alt]      nach einem Fehler ab dem fehlgeschlagenen Schritt weitermachen (--alt: Ausweichweg)
+  gparted DISPLAY XAUTH     GParted als root auf dem Bildschirm oeffnen
+  savelog                   Protokoll auf einen eingesteckten USB-Stick kopieren
+  text                      Installation im Terminal (Rueckfall, nur "ganze SSD")
+
+Schritte von "run":  check → shrink → partition → format → copy → configure → boot → cleanup
+Jeder Schritt ist wiederholbar; der Stand liegt in /run/voidstation-installer/state.json (nur root).
+"""
+import getpass
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+RUNDIR = Path("/run/voidstation-installer")
+STATE = RUNDIR / "state.json"
+LOG = RUNDIR / "install.log"
+TARGET = Path("/mnt/voidstation")
+BASEMNT = RUNDIR / "base"
+PROBEMNT = RUNDIR / "probe"
+LIVE_MARK = Path("/etc/voidstation-live")
+MiB = 1024 ** 2
+GiB = 1024 ** 3
+MIN_ROOT = 16 * GiB
+ESP_SIZE = 512 * MiB
+HEADROOM = 2 * GiB                                    # Platz, der dem fremden System mindestens frei bleibt
+PHASES = ["check", "shrink", "partition", "format", "copy", "configure", "boot", "cleanup"]
+WEIGHT = {"check": 2, "shrink": 8, "partition": 2, "format": 3, "copy": 60, "configure": 15, "boot": 7, "cleanup": 3}
+
+GUID = {
+    "esp": "c12a7328-f81f-11d2-ba4b-00a0c93ec93b", "linux": "0fc63daf-8483-4772-8e79-3d69d8477de4",
+    "msdata": "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7", "msres": "e3c9e316-0b5c-4db8-817d-f92df00215ae",
+    "winre": "de94bba4-06d1-4d40-a16a-bfd50179d6ac", "swap": "0657fd6d-a4ab-43c4-84e5-0933c84b4f4f",
+    "fbsd_ufs": "516e7cb6-6ecf-11d6-8ff8-00022d09712b", "fbsd_zfs": "516e7cba-6ecf-11d6-8ff8-00022d09712b",
+    "fbsd_boot": "83bd6b9d-7f41-11dc-be0b-001560b84f0f", "fbsd_swap": "516e7cb5-6ecf-11d6-8ff8-00022d09712b",
+    "openbsd": "824cc7a0-36a8-11e3-890a-952519ad3f61", "netbsd": "49f48d5a-b10e-11dc-b99b-0019d1879648",
+}
+SHRINKABLE = {"ntfs", "ext4", "ext3", "ext2", "btrfs"}
+TEST = os.environ.get("VS_INSTALLER_TEST") == "1"     # nur fuer Tests mit Abbild-Dateien: Loop-Geraete zulassen
+DISK_TYPES = ("disk", "loop") if TEST else ("disk",)
+
+
+class Fail(Exception):
+    """Fehler mit Kennung fuer die Oberflaeche (Text dazu steht in web/i18n)."""
+    def __init__(self, code, msg=""):
+        super().__init__(msg or code)
+        self.code, self.msg = code, msg or code
+
+
+# ---------------------------------------------------------------------------
+#  Grundfunktionen
+# ---------------------------------------------------------------------------
+SECRETS = []                                          # Passwoerter: nie ins Protokoll
+
+
+def log(*a):
+    RUNDIR.mkdir(parents=True, exist_ok=True)
+    line = " ".join(str(x) for x in a)
+    for sec in SECRETS:
+        line = line.replace("=" + sec, "=***")           # steht nur als SMBPASS=… in Befehlszeilen
+    with open(LOG, "a", encoding="utf-8") as f:
+        f.write(time.strftime("%H:%M:%S ") + line + "\n")
+
+
+def emit(**ev):
+    print(json.dumps(ev, ensure_ascii=False), flush=True)
+    if ev.get("ev") != "progress":
+        log("EVENT", json.dumps(ev, ensure_ascii=False))
+
+
+def sh(cmd, check=True, input=None, env=None, quiet=False, timeout=None):
+    """Befehl ausfuehren, alles ins Protokoll. Gibt CompletedProcess zurueck."""
+    log("$", " ".join(cmd) if isinstance(cmd, list) else cmd)
+    try:
+        r = subprocess.run(cmd, input=input, capture_output=True, text=True, env=env, timeout=timeout,
+                           shell=isinstance(cmd, str))
+    except FileNotFoundError:
+        r = subprocess.CompletedProcess(cmd, 127, "", f"{cmd[0]}: Befehl fehlt")
+    except subprocess.TimeoutExpired:
+        r = subprocess.CompletedProcess(cmd, 124, "", "Zeitueberschreitung")
+    out = (r.stdout + r.stderr).strip()
+    if out and not quiet:
+        log(out[-4000:])
+    if check and r.returncode != 0:
+        raise Fail("command", f"{cmd if isinstance(cmd, str) else ' '.join(cmd)}: {out[-400:] or r.returncode}")
+    return r
+
+
+def chroot(cmd, check=True, input=None):
+    return sh(["chroot", str(TARGET)] + (cmd if isinstance(cmd, list) else ["/bin/sh", "-c", cmd]),
+              check=check, input=input, env={"PATH": "/usr/bin:/usr/sbin:/bin:/sbin", "LANG": "C"})
+
+
+def mounted(path):
+    return os.path.ismount(str(path))
+
+
+def read_json_state():
+    try:
+        return json.loads(STATE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def save_state(st):
+    RUNDIR.mkdir(parents=True, exist_ok=True)
+    os.chmod(RUNDIR, 0o700)
+    tmp = STATE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(st, ensure_ascii=False), encoding="utf-8")
+    os.chmod(tmp, 0o600)
+    tmp.replace(STATE)
+
+
+def settle():
+    sh(["udevadm", "settle", "--timeout=10"], check=False, quiet=True)
+    time.sleep(0.5)
+
+
+def part_path(disk, num):
+    return f"{disk}p{num}" if re.search(r"\d$", disk) else f"{disk}{num}"
+
+
+def blkid(dev, tag):
+    r = sh(["blkid", "-s", tag, "-o", "value", dev], check=False, quiet=True)
+    return r.stdout.strip()
+
+
+def align_up(v, a):
+    return (v + a - 1) // a * a
+
+
+# ---------------------------------------------------------------------------
+#  Geraet pruefen (probe)
+# ---------------------------------------------------------------------------
+def live_disk():
+    """Platte, von der das Live-System laeuft (wird nie angeboten)."""
+    for mp in ("/run/initramfs/live", "/run/initramfs/isoscan"):
+        if mounted(mp):
+            src = sh(["findmnt", "-no", "SOURCE", mp], check=False, quiet=True).stdout.strip()
+            if src.startswith("/dev/"):
+                pk = sh(["lsblk", "-no", "PKNAME", src], check=False, quiet=True).stdout.split()
+                return "/dev/" + pk[0] if pk and pk[0] else src
+    return None
+
+
+def cpu_name():
+    try:
+        for l in open("/proc/cpuinfo", encoding="utf-8"):
+            if l.startswith("model name"):
+                return re.sub(r"\s+", " ", l.split(":", 1)[1]).replace("(R)", "").replace("(TM)", "").replace(" CPU", "").strip()
+    except OSError:
+        pass
+    return ""
+
+
+def gpu_names():
+    r = sh(["lspci", "-mm"], check=False, quiet=True) if shutil.which("lspci") else None
+    names = []
+    if r and r.returncode == 0:
+        for l in r.stdout.splitlines():
+            f = re.findall(r'"([^"]*)"', l)
+            if len(f) >= 3 and ("VGA" in f[0] or "Display" in f[0] or "3D" in f[0]):
+                vendor = f[1].replace(" Corporation", "").replace("Advanced Micro Devices, Inc. [AMD/ATI]", "AMD")
+                model = re.sub(r"\s*\(rev [^)]*\)", "", f[2])
+                names.append(f"{vendor.split()[0]} {model}"[:60])
+    if not names:
+        for d in Path("/sys/bus/pci/devices").glob("*"):
+            try:
+                if (d / "class").read_text().startswith("0x03"):
+                    v = (d / "vendor").read_text().strip()
+                    names.append({"0x8086": "Intel", "0x1002": "AMD", "0x10de": "NVIDIA"}.get(v, v))
+            except OSError:
+                pass
+    return names
+
+
+def secure_boot():
+    for f in Path("/sys/firmware/efi/efivars").glob("SecureBoot-*"):
+        try:
+            return f.read_bytes()[-1] == 1
+        except OSError:
+            pass
+    return False
+
+
+def net_state():
+    try:
+        routes = open("/proc/net/route").read().splitlines()[1:]
+    except OSError:
+        routes = []
+    for l in routes:
+        f = l.split()
+        if len(f) > 2 and f[1] == "00000000":
+            return "wifi" if Path(f"/sys/class/net/{f[0]}/wireless").exists() else "lan"
+    return "none"
+
+
+def with_mount(dev, fstype, fn, rw=False):
+    """dev kurz einhaengen (standardmaessig nur lesend), fn(mountpunkt) aufrufen."""
+    PROBEMNT.mkdir(parents=True, exist_ok=True)
+    opts = "rw" if rw else "ro"
+    if fstype == "ntfs":
+        cmd = ["mount", "-t", "ntfs3", "-o", opts, dev, str(PROBEMNT)]
+        if sh(cmd, check=False, quiet=True).returncode != 0:
+            cmd = ["ntfs-3g", "-o", opts, dev, str(PROBEMNT)]
+            if sh(cmd, check=False, quiet=True).returncode != 0:
+                return None
+    else:
+        extra = ",norecovery" if (fstype in ("ext4", "ext3", "xfs") and not rw) else ""
+        if sh(["mount", "-t", fstype, "-o", opts + extra, dev, str(PROBEMNT)], check=False, quiet=True).returncode != 0:
+            if sh(["mount", "-o", opts, dev, str(PROBEMNT)], check=False, quiet=True).returncode != 0:
+                return None
+    try:
+        return fn(PROBEMNT)
+    finally:
+        sh(["umount", str(PROBEMNT)], check=False, quiet=True)
+
+
+def os_release_name(root):
+    for cand in (root / "etc/os-release", root / "usr/lib/os-release", root / "@/etc/os-release", root / "@rootfs/etc/os-release"):
+        try:
+            txt = cand.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        m = re.search(r'^PRETTY_NAME="?([^"\n]+)"?', txt, re.M) or re.search(r'^NAME="?([^"\n]+)"?', txt, re.M)
+        if m:
+            return m.group(1).strip()
+    return None
+
+
+def esp_loaders(root):
+    """Bekannte EFI-Lader auf einer EFI-Partition (Pfade relativ zur Partition)."""
+    found = []
+    efi = next((d for d in root.iterdir() if d.name.lower() == "efi"), None) if root.is_dir() else None
+    if not efi:
+        return found
+    for vendor in sorted(efi.iterdir()):
+        if not vendor.is_dir():
+            continue
+        files = {f.name.lower(): f.name for f in vendor.iterdir() if f.is_file()}
+        v = vendor.name
+        for want, name in (("bootmgfw.efi", "Windows"), ("shimx64.efi", None), ("grubx64.efi", None),
+                           ("loader.efi", "FreeBSD"), ("bootx64.efi", None)):
+            if want in files:
+                if v.lower() == "microsoft" or v.lower() == "voidstation" or v.lower() == "void_grub":
+                    if want != "bootmgfw.efi":
+                        continue
+                label = name or ("UEFI-Standard" if v.lower() == "boot" else v.capitalize())
+                found.append({"path": f"/EFI/{v}/{files[want]}", "name": label, "vendor": v.lower()})
+                break
+        if v.lower() == "microsoft":
+            ms = vendor / "Boot"
+            if ms.is_dir():
+                for f in ms.iterdir():
+                    if f.name.lower() == "bootmgfw.efi":
+                        found.append({"path": f"/EFI/{v}/Boot/{f.name}", "name": "Windows", "vendor": "microsoft"})
+    # doppelte Eintraege (z. B. Windows) zusammenfassen
+    seen, uniq = set(), []
+    for l in found:
+        if l["path"].lower() not in seen:
+            seen.add(l["path"].lower()); uniq.append(l)
+    return uniq
+
+
+def ntfs_info(dev):
+    """Mindestgroesse und Zustand einer NTFS-Partition ueber ntfsresize --info."""
+    r = sh(["ntfsresize", "--info", "--no-progress-bar", dev], check=False, quiet=True)
+    out = r.stdout + r.stderr
+    info = {"hibernated": bool(re.search(r"hibernat", out, re.I)), "dirty": bool(re.search(r"inconsistent|chkdsk|dirty", out, re.I))}
+    m = re.search(r"You might resize at (\d+) bytes", out)
+    if m:
+        info["min"] = int(m.group(1))
+    m = re.search(r"Space in use\s*:\s*(\d+) MB", out)
+    if m:
+        info["used"] = int(m.group(1)) * 1000 * 1000
+    return info
+
+
+def ext_info(dev):
+    info = {}
+    d = sh(["dumpe2fs", "-h", dev], check=False, quiet=True).stdout
+    bs = int(re.search(r"Block size:\s*(\d+)", d).group(1)) if "Block size" in d else 4096
+    bc = re.search(r"Block count:\s*(\d+)", d)
+    fb = re.search(r"Free blocks:\s*(\d+)", d)
+    if bc and fb:
+        info["used"] = (int(bc.group(1)) - int(fb.group(1))) * bs
+    r = sh(["resize2fs", "-P", dev], check=False, quiet=True)
+    m = re.search(r"minimum size of the filesystem:\s*(\d+)", r.stdout + r.stderr)
+    if m:
+        info["min"] = int(m.group(1)) * bs
+    elif "used" in info:
+        info["min"] = int(info["used"] * 1.15)
+    return info
+
+
+def btrfs_info(dev):
+    def f(mnt):
+        info = {}
+        r = sh(["btrfs", "inspect-internal", "min-dev-size", str(mnt)], check=False, quiet=True)
+        m = re.search(r"(\d+)\s+bytes", r.stdout)
+        if m:
+            info["min"] = int(int(m.group(1)) * 1.1)
+        r = sh(["btrfs", "filesystem", "usage", "-b", str(mnt)], check=False, quiet=True)
+        m = re.search(r"Used:\s+(\d+)", r.stdout)
+        if m:
+            info["used"] = int(m.group(1))
+        info["os"] = os_release_name(mnt)
+        return info
+    return with_mount(dev, "btrfs", f) or {}
+
+
+def disk_table(disk):
+    r = sh(["sfdisk", "-J", disk], check=False, quiet=True)
+    try:
+        return json.loads(r.stdout)["partitiontable"]
+    except (ValueError, KeyError):
+        return None
+
+
+def free_regions(pt, size_bytes):
+    """Freie Bereiche einer GPT-Tabelle in Sektoren (ausgerichtet auf 1 MiB)."""
+    ss = pt.get("sectorsize", 512)
+    al = MiB // ss
+    first = pt.get("firstlba", 2048)
+    last = pt.get("lastlba", size_bytes // ss - 34)
+    parts = sorted(pt.get("partitions", []), key=lambda p: p["start"])
+    regions, cur = [], first
+    for p in parts + [{"start": last + 1, "size": 0}]:
+        s = align_up(cur, al)
+        e = p["start"]                              # exklusiv
+        if e - s >= (64 * MiB) // ss:
+            n = (e - s) // al * al
+            regions.append({"start": s, "sectors": n, "bytes": n * ss})
+        cur = max(cur, p["start"] + p["size"])
+    return regions
+
+
+def probe():
+    ld = live_disk()
+    lsb = json.loads(sh(["lsblk", "-J", "-b", "-o", "NAME,PATH,TYPE,SIZE,MODEL,TRAN,RM,RO,FSTYPE,PARTTYPE,LABEL,UUID"],
+                        quiet=True).stdout)
+    res = {"uefi": Path("/sys/firmware/efi").is_dir(), "secureboot": secure_boot(), "arch": os.uname().machine,
+           "ram": 0, "cpu": cpu_name(), "gpu": gpu_names(), "net": net_state(), "live_disk": ld,
+           "disks": [], "windows": False, "min_root": MIN_ROOT, "esp_size": ESP_SIZE}
+    try:
+        res["ram"] = int(re.search(r"MemTotal:\s+(\d+)", open("/proc/meminfo").read()).group(1)) * 1024
+    except (OSError, AttributeError):
+        pass
+    for d in lsb.get("blockdevices", []):
+        if d.get("type") not in DISK_TYPES or d.get("ro") or not d.get("size") or d["path"] == ld:
+            continue
+        if re.match(r"/dev/(zram|ram|sr|fd)", d["path"]) or re.search(r"mmcblk\d+boot|rpmb", d["path"]):
+            continue
+        if d.get("tran") == "usb" or d.get("rm"):
+            continue                                              # USB-Sticks/-Platten werden nicht angeboten
+        mps = sh(["lsblk", "-lnpo", "MOUNTPOINTS", d["path"]], check=False, quiet=True).stdout.split()
+        if any(m in ("/", "/usr", "/boot") for m in mps):
+            continue                                              # Platte des gerade laufenden Systems
+        disk = {"path": d["path"], "size": d["size"], "model": (d.get("model") or "").strip(), "tran": d.get("tran") or "",
+                "label": None, "parts": [], "free": [], "systems": [], "esp": None, "options": {}}
+        pt = disk_table(d["path"])
+        if pt:
+            disk["label"] = pt.get("label")
+            disk["sectorsize"] = pt.get("sectorsize", 512)
+        byname = {c["path"]: c for c in d.get("children", []) or []}
+        for p in (pt or {}).get("partitions", []):
+            c = byname.get(p["node"], {})
+            ptype = (p.get("type") or "").lower()
+            fs = c.get("fstype") or blkid(p["node"], "TYPE")          # lsblk kennt es nur mit laufendem udev
+            part = {"path": p["node"], "num": int(re.search(r"(\d+)$", p["node"]).group(1)), "start": p["start"],
+                    "sectors": p["size"], "size": p["size"] * disk.get("sectorsize", 512), "type": ptype,
+                    "fstype": fs, "label": c.get("label") or blkid(p["node"], "LABEL") or p.get("name") or "",
+                    "uuid": c.get("uuid") or blkid(p["node"], "UUID"),
+                    "role": "data", "os": None, "shrink": False}
+            if ptype == GUID["esp"] or (fs == "vfat" and ptype in ("ef", "0xef")):
+                part["role"] = "esp"
+                part["loaders"] = with_mount(p["node"], "vfat", esp_loaders) or []
+                part["free_bytes"] = with_mount(p["node"], "vfat", lambda m: shutil.disk_usage(m).free) or 0
+                if disk["esp"] is None:
+                    disk["esp"] = p["node"]
+                for l in part["loaders"]:
+                    if l["vendor"] == "microsoft":
+                        res["windows"] = True
+            elif ptype == GUID["msres"]:
+                part["role"] = "reserved"
+            elif ptype == GUID["winre"]:
+                part["role"] = "recovery"; part["os"] = "Windows"
+            elif fs == "BitLocker":
+                part["role"] = "os"; part["os"] = "Windows (BitLocker)"; part["locked"] = True; res["windows"] = True
+            elif fs == "ntfs":
+                ni = ntfs_info(p["node"])
+                part.update({k: v for k, v in ni.items() if k in ("min", "used", "hibernated", "dirty")})
+                win = with_mount(p["node"], "ntfs", lambda m: (m / "Windows" / "System32").is_dir())
+                part["role"] = "os" if win else "data"
+                part["os"] = "Windows" if win else None
+                if win:
+                    res["windows"] = True
+                part["shrink"] = "min" in ni
+            elif fs in ("ext4", "ext3", "ext2"):
+                part.update(ext_info(p["node"]))
+                name = with_mount(p["node"], fs, os_release_name)
+                part["role"], part["os"] = ("os", name) if name else ("data", None)
+                part["shrink"] = "min" in part
+            elif fs == "btrfs":
+                bi = btrfs_info(p["node"])
+                part.update({k: v for k, v in bi.items() if k in ("min", "used")})
+                part["role"], part["os"] = ("os", bi["os"]) if bi.get("os") else ("data", None)
+                part["shrink"] = "min" in part
+            elif fs == "xfs":
+                name = with_mount(p["node"], "xfs", os_release_name)
+                part["role"], part["os"] = ("os", name) if name else ("data", None)
+            elif fs == "swap" or ptype == GUID["swap"]:
+                part["role"] = "swap"
+            elif fs == "crypto_LUKS":
+                part["role"] = "os"; part["os"] = "LUKS"; part["locked"] = True
+            elif fs == "LVM2_member":
+                part["role"] = "os"; part["os"] = "LVM"; part["locked"] = True
+            elif ptype in (GUID["fbsd_ufs"], GUID["fbsd_zfs"], GUID["fbsd_boot"], GUID["fbsd_swap"]) or fs in ("ufs", "zfs_member"):
+                part["role"] = "os" if ptype != GUID["fbsd_swap"] else "swap"; part["os"] = "FreeBSD"
+            elif ptype == GUID["openbsd"]:
+                part["role"] = "os"; part["os"] = "OpenBSD"
+            elif ptype == GUID["netbsd"]:
+                part["role"] = "os"; part["os"] = "NetBSD"
+            disk["parts"].append(part)
+        if pt and pt.get("label") == "gpt":
+            disk["free"] = free_regions(pt, d["size"])
+        # erkannte Systeme (Namen fuer die Oberflaeche)
+        names = []
+        for p in disk["parts"]:
+            if p["os"] and p["os"] not in names and p["role"] == "os":
+                names.append(p["os"])
+        for p in disk["parts"]:
+            for l in p.get("loaders", []):
+                if l["name"] not in names and l["name"] not in ("UEFI-Standard",) and l["vendor"] not in ("voidstation",):
+                    if not any(l["name"].lower() in n.lower() or n.lower().startswith(l["name"].lower()) for n in names):
+                        names.append(l["name"])
+        disk["systems"] = names
+        esp_need = 0 if disk["esp"] else ESP_SIZE
+        # --- Wege: ganze SSD, neben einem System (verkleinern), freier Platz
+        if disk["size"] >= MIN_ROOT + ESP_SIZE + GiB:
+            disk["options"]["whole"] = True
+        beside = []
+        if disk["label"] == "gpt":
+            for p in disk["parts"]:
+                if p["fstype"] == "ntfs" and p["role"] == "os" and (p.get("hibernated") or p.get("dirty")):
+                    # Windows im Ruhezustand/Schnellstart oder mit Dateisystemfehlern: erst in Windows beheben
+                    beside.append({"part": p["path"], "os": p["os"], "fstype": "ntfs", "size": p["size"],
+                                   "blocked": "hibernated" if p.get("hibernated") else "dirty"})
+                    continue
+                if not p["shrink"] or p.get("locked") or p["fstype"] not in SHRINKABLE:
+                    continue
+                keep_min = p["min"] + HEADROOM
+                max_new = (p["size"] - keep_min) // MiB * MiB - esp_need
+                if max_new >= MIN_ROOT:
+                    default = max(MIN_ROOT, min(max_new, (p["size"] - p["min"]) // 2 // GiB * GiB))
+                    beside.append({"part": p["path"], "os": p["os"] or p["label"] or p["fstype"].upper(), "fstype": p["fstype"],
+                                   "size": p["size"], "used": p.get("used"), "min": p["min"], "max_new": max_new,
+                                   "default": default, "hibernated": p.get("hibernated", False), "dirty": p.get("dirty", False)})
+            free = [r for r in disk["free"] if r["bytes"] - esp_need >= MIN_ROOT]
+            if free:
+                disk["options"]["free"] = sorted(free, key=lambda r: -r["bytes"])
+        if beside:
+            disk["options"]["beside"] = beside
+        res["disks"].append(disk)
+    res["disks"].sort(key=lambda x: (x["tran"] == "usb", x["path"]))
+    return res
+
+
+# ---------------------------------------------------------------------------
+#  Installation
+# ---------------------------------------------------------------------------
+class Run:
+    def __init__(self, st):
+        self.st = st
+        self.cfg = st["config"]
+        pw = self.cfg.get("user", {}).get("password")
+        if pw and pw not in SECRETS:
+            SECRETS.append(pw)
+        self.pct_done = 0.0
+
+    # --- Fortschritt
+    def weights(self):
+        return {p: (0 if (p == "shrink" and self.cfg["mode"] != "beside") else WEIGHT[p]) for p in PHASES}
+
+    def progress(self, phase, frac, **detail):
+        w = self.weights()
+        total = sum(w.values())
+        before = sum(w[p] for p in PHASES[:PHASES.index(phase)])
+        emit(ev="progress", phase=phase, phase_pct=round(frac * 100, 1),
+             pct=round((before + w[phase] * frac) / total * 100, 1), **detail)
+
+    def mark_done(self, phase):
+        self.st.setdefault("done", [])
+        if phase not in self.st["done"]:
+            self.st["done"].append(phase)
+        save_state(self.st)
+
+    # --- Einhaengen
+    def mount_target(self):
+        TARGET.mkdir(parents=True, exist_ok=True)
+        if not mounted(TARGET):
+            sh(["mount", self.st["root_dev"], str(TARGET)])
+        esp = TARGET / "boot/efi"
+        esp.mkdir(parents=True, exist_ok=True)
+        if not mounted(esp):
+            sh(["mount", "-t", "vfat", self.st["esp_dev"], str(esp)])
+
+    def mount_pseudo(self):
+        for d in ("proc", "sys", "dev", "run", "tmp"):
+            (TARGET / d).mkdir(exist_ok=True)
+        if not mounted(TARGET / "proc"):
+            sh(["mount", "-t", "proc", "proc", str(TARGET / "proc")])
+        for d in ("sys", "dev", "run"):
+            if not mounted(TARGET / d):
+                sh(["mount", "--rbind", f"/{d}", str(TARGET / d)])
+                sh(["mount", "--make-rslave", str(TARGET / d)], check=False)
+
+    def umount_all(self):
+        sh(["sync"], check=False)
+        if mounted(TARGET):
+            if sh(["umount", "-R", str(TARGET)], check=False).returncode != 0:
+                sh(["umount", "-Rl", str(TARGET)], check=False)
+
+    # --- Ablauf
+    def run(self, alt=False):
+        self.alt = alt
+        done = set(self.st.get("done", []))
+        for ph in PHASES:
+            if ph in done:
+                continue
+            if ph == "shrink" and self.cfg["mode"] != "beside":
+                self.mark_done(ph)
+                continue
+            self.st["current"] = ph
+            save_state(self.st)
+            emit(ev="phase", phase=ph, state="running")
+            self.progress(ph, 0)
+            try:
+                getattr(self, "ph_" + ph)()
+            except Fail as e:
+                self.fail(ph, e.code, e.msg)
+                return 1
+            except Exception as e:  # noqa: BLE001
+                self.fail(ph, "internal", repr(e))
+                return 1
+            self.progress(ph, 1)
+            emit(ev="phase", phase=ph, state="done")
+            self.mark_done(ph)
+        self.st["finished"] = time.time()
+        self.cfg["user"]["password"] = ""                  # nicht laenger als noetig aufheben
+        save_state(self.st)
+        emit(ev="done", pct=100, seconds=int(time.time() - self.st["started"]), user=self.cfg["user"]["name"],
+             login=self.cfg["user"]["login"], hostname=self.cfg["hostname"])
+        return 0
+
+    def fail(self, phase, code, msg):
+        log("FEHLER", phase, code, msg)
+        tail = []
+        try:
+            tail = [l for l in LOG.read_text(encoding="utf-8").splitlines() if not l[9:].startswith("EVENT")][-6:]
+        except OSError:
+            pass
+        self.st["error"] = {"phase": phase, "code": code, "msg": msg}
+        save_state(self.st)
+        emit(ev="error", phase=phase, code=code, msg=msg[-600:], done=self.st.get("done", []),
+             foreign_untouched=self.st.get("foreign_untouched", True), log=tail,
+             alt=(phase == "boot"))
+        # Einhaengungen fuer einen neuen Versuch loesen
+        self.umount_all()
+
+    # --- 1. Pruefen
+    def ph_check(self):
+        c = self.cfg
+        if not LIVE_MARK.exists() and not TEST:
+            raise Fail("not_live", "Der Installer laeuft nur im Live-System.")
+        if not Path("/sys/firmware/efi").is_dir() and not TEST:
+            raise Fail("no_uefi")
+        disk = c["disk"]
+        if not Path(disk).exists():
+            raise Fail("no_disk", disk)
+        if disk == live_disk():
+            raise Fail("live_disk")
+        size = int(sh(["blockdev", "--getsize64", disk]).stdout)
+        if c["mode"] == "whole" and size < MIN_ROOT + ESP_SIZE:
+            raise Fail("too_small")
+        # nichts von dieser Platte darf eingehaengt sein (ausser unserem Ziel bei einem neuen Versuch)
+        self.umount_all()
+        for l in sh(["lsblk", "-lnpo", "NAME,MOUNTPOINTS", disk], quiet=True).stdout.splitlines():
+            f = l.split(None, 1)
+            if len(f) > 1 and f[1].strip():
+                for mp in f[1].split():
+                    if mp in ("[SWAP]",):
+                        sh(["swapoff", f[0]], check=False)
+                    else:
+                        sh(["umount", mp], check=False)
+        self.st.setdefault("foreign_untouched", True)
+        if c["mode"] == "beside":
+            p = c["part"]
+            fs = blkid(p, "TYPE")
+            if fs not in SHRINKABLE:
+                raise Fail("not_shrinkable", fs)
+            if fs == "ntfs":
+                ni = ntfs_info(p)
+                if ni.get("hibernated"):
+                    raise Fail("ntfs_hibernated")
+                if "min" not in ni:
+                    raise Fail("ntfs_check", "ntfsresize --info")
+        self.progress("check", 1)
+
+    # --- 2. Platz schaffen (nur "neben einem System")
+    def ph_shrink(self):
+        c = self.cfg
+        if c["mode"] != "beside":
+            return
+        p = c["part"]
+        disk = c["disk"]
+        pt = disk_table(disk)
+        ss = pt.get("sectorsize", 512)
+        if self.st.get("shrunk_to"):                      # bereits verkleinert (neuer Versuch)
+            return
+        me = next((x for x in pt["partitions"] if x["node"] == p), None)
+        if not me:
+            raise Fail("no_disk", p)
+        num = int(re.search(r"(\d+)$", p).group(1))
+        old_bytes = me["size"] * ss
+        esp_need = 0 if self.find_esp(pt) else ESP_SIZE
+        # neue Groesse der fremden Partition: alt - (VoidStation + ggf. EFI), auf MiB abgerundet
+        new_part_bytes = (old_bytes - int(c["new_size"]) - esp_need) // MiB * MiB
+        info = ntfs_info(p) if blkid(p, "TYPE") == "ntfs" else {}
+        if new_part_bytes <= 0 or ("min" in info and new_part_bytes < info["min"] + HEADROOM // 2):
+            raise Fail("bad_size")
+        fs = blkid(p, "TYPE")
+        fs_bytes = new_part_bytes - MiB                    # Dateisystem etwas kleiner als die Partition
+        log(f"Verkleinere {p} ({fs}) von {old_bytes} auf {new_part_bytes} Bytes")
+        if fs == "ntfs":
+            self.progress("shrink", 0.05, detail="check")
+            r = sh(["ntfsresize", "--no-action", "--no-progress-bar", "--size", str(fs_bytes), p], check=False)
+            if r.returncode != 0:
+                raise Fail("shrink_dryrun", (r.stdout + r.stderr)[-400:])
+            self.st["foreign_untouched"] = False; save_state(self.st)
+            self.progress("shrink", 0.2, detail="resize")
+            r = sh(["ntfsresize", "--no-progress-bar", "--size", str(fs_bytes), p], input="y\n", check=False)
+            if r.returncode != 0:
+                raise Fail("shrink_fs", (r.stdout + r.stderr)[-400:])
+        elif fs in ("ext4", "ext3", "ext2"):
+            self.progress("shrink", 0.05, detail="check")
+            r = sh(["e2fsck", "-f", "-p", p], check=False)
+            if r.returncode >= 4:
+                raise Fail("shrink_dryrun", (r.stdout + r.stderr)[-400:])
+            self.st["foreign_untouched"] = False; save_state(self.st)
+            self.progress("shrink", 0.3, detail="resize")
+            sh(["resize2fs", p, f"{fs_bytes // 1024}K"])
+        elif fs == "btrfs":
+            mnt = RUNDIR / "btrfs"
+            mnt.mkdir(parents=True, exist_ok=True)
+            sh(["mount", "-t", "btrfs", p, str(mnt)])
+            try:
+                self.st["foreign_untouched"] = False; save_state(self.st)
+                self.progress("shrink", 0.3, detail="resize")
+                sh(["btrfs", "filesystem", "resize", str(fs_bytes), str(mnt)])
+            finally:
+                sh(["umount", str(mnt)], check=False)
+        else:
+            raise Fail("not_shrinkable", fs)
+        self.progress("shrink", 0.8, detail="table")
+        sh(["sfdisk", "--no-reread", "--no-tell-kernel", "-N", str(num), disk], input=f"size={new_part_bytes // ss}\n")
+        self.st["shrunk_to"] = new_part_bytes
+        self.st["new_region"] = {"start": me["start"] + new_part_bytes // ss, "sectors": (old_bytes - new_part_bytes) // ss}
+        save_state(self.st)
+        sh(["partx", "-u", disk], check=False)
+        settle()
+        if blkid(p, "TYPE") != fs:
+            raise Fail("shrink_verify", f"{p}: Dateisystem nach dem Verkleinern nicht lesbar")
+
+    def find_esp(self, pt):
+        for x in pt.get("partitions", []):
+            if (x.get("type") or "").lower() == GUID["esp"]:
+                return x["node"]
+        return None
+
+    # --- 3. Partitionieren
+    def ph_partition(self):
+        c = self.cfg
+        disk = c["disk"]
+        mode = c["mode"]
+        if mode == "manual":
+            self.st["root_dev"] = c["manual"]["root"]
+            self.st["esp_dev"] = c["manual"]["esp"]
+            self.st["esp_new"] = bool(c["manual"].get("format_esp"))
+            save_state(self.st)
+            return
+        if mode == "whole":
+            sh(["swapoff", "-a"], check=False)
+            sh(["wipefs", "-af", disk])
+            self.st["foreign_untouched"] = False; save_state(self.st)
+            sh(["sfdisk", "-q", "--wipe", "always", "--wipe-partitions", "always", disk],
+               input="label: gpt\nsize=512MiB, type=uefi, name=EFI\ntype=linux, name=VoidStation\n")
+            sh(["partx", "-u", disk], check=False)
+            settle()
+            self.st["esp_dev"], self.st["root_dev"], self.st["esp_new"] = part_path(disk, 1), part_path(disk, 2), True
+        elif self.st.get("appended") and self.st.get("root_dev") and Path(self.st["root_dev"]).exists():
+            pass                                           # neuer Versuch: Partitionen gibt es schon
+        else:
+            pt = disk_table(disk)
+            if not pt or pt.get("label") != "gpt":
+                raise Fail("not_gpt")
+            ss = pt.get("sectorsize", 512)
+            region = self.st.get("new_region") if mode == "beside" else c["region"]
+            start, sectors = int(region["start"]), int(region["sectors"])
+            al = MiB // ss
+            start = align_up(start, al)
+            end = int(region["start"]) + int(region["sectors"])
+            esp = self.find_esp(pt)
+            lines = []
+            if not esp:
+                lines.append(f"start={start}, size={ESP_SIZE // ss}, type=uefi, name=EFI")
+                start += ESP_SIZE // ss
+            size = (end - start) // al * al
+            if size * ss < MIN_ROOT - 256 * MiB:
+                raise Fail("too_small")
+            lines.append(f"start={start}, size={size}, type=linux, name=VoidStation")
+            before = {x["node"] for x in pt.get("partitions", [])}
+            sh(["sfdisk", "--no-reread", "--no-tell-kernel", "--append", disk], input="\n".join(lines) + "\n")
+            sh(["partx", "-u", disk], check=False)
+            sh(["partx", "-a", disk], check=False)
+            settle()
+            pt2 = disk_table(disk)
+            new = [x for x in pt2.get("partitions", []) if x["node"] not in before]
+            root = next((x["node"] for x in new if (x.get("type") or "").lower() == GUID["linux"]), None)
+            espn = next((x["node"] for x in new if (x.get("type") or "").lower() == GUID["esp"]), None)
+            if not root:
+                raise Fail("partition", "neue Partition nicht gefunden")
+            self.st["root_dev"] = root
+            self.st["esp_dev"] = espn or esp
+            self.st["esp_new"] = bool(espn)
+            self.st["appended"] = True
+        for _ in range(20):
+            if Path(self.st["root_dev"]).exists() and Path(self.st["esp_dev"]).exists():
+                break
+            time.sleep(0.5)
+        else:
+            raise Fail("partition", "Partitionen erscheinen nicht")
+        save_state(self.st)
+
+    # --- 4. Formatieren
+    def ph_format(self):
+        self.umount_all()
+        if self.cfg["mode"] == "manual":
+            self.st["foreign_untouched"] = False; save_state(self.st)   # selbst gewaehlte Partitionen
+        if self.st.get("esp_new"):
+            sh(["mkfs.vfat", "-F32", "-n", "EFI", self.st["esp_dev"]])
+        elif blkid(self.st["esp_dev"], "TYPE") != "vfat":
+            raise Fail("esp_bad", self.st["esp_dev"])
+        self.progress("format", 0.3)
+        sh(["mkfs.ext4", "-qF", "-L", "VoidStation", self.st["root_dev"]])
+
+    # --- 5. Kopieren
+    def base_source(self):
+        """Unveraendertes Live-Abbild (ohne Live-Benutzer und Aenderungen seit dem Start) einhaengen."""
+        if TEST and os.environ.get("VS_INSTALLER_SRC"):
+            return Path(os.environ["VS_INSTALLER_SRC"])
+        if mounted(BASEMNT):
+            return BASEMNT
+        BASEMNT.mkdir(parents=True, exist_ok=True)
+        for cand in ("/run/rootfsbase",):
+            if Path(cand).is_dir() and any(Path(cand).iterdir()):
+                return Path(cand)
+        for dev in ("/dev/mapper/live-base", "/run/initramfs/squashfs/LiveOS/rootfs.img",
+                    "/run/initramfs/squashfs/LiveOS/ext3fs.img"):
+            if Path(dev).exists():
+                opts = "ro,loop" if dev.endswith(".img") else "ro"
+                if sh(["mount", "-o", opts + ",noload", dev, str(BASEMNT)], check=False).returncode == 0 or \
+                   sh(["mount", "-o", opts, dev, str(BASEMNT)], check=False).returncode == 0:
+                    return BASEMNT
+        log("Kein Live-Abbild gefunden – kopiere das laufende System")
+        return Path("/")
+
+    def ph_copy(self):
+        self.mount_target()
+        src = self.base_source()
+        self.progress("copy", 0.01, detail="count")
+        total = int(sh(["du", "-sxb", str(src)], quiet=True).stdout.split()[0])
+        excl = []
+        if str(src) == "/":
+            excl = ["--exclude=./home/*", "--exclude=./tmp/*", "--exclude=./run/*", "--exclude=./mnt/*", "--exclude=./media/*",
+                    "--exclude=./var/log/*", "--exclude=./proc/*", "--exclude=./sys/*", "--exclude=./dev/*"]
+        tar_c = ["tar", "-C", str(src), "--one-file-system", "--xattrs", "--xattrs-include=*", "--acls",
+                 "--numeric-owner", "-cpf", "-"] + excl + ["."]
+        tar_x = ["tar", "-C", str(TARGET), "--xattrs", "--xattrs-include=*", "--acls", "--numeric-owner", "-xpf", "-"]
+        log("$", " ".join(tar_c), "|", " ".join(tar_x))
+        pc = subprocess.Popen(tar_c, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        px = subprocess.Popen(tar_x, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+        done, last, t0 = 0, 0.0, time.time()
+        while True:
+            chunk = pc.stdout.read(4 * MiB)
+            if not chunk:
+                break
+            px.stdin.write(chunk)
+            done += len(chunk)
+            if time.time() - last > 0.5:
+                last = time.time()
+                frac = min(0.99, done / max(total, 1))
+                rate = done / max(0.1, time.time() - t0)
+                self.progress("copy", frac, done=done, total=total, eta=int((total - done) / rate) if rate > 0 else None)
+        px.stdin.close()
+        rc_c, rc_x = pc.wait(), px.wait()
+        err = (pc.stderr.read() + px.stderr.read()).decode("utf-8", "replace")
+        if err.strip():
+            log(err[-3000:])
+        if rc_c not in (0, 1) or rc_x != 0:                 # tar-Rueckgabe 1 = Dateien waehrend des Lesens geaendert
+            raise Fail("copy", err[-400:] or f"tar {rc_c}/{rc_x}")
+        for d in ("dev", "proc", "sys", "run", "tmp", "mnt", "home", "boot/efi"):
+            (TARGET / d).mkdir(parents=True, exist_ok=True)
+        os.chmod(TARGET / "tmp", 0o1777)
+        if src == BASEMNT:
+            sh(["umount", str(BASEMNT)], check=False)
+
+    # --- 6. Einrichten
+    def ph_configure(self):
+        """Grundeinstellungen, dann das normale install.sh im neuen System (offline, fuer den neuen Benutzer)."""
+        c = self.cfg
+        u = c["user"]
+        login = u["login"]
+        self.mount_target()
+        self.mount_pseudo()
+        T = TARGET
+        # Live-Reste und Live-Benutzer entfernen
+        for f in ("etc/voidstation-live", "etc/runit/core-services/99-voidstation-live.sh", "etc/profile.d/zz-voidstation-live.sh",
+                  "etc/sudoers.d/zz-voidstation-installer", "etc/sudoers.d/99-void-live", "usr/local/sbin/voidstation-installer",
+                  "etc/default/live.conf", "etc/polkit-1/rules.d/void-live.rules", "etc/xdg/autostart/voidstation-live.desktop"):
+            p = T / f
+            if p.exists() or p.is_symlink():
+                p.unlink()
+        if chroot(["id", "tv"], check=False).returncode == 0 and login != "tv":
+            chroot(["userdel", "-r", "tv"], check=False)
+        if chroot(["xbps-query", "gparted"], check=False).returncode == 0:
+            chroot(["xbps-remove", "-Ry", "gparted"], check=False)
+        # Grundeinstellungen
+        (T / "etc/hostname").write_text(c["hostname"] + "\n")
+        lang = c.get("lang", "de")
+        (T / "etc/locale.conf").write_text("LANG=" + {"de": "de_DE.UTF-8", "en": "en_US.UTF-8"}.get(lang, "de_DE.UTF-8") + "\n")
+        keymap = c.get("keymap", "de")
+        rc = T / "etc/rc.conf"
+        txt = rc.read_text() if rc.exists() else ""
+        txt = re.sub(r"^\s*(KEYMAP|HARDWARECLOCK)=.*\n?", "", txt, flags=re.M).rstrip("\n")
+        txt = re.sub(r"\n# VoidStation$", "", txt)
+        txt += f'\n\n# VoidStation\nKEYMAP="{ {"de": "de", "us": "us", "gb": "uk"}.get(keymap, "de") }"\n' \
+               f'HARDWARECLOCK="{"localtime" if c.get("rtc_local") else "UTC"}"\n'
+        rc.write_text(txt.lstrip("\n"))
+        xk = T / "etc/X11/xorg.conf.d"
+        xk.mkdir(parents=True, exist_ok=True)
+        (xk / "00-keyboard.conf").write_text(
+            'Section "InputClass"\n  Identifier "system-keyboard"\n  MatchIsKeyboard "on"\n'
+            f'  Option "XkbLayout" "{ {"de": "de", "us": "us", "gb": "gb"}.get(keymap, "de") }"\nEndSection\n')
+        tz = c.get("timezone") or "Europe/Berlin"
+        if not re.fullmatch(r"[A-Za-z_]+(/[A-Za-z0-9_+-]+)*", tz) or not (T / "usr/share/zoneinfo" / tz).is_file():
+            tz = "Europe/Berlin"
+        lt = T / "etc/localtime"
+        if lt.exists() or lt.is_symlink():
+            lt.unlink()
+        lt.symlink_to(f"/usr/share/zoneinfo/{tz}")
+        cc = T / "etc/chrony.conf"
+        if c.get("rtc_local") and cc.exists():
+            cc.write_text(re.sub(r"^rtcsync", "#rtcsync  # VoidStation: Hardware-Uhr in Ortszeit (Windows)", cc.read_text(), flags=re.M))
+        self.progress("configure", 0.1)
+        # fstab (+ Auslagerungsdatei bei wenig RAM)
+        ru, eu = blkid(self.st["root_dev"], "UUID"), blkid(self.st["esp_dev"], "UUID")
+        fstab = ["# <file system>  <dir>  <type>  <options>  <dump>  <pass>",
+                 f"UUID={ru}  /          ext4   defaults,noatime  0 1",
+                 f"UUID={eu}  /boot/efi  vfat   defaults,umask=0077  0 2",
+                 "tmpfs  /tmp  tmpfs  defaults,nosuid,nodev  0 0"]
+        ram_mb = int(re.search(r"MemTotal:\s+(\d+)", open("/proc/meminfo").read()).group(1)) // 1024
+        if ram_mb < 7800 and not (T / "swapfile").exists() and shutil.disk_usage(T).free > 6 * GiB:
+            sh(["fallocate", "-l", "2G", str(T / "swapfile")])
+            os.chmod(T / "swapfile", 0o600)
+            sh(["mkswap", "-q", str(T / "swapfile")])
+        if (T / "swapfile").exists():
+            fstab.append("/swapfile  none  swap  defaults  0 0")
+        (T / "etc/fstab").write_text("\n".join(fstab) + "\n")
+        self.progress("configure", 0.2)
+        # Benutzer
+        if chroot(["id", login], check=False).returncode != 0:
+            groups = [g for g in ("wheel", "audio", "video", "input", "render", "network", "plugdev")
+                      if chroot(["getent", "group", g], check=False).returncode == 0]
+            chroot(["useradd", "-m", "-U", "-s", "/bin/bash", "-G", ",".join(groups), "-c", u["name"], login])
+        chroot(["chpasswd"], input=f"{login}:{u['password']}\nroot:{u['password']}\n")
+        (T / "etc/sudoers.d").mkdir(exist_ok=True)
+        (T / "etc/sudoers.d/wheel").write_text("%wheel ALL=(ALL:ALL) ALL\n")
+        os.chmod(T / "etc/sudoers.d/wheel", 0o440)
+        self.progress("configure", 0.3)
+        # VoidStation selbst: dasselbe install.sh wie bei jeder Installation, nur ohne Internet
+        inst = T / "usr/local/share/voidstation/install.sh"
+        if not inst.exists():
+            raise Fail("no_payload", str(inst))
+        env = ["env", f"VSUSER={login}", f"VSNAME={u['name']}", f"SMBPASS={u['password']}",
+               "SVDIR=/etc/runit/runsvdir/default", "VOIDSTATION_CHROOT=1", "VOIDSTATION_OFFLINE=1",
+               "VOIDSTATION_NONINTERACTIVE=1", "HOME=/root", "TERM=dumb"]
+        r = chroot(env + ["bash", "/usr/local/share/voidstation/install.sh"], check=False)
+        if r.returncode != 0:
+            raise Fail("setup", (r.stdout + r.stderr)[-400:])
+        self.progress("configure", 0.8)
+        # Wahl aus dem Installer uebernehmen
+        vs = T / "home" / login / ".local/share/voidstation"
+        vs.mkdir(parents=True, exist_ok=True)
+        sj = vs / "settings.json"
+        try:
+            s = json.loads(sj.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            s = {}
+        s["lang"] = lang
+        sj.write_text(json.dumps(s, indent=2), encoding="utf-8")
+        if c.get("favorites"):
+            live_home = Path("/home/tv/.local/share/voidstation")
+            for f in ("radio.json", "tvfavs.json"):
+                if (live_home / f).is_file():
+                    shutil.copy2(live_home / f, vs / f)
+        chroot(["chown", "-R", f"{login}:{login}", f"/home/{login}/.local"])
+        sv = T / "etc/runit/runsvdir/default"
+        for s_ in ("sshd",) + (() if c.get("share", True) else ("smbd", "nmbd")):
+            if (sv / s_).is_symlink():
+                (sv / s_).unlink()                         # Fernzugriff: Einstellungen → System
+        if c.get("wifi"):
+            src = Path("/etc/NetworkManager/system-connections")
+            dst = T / "etc/NetworkManager/system-connections"
+            if src.is_dir():
+                dst.mkdir(parents=True, exist_ok=True)
+                os.chmod(dst, 0o700)
+                for f in src.iterdir():
+                    if f.is_file():
+                        shutil.copy2(f, dst / f.name)
+                        os.chmod(dst / f.name, 0o600)
+        ch = T / "usr/local/share/voidstation/channel"
+        ch.parent.mkdir(parents=True, exist_ok=True)
+        ch.write_text(("main" if c.get("channel") == "main" else "stable") + "\n")
+        os.chmod(ch, 0o644)
+        self.progress("configure", 1)
+
+    # --- 7. Startmanager
+    def foreign_loaders(self):
+        """EFI-Lader anderer Systeme auf allen EFI-Partitionen (fuer GRUB-Eintraege)."""
+        out = []
+        lsb = json.loads(sh(["lsblk", "-J", "-o", "PATH,PARTTYPE,FSTYPE,UUID"], quiet=True).stdout)
+
+        def walk(nodes):
+            for n in nodes or []:
+                yield n
+                yield from walk(n.get("children"))
+        for n in walk(lsb.get("blockdevices")):
+            if (n.get("parttype") or "").lower() == GUID["esp"] and n.get("fstype") == "vfat":
+                if n["path"] == self.st["esp_dev"]:
+                    loaders = esp_loaders(TARGET / "boot/efi")
+                else:
+                    loaders = with_mount(n["path"], "vfat", esp_loaders) or []
+                for l in loaders:
+                    if l["vendor"] in ("voidstation", "void_grub", "boot"):
+                        continue
+                    out.append(dict(l, uuid=n.get("uuid")))
+        return out
+
+    def ph_boot(self):
+        c = self.cfg
+        self.mount_target()
+        self.mount_pseudo()
+        T = TARGET
+        kvers = sorted((p.name[len("vmlinuz-"):] for p in (T / "boot").glob("vmlinuz-*")
+                        if (T / "usr/lib/modules" / p.name[len("vmlinuz-"):]).is_dir()),
+                       key=lambda v: [int(x) if x.isdigit() else 0 for x in re.split(r"[._-]", v)])
+        if not kvers:
+            raise Fail("no_kernel")
+        others = self.foreign_loaders()
+        dual = bool(others) or c["mode"] != "whole"
+        esp_free = shutil.disk_usage(T / "boot/efi").free
+        use_stub = not dual and esp_free > 150 * MiB and not self.alt
+        self.st["boot"] = {"dual": dual, "efistub": use_stub, "others": [o["name"] for o in others]}
+        save_state(self.st)
+        grubdef = T / "etc/default/grub"
+        txt = grubdef.read_text() if grubdef.exists() else ""
+        for k, v in (("GRUB_TIMEOUT", "3" if dual else "0"), ("GRUB_TIMEOUT_STYLE", "menu" if dual else "hidden"),
+                     ("GRUB_DISABLE_OS_PROBER", "true"), ("GRUB_DISTRIBUTOR", '"VoidStation"')):
+            txt = re.sub(rf"^#?\s*{k}=.*\n?", "", txt, flags=re.M) + f"{k}={v}\n"
+        grubdef.write_text(txt)
+        # Eintraege fuer andere Systeme: deren eigener EFI-Lader wird gestartet (bleibt bei deren Updates gueltig)
+        gd = T / "etc/grub.d/40_voidstation_andere"
+        if others:
+            lines = ["#!/bin/sh", "# VoidStation: andere Systeme ueber ihren eigenen EFI-Lader starten", "exec tail -n +4 $0"]
+            for o in others:
+                lines += [f'menuentry "{o["name"]}" {{', "    insmod part_gpt", "    insmod fat",
+                          f'    search --no-floppy --fs-uuid --set=root {o["uuid"]}',
+                          f'    chainloader {o["path"]}', "}"]
+            gd.write_text("\n".join(lines) + "\n")
+            os.chmod(gd, 0o755)
+        elif gd.exists():
+            gd.unlink()
+        # EFISTUB (nur ganze SSD): Kernel direkt starten, GRUB bleibt als Rueckfall
+        hook = T / "etc/default/efibootmgr-kernel-hook"
+        ru = blkid(self.st["root_dev"], "UUID")
+        espdev = self.st["esp_dev"]
+        disk = "/dev/" + sh(["lsblk", "-no", "PKNAME", espdev], quiet=True).stdout.split()[0]
+        partno = Path(f"/sys/class/block/{Path(espdev).name}/partition").read_text().strip()
+        kd = T / "etc/kernel.d/post-install"
+        for f in (kd / "40-voidstation-esp", kd / "60-voidstation-bootorder", T / "etc/kernel.d/post-remove/40-voidstation-esp"):
+            if f.exists():
+                f.unlink()
+        if use_stub:
+            hook.write_text(f'MODIFY_EFI_ENTRIES=1\nOPTIONS="root=UUID={ru} ro quiet loglevel=3 rd.udev.log_level=3"\n'
+                            f'DISK="{disk}"\nPART={partno}\n')
+            kd.mkdir(parents=True, exist_ok=True)
+            (T / "etc/kernel.d/post-remove").mkdir(parents=True, exist_ok=True)
+            (kd / "40-voidstation-esp").write_text(
+                '#!/bin/sh\n# VoidStation: Kernel fuer EFISTUB auf die EFI-Partition kopieren\n'
+                'cp -f "/boot/vmlinuz-$2" "/boot/initramfs-$2.img" "/boot/efi/"\n')
+            (T / "etc/kernel.d/post-remove/40-voidstation-esp").write_text('#!/bin/sh\nrm -f "/boot/efi/vmlinuz-$2" "/boot/efi/initramfs-$2.img"\n')
+            (kd / "60-voidstation-bootorder").write_text(
+                '#!/bin/sh\nmajor=$(echo "$1" | cut -c 6-)\n'
+                'num=$(efibootmgr | grep -E "^Boot[0-9A-Fa-f]{4}\\*? Void Linux with kernel ${major}([^0-9]|$)" | head -1 | cut -c5-8)\n'
+                '[ -n "$num" ] || exit 0\n'
+                'rest=$(efibootmgr | sed -n "s/^BootOrder: //p" | tr "," "\\n" | grep -vi "^${num}$" | paste -sd, -)\n'
+                'efibootmgr -qo "${num}${rest:+,$rest}"\n')
+            for f in (kd / "40-voidstation-esp", kd / "60-voidstation-bootorder", T / "etc/kernel.d/post-remove/40-voidstation-esp"):
+                os.chmod(f, 0o744)
+        else:
+            hook.write_text("MODIFY_EFI_ENTRIES=0\n")
+        self.progress("boot", 0.15)
+        # GRUB
+        bootx = next((p for p in (T / "boot/efi/EFI/BOOT/BOOTX64.EFI", T / "boot/efi/EFI/boot/bootx64.efi") if p.exists()), None)
+        base = ["grub-install", "--target=x86_64-efi", "--efi-directory=/boot/efi", "--bootloader-id=VoidStation"]
+        if self.alt:
+            # Ausweichweg: kein NVRAM-Eintrag, nur der Standard-Starter (wenn er frei ist oder schon uns gehoert)
+            if bootx and dual:
+                raise Fail("efi_fallback_taken")
+            r = chroot(base + ["--removable", "--no-nvram"], check=False)
+            if r.returncode != 0:
+                raise Fail("grub", (r.stdout + r.stderr)[-400:])
+        else:
+            r = chroot(base, check=False)
+            if r.returncode != 0:
+                out = r.stdout + r.stderr
+                raise Fail("efi_nvram" if re.search(r"efibootmgr|EFI variable|NVRAM|No space left", out, re.I) else "grub", out[-400:])
+            if not dual or bootx is None:
+                chroot(base + ["--removable"], check=False)   # Standardpfad als Rueckfall, wenn er frei ist
+        self.progress("boot", 0.5)
+        # Initramfs + Kernel-Hooks (EFISTUB-Eintrag) fuer jeden Kernel; allgemeines Initramfs,
+        # weil es im chroot vom Live-System aus gebaut wird (hostonly wuerde die Live-Hardware-Sicht nehmen)
+        dc = T / "etc/dracut.conf.d"
+        dc.mkdir(parents=True, exist_ok=True)
+        (dc / "10-voidstation.conf").write_text('# VoidStation: Initramfs fuer jede Hardware\nhostonly="no"\n')
+        for kv in kvers:
+            pkg = "linux" + ".".join(kv.split(".")[:2])
+            r = chroot(["xbps-reconfigure", "-f", pkg], check=False)
+            if r.returncode != 0 or not (T / f"boot/initramfs-{kv}.img").exists():
+                chroot(["dracut", "--no-hostonly", "--force", f"/boot/initramfs-{kv}.img", kv])
+        self.progress("boot", 0.85)
+        chroot(["grub-mkconfig", "-o", "/boot/grub/grub.cfg"])
+
+    # --- 8. Abschluss
+    def ph_cleanup(self):
+        try:
+            self.mount_target()
+            shutil.copy2(LOG, TARGET / "var/log/voidstation-install.log")
+            os.chmod(TARGET / "var/log/voidstation-install.log", 0o600)
+        except (OSError, Fail):
+            pass
+        self.umount_all()
+
+
+def disk_of(dev):
+    r = sh(["lsblk", "-no", "PKNAME", dev], check=False, quiet=True).stdout.split()
+    return "/dev/" + r[0] if r else None
+
+
+def dev_type(dev):
+    return sh(["lsblk", "-dno", "TYPE", dev], check=False, quiet=True).stdout.strip()
+
+
+def validate(cfg):
+    """Einstellungen aus der Oberflaeche pruefen, bevor irgendetwas veraendert wird. Gibt Fehlerkennung oder None."""
+    mode, disk = cfg.get("mode"), cfg.get("disk", "")
+    if mode not in ("whole", "beside", "free", "manual"):
+        return "bad_config"
+    if not re.fullmatch(r"/dev/[A-Za-z0-9/_-]+", disk) or dev_type(disk) not in DISK_TYPES:
+        return "no_disk"
+    if disk == live_disk():
+        return "live_disk"
+    u = cfg.get("user") or {}
+    name, login, pw = u.get("name", ""), u.get("login", ""), u.get("password", "")
+    if not re.fullmatch(r"[a-z_][a-z0-9_-]{0,30}", login) or login in ("root", "tv", "nobody"):
+        return "bad_login"
+    if not name or re.search(r"[:,=\n\r\\\x00-\x1f]", name) or len(name) > 60:
+        return "bad_name"
+    if not pw or re.search(r"[\n\r\x00]", pw) or len(pw) > 200:
+        return "bad_password"
+    if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,13}[A-Za-z0-9])?", cfg.get("hostname", "")):
+        return "bad_hostname"
+    if cfg.get("lang", "de") not in ("de", "en") or cfg.get("keymap", "de") not in ("de", "us", "gb"):
+        return "bad_config"
+    if mode == "beside":
+        part = cfg.get("part", "")
+        if not re.fullmatch(r"/dev/[A-Za-z0-9/_-]+", part) or disk_of(part) != disk:
+            return "no_disk"
+        try:
+            if int(cfg.get("new_size", 0)) < MIN_ROOT:
+                return "bad_size"
+        except (TypeError, ValueError):
+            return "bad_size"
+    if mode == "free":
+        r = cfg.get("region") or {}
+        if not isinstance(r.get("start"), int) or not isinstance(r.get("sectors"), int) or r["start"] < 34:
+            return "bad_size"
+    if mode == "manual":
+        m = cfg.get("manual") or {}
+        root, esp = m.get("root", ""), m.get("esp", "")
+        for d in (root, esp):
+            if not re.fullmatch(r"/dev/[A-Za-z0-9/_-]+", d) or dev_type(d) != "part":
+                return "no_disk"
+        if root == esp or live_disk() in (disk_of(root), disk_of(esp)):
+            return "bad_manual"
+        if int(sh(["blockdev", "--getsize64", root], quiet=True).stdout) < MIN_ROOT - 512 * MiB:
+            return "too_small"
+    return None
+
+
+def cmd_run(args):
+    RUNDIR.mkdir(parents=True, exist_ok=True)
+    os.chmod(RUNDIR, 0o700)
+    if "--resume" in args:
+        st = read_json_state()
+        if not st:
+            emit(ev="error", phase="check", code="no_state", msg="Kein Stand zum Fortsetzen")
+            return 1
+        st.pop("error", None)
+        log("=== Neuer Versuch", "(Ausweichweg)" if "--alt" in args else "")
+        if "--alt" in args and "boot" in st.get("done", []):
+            st["done"].remove("boot")
+    else:
+        try:
+            cfg = json.loads(sys.stdin.read() or "{}")
+        except ValueError:
+            cfg = {}
+        bad = validate(cfg) if isinstance(cfg, dict) else "bad_config"
+        if bad:
+            emit(ev="error", phase="check", code=bad, msg=bad, done=[], foreign_untouched=True, log=[], alt=False)
+            return 1
+        if LOG.exists():
+            LOG.rename(LOG.with_suffix(".log.alt"))
+        st = {"config": cfg, "done": [], "started": time.time()}
+        save_state(st)
+        log("=== VoidStation-Installation", json.dumps({k: v for k, v in cfg.items() if k != "user"}, ensure_ascii=False))
+    return Run(st).run(alt="--alt" in args)
+
+
+# ---------------------------------------------------------------------------
+#  GParted, Protokoll sichern, Terminal
+# ---------------------------------------------------------------------------
+def cmd_gparted(args):
+    if len(args) < 2 or not re.fullmatch(r":\d+(\.\d+)?", args[0]) or not re.fullmatch(r"/[\w./-]+", args[1]):
+        print("gparted DISPLAY XAUTHORITY"); return 2
+    if not LIVE_MARK.exists():
+        return 2
+    env = {"PATH": "/usr/bin:/usr/sbin:/bin:/sbin", "DISPLAY": args[0], "XAUTHORITY": args[1], "HOME": "/root"}
+    subprocess.Popen(["gparted"], env=env, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    print(json.dumps({"ok": True}))
+    return 0
+
+
+def cmd_savelog(_args):
+    """Protokoll auf den ersten beschreibbaren USB-Datentraeger (FAT/exFAT/NTFS) kopieren."""
+    lsb = json.loads(sh(["lsblk", "-J", "-p", "-o", "NAME,TRAN,RM,FSTYPE,MOUNTPOINT,TYPE"], quiet=True).stdout)
+    name = f"voidstation-install-{time.strftime('%Y%m%d-%H%M')}.log"
+    for d in lsb.get("blockdevices", []):
+        if d.get("tran") != "usb" and not d.get("rm"):
+            continue
+        for p in [d] + (d.get("children") or []):
+            if p.get("fstype") not in ("vfat", "exfat", "ntfs"):
+                continue
+            mp, own = p.get("mountpoint"), False
+            if not mp:
+                mnt = RUNDIR / "usb"
+                mnt.mkdir(parents=True, exist_ok=True)
+                if sh(["mount", "-o", "rw", p["name"], str(mnt)], check=False).returncode != 0:
+                    continue
+                mp, own = str(mnt), True
+            try:
+                shutil.copy2(LOG, Path(mp) / name)
+                sh(["sync"], check=False)
+                print(json.dumps({"ok": True, "device": p["name"], "file": name}))
+                return 0
+            except OSError:
+                pass
+            finally:
+                if own:
+                    sh(["umount", mp], check=False)
+    print(json.dumps({"ok": False, "code": "no_usb"}))
+    return 1
+
+
+def cmd_text(_args):
+    """Rueckfall im Terminal: ganze SSD, wenige Fragen."""
+    p = probe()
+    if not p["uefi"]:
+        print("Nicht im UEFI-Modus gestartet – im Firmware-Setup UEFI einschalten (CSM/Legacy aus)."); return 1
+    disks = [d for d in p["disks"] if d["options"].get("whole")]
+    if not disks:
+        print("Keine passende interne SSD gefunden (mind. 17 GB)."); return 1
+    for i, d in enumerate(disks, 1):
+        print(f"  {i}) {d['path']}  {d['size'] // 10**9} GB  {d['model']}  {', '.join(d['systems'])}")
+    n = int(input("Nummer der Ziel-SSD (wird KOMPLETT geloescht): ") or "1")
+    disk = disks[n - 1]["path"]
+    name = input("Name [Paul]: ").strip() or "Paul"
+    login = re.sub(r"[^a-z0-9_-]", "", name.lower().replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")) or "user"
+    while True:
+        pw = getpass.getpass("Passwort: ")
+        if pw and pw == getpass.getpass("Nochmal: "):
+            break
+        print("Leer oder nicht gleich.")
+    host = input("Rechnername [tv]: ").strip() or "tv"
+    if input(f"ALLE Daten auf {disk} loeschen? JA eintippen: ") != "JA":
+        print("Abgebrochen."); return 1
+    cfg = {"mode": "whole", "disk": disk, "user": {"name": name, "login": login, "password": pw}, "hostname": host,
+           "lang": "de", "keymap": "de", "timezone": "Europe/Berlin", "channel": "stable", "wifi": True, "share": True,
+           "favorites": True, "rtc_local": False}
+    bad = validate(cfg)
+    if bad:
+        print("Ungueltige Angabe:", bad); return 1
+    RUNDIR.mkdir(parents=True, exist_ok=True)
+    st = {"config": cfg, "done": [], "started": time.time()}
+    save_state(st)
+    return Run(st).run()
+
+
+def main(argv):
+    if os.geteuid() != 0:
+        print("nur als root"); return 2
+    cmd, args = (argv[1] if len(argv) > 1 else ""), argv[2:]
+    if cmd == "probe":
+        print(json.dumps(probe(), ensure_ascii=False)); return 0
+    if cmd == "run":
+        return cmd_run(args)
+    if cmd == "gparted":
+        return cmd_gparted(args)
+    if cmd == "savelog":
+        return cmd_savelog(args)
+    if cmd == "log":
+        try:
+            print(LOG.read_text(encoding="utf-8")[-20000:])
+        except OSError:
+            pass
+        return 0
+    if cmd == "text":
+        return cmd_text(args)
+    print(__doc__); return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
