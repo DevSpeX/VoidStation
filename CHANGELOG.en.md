@@ -3,6 +3,10 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.7.3 – 2026-09-29
+- No more “update” to an older version (e.g. when Stable is still behind the installed version)
+- Live system: no update status in Settings
+
 ## 0.7.2 – 2026-09-29
 - ISO build: the live-system setup script is now executable (fixes the abort at step 7/13)
 

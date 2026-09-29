@@ -1184,6 +1184,7 @@ function showVs() {
   const el = $('#vsInfo'); if (!el) return;
   const sv = sett && sett.version;
   const ver = (vsState && vsState.local) || (sv && (sv.version || sv.build)) || '–';
+  if (sett?.live) { el.innerHTML = `VoidStation ${esc(ver)}<br>${esc(T('settings.liveInfo'))}`; return; }
   let st = esc(T('upd.searching'));
   if (vsState) st = vsState.available ? `<b>${esc(T('upd.available', { version: vsState.remote }))}</b>`
     : esc(vsState.remote ? T('upd.current') : T('upd.unreachable'));

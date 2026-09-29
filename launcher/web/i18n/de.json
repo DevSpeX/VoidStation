@@ -125,6 +125,7 @@
   "settings.sshOn": "Fernzugriff an – z. B. per PuTTY auf {host}",
   "settings.sshOff": "Fernzugriff aus",
   "settings.channel": "Update-Kanal",
+  "settings.liveInfo": "Live-System – Updates gibt es nach der Installation",
   "wifi.scanning": "Suche WLAN-Netze …",
   "wifi.scanFailed": "WLAN-Suche fehlgeschlagen: {msg}",
   "wifi.connecting": "Verbinde mit „{ssid}“ …",
