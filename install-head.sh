@@ -47,7 +47,7 @@ for d in /sys/bus/pci/devices/*; do
   case "$(cat "$d/class" 2>/dev/null)" in 0x03*) ;; *) continue ;; esac
   case "$(cat "$d/vendor" 2>/dev/null)" in
     0x8086) echo "GPU: Intel";  GPU_PKGS="$GPU_PKGS mesa-intel-dri intel-video-accel mesa-vulkan-intel" ;;
-    0x1002) echo "GPU: AMD";    GPU_PKGS="$GPU_PKGS mesa-ati-dri mesa-vaapi mesa-vdpau mesa-vulkan-radeon" ;;
+    0x1002) echo "GPU: AMD";    GPU_PKGS="$GPU_PKGS mesa-ati-dri mesa-vaapi mesa-vulkan-radeon" ;;
     0x10de) echo "GPU: NVIDIA (nouveau)"; GPU_PKGS="$GPU_PKGS mesa-nouveau-dri" ;;
   esac
 done

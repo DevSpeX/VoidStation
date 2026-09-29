@@ -3,6 +3,9 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.7.1 – 2026-09-29
+- ISO build: packages that no longer exist in the Void repositories (e.g. mesa-vdpau) are skipped instead of aborting the build
+
 ## 0.7.0 – 2026-09-29
 - XLibre is now the only display server – the update removes X.Org, and the choice in Settings is gone
 - If the interface fails to start twice, XLibre gets reinstalled once; after that a rescue console follows

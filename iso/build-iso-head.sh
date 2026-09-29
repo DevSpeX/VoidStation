@@ -78,12 +78,23 @@ grep -q '<plist' "$MK/keys/$XLIBRE_KEYFP.plist" || die "XLibre-Schluessel nicht 
 
 # Paketliste: alles, was install.sh braucht, dazu Grafiktreiber fuer Intel, AMD und NVIDIA
 # und die Werkzeuge des Installers
-GPU_PKGS="mesa-dri mesa-intel-dri intel-video-accel mesa-vulkan-intel mesa-ati-dri mesa-vaapi mesa-vdpau mesa-vulkan-radeon mesa-nouveau-dri"
+GPU_PKGS="mesa-dri mesa-intel-dri intel-video-accel mesa-vulkan-intel mesa-ati-dri mesa-vaapi mesa-vulkan-radeon mesa-nouveau-dri"
 eval "$(sed -n '/^PKGS="/,/"$/p' "$SRC/install.sh" | head -20)"
 [ -n "${PKGS:-}" ] || die "Paketliste aus install.sh nicht lesbar."
 LIVE_PKGS="$PKGS void-repo-nonfree xlibre-minimal linux-firmware grub-x86_64-efi efibootmgr dracut sudo \
   gparted ntfs-3g btrfs-progs dosfstools e2fsprogs xfsprogs gptfdisk pciutils util-linux tar curl"
 LIVE_PKGS="$(echo $LIVE_PKGS | tr ' ' '\n' | awk 'NF && !seen[$0]++' | tr '\n' ' ')"
+# Pakete, die es in den Quellen nicht (mehr) gibt, weglassen statt den ganzen Bau abzubrechen
+xbps-install -S >/dev/null 2>&1 || warn "Paketlisten konnten nicht aktualisiert werden"
+OK_PKGS="" SKIPPED=""
+for p in $LIVE_PKGS; do
+  if xbps-query -R "$p" >/dev/null 2>&1; then OK_PKGS="$OK_PKGS $p"; else SKIPPED="$SKIPPED $p"; fi
+done
+[ -n "$SKIPPED" ] && warn "nicht in den Paketquellen, weggelassen:$SKIPPED"
+for p in xlibre-minimal firefox python3 NetworkManager grub-x86_64-efi; do
+  case " $OK_PKGS " in *" $p "*) ;; *) die "Pflichtpaket fehlt in den Paketquellen: $p" ;; esac
+done
+LIVE_PKGS="${OK_PKGS# }"
 echo "$(echo $LIVE_PKGS | wc -w) Pakete"
 
 # ---------------------------------------------------------------------
