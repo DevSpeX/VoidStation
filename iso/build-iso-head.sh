@@ -58,6 +58,7 @@ say "3/5  VoidStation-Dateien fuer den Stick zusammenstellen"
 SRC="$WORK/files"; INC="$WORK/include"
 rm -rf "$SRC" "$INC"; mkdir -p "$SRC" "$INC"
 sed -n '/^__PAYLOAD_BELOW__$/,$p' "$0" | tail -n +2 | base64 -d | tar -xz -C "$SRC"
+chmod 755 "$SRC/postsetup.sh" "$SRC/grub-entries.py"          # mklive startet postsetup direkt
 
 install -D -m 755 "$SRC/voidstation-installer"      "$INC/usr/local/sbin/voidstation-installer"
 install -D -m 644 "$SRC/install.sh"                 "$INC/usr/local/share/voidstation/install.sh"
