@@ -4,6 +4,14 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.8.0 – 2026-09-30
+- Designs: Dunkel, Hell, Hoher Kontrast und Nord – unter Einstellungen → Anzeige
+- Bildschirmtastatur für Suchfelder und WLAN-Passwort – bedienbar mit Controller, Fernbedienung oder Tastatur
+- Bluetooth: Kopfhörer und Controller in den Einstellungen suchen, koppeln, verbinden und entkoppeln (nach dem Update einmal neu starten)
+- Spiele: Emulator-Kacheln zeigen die Spiele aus der Freigabe (share/ROMs/<System>) und starten sie direkt
+- Fernsehen: Programmvorschau (EPG) mit laufender und nächster Sendung – sobald eine EPG-Quelle eingetragen ist
+- Danke an DevSpeX für diese Version!
+
 ## 0.7.8 – 2026-09-29
 - Installer: Benutzer- und Root-Passwort werden jetzt wirklich gesetzt – bisher blieben beide Konten ohne Passwort, sudo und su schlugen fehl; der Installer prüft das jetzt und bricht sonst ab
 - Installiertes System: keine Begrüßung des Live-Sticks („root:voidlinux …“) mehr auf der Textkonsole

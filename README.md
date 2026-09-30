@@ -164,6 +164,14 @@ Neue Themes können als CSS-Datei direkt in `launcher/web/themes/<theme-name>.cs
 
 VoidStation erkennt neue CSS-Dateien im Theme-Ordner automatisch und bietet sie direkt in den Einstellungen an.
 
+## Spiele, Bluetooth, Programmvorschau
+
+- **Spiele:** ROMs in die Freigabe unter `share/ROMs/<System>` kopieren (`gba`, `snes`, `nes`, `psx`, `psp`, `nds`, `gamecube`, `dreamcast` …). Die Emulator-Kachel zeigt dann eine Spieleliste; ohne Spiele startet der Emulator direkt.
+- **Bluetooth:** Einstellungen → Bluetooth. Bringt `bluez` und `libspa-bluetooth` (Ton über PipeWire) mit; der Benutzer ist in der Gruppe `bluetooth` – nach der Installation bzw. dem Update einmal neu starten.
+- **Programmvorschau (EPG):** standardmäßig aus. Einschalten, indem man die Adresse einer XMLTV-Datei (`.xml` oder `.xml.gz`) einträgt:
+  `echo 'https://…/epg.xml.gz' | sudo tee /usr/local/share/voidstation/epg-url`
+  Die Datei wird täglich geladen, im Hintergrund eingelesen und als kleine `~/.local/share/voidstation/cache/epg.json` zwischengespeichert.
+
 ## Aufbau
 
 | Pfad | Inhalt |
