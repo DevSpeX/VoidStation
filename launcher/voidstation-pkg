@@ -67,6 +67,22 @@ selfupdate() {
 }
 
 # ---------------------------------------------------------------------
+#  Bluetooth-Dienst (bluetoothd) an/aus
+# ---------------------------------------------------------------------
+bluetooth_ctl() {
+  case "$1" in
+    on)
+      [ -d /etc/sv/bluetoothd ] || xbps-install -Sy bluez || return 1
+      [ -e /var/service/bluetoothd ] || ln -s /etc/sv/bluetoothd /var/service/
+      echo "Bluetooth an"
+      ;;
+    off) rm -f /var/service/bluetoothd; echo "Bluetooth aus" ;;
+    status|"") [ -e /var/service/bluetoothd ] && echo on || echo off ;;
+    *) echo "bluetooth: on | off | status"; return 2 ;;
+  esac
+}
+
+# ---------------------------------------------------------------------
 #  Grafik-Server: ausschliesslich XLibre (Pakete von xlibre-void)
 # ---------------------------------------------------------------------
 xlibre_key() {   # Signaturschluessel des xlibre-void-Repos (Fingerabdruck geprueft: 00:ca:42:57:…)
@@ -193,12 +209,15 @@ main() {
     ssh)                                    # Fernzugriff: on | off | status
       ssh_ctl "$1"
       ;;
+    bluetooth)                              # Bluetooth-Dienst: on | off | status
+      bluetooth_ctl "$1"
+      ;;
     channel)                                # Update-Kanal waehlen: stable (Standard) oder main (Test)
       case "$1" in stable|main) echo "$1" > "$CHANNELFILE"; chmod 644 "$CHANNELFILE"; echo "Kanal: $1" ;;
         *) echo "Kanal muss stable oder main sein"; return 2 ;; esac
       ;;
     *)
-      echo "Benutzung: voidstation-pkg install|remove|markauto <paket>... | sync | update | check | selfupdate | channel stable|main | xserver ensure|repair|status | ssh on|off|status"
+      echo "Benutzung: voidstation-pkg install|remove|markauto <paket>... | sync | update | check | selfupdate | channel stable|main | xserver ensure|repair|status | ssh on|off|status | bluetooth on|off|status"
       return 2
       ;;
   esac

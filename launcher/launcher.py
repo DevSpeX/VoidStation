@@ -78,9 +78,9 @@ def expand(args):
     return [os.path.expandvars(os.path.expanduser(a)) for a in args]
 
 
-def run(args, **kw):
+def run(args, timeout=5, **kw):
     try:
-        return subprocess.run(args, capture_output=True, text=True, timeout=5, **kw)
+        return subprocess.run(args, capture_output=True, text=True, timeout=timeout, **kw)
     except (OSError, subprocess.TimeoutExpired):
         return None
 
@@ -1851,6 +1851,124 @@ class ROMManager:
 
 
 ROMS = ROMManager()
+#  Bluetooth: Audio-Kopfhörer und Wireless Gamepads
+# ---------------------------------------------------------------------------
+class BluetoothManager:
+    """Verwaltet Bluetooth-Geräte (Headsets, Gamepads, etc.) über bluetoothctl."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self._scanning = False
+
+    def is_available(self):
+        return bool(shutil.which("bluetoothctl"))
+
+    def is_service_active(self):
+        return os.path.exists("/var/service/bluetoothd")
+
+    def is_powered(self):
+        r = run(["bluetoothctl", "show"])
+        if r and r.returncode == 0:
+            for line in r.stdout.splitlines():
+                if "Powered: yes" in line:
+                    return True
+        return False
+
+    def status(self):
+        available = self.is_available()
+        service = self.is_service_active()
+        powered = self.is_powered() if (available and service) else False
+        devices = self.list_devices() if powered else []
+        return {
+            "available": available,
+            "service": service,
+            "powered": powered,
+            "scanning": self._scanning,
+            "devices": devices,
+        }
+
+    MAC_RE = re.compile(r"^[0-9A-F]{2}(:[0-9A-F]{2}){5}$", re.I)
+
+    @staticmethod
+    def _named(mac, name):
+        # Geraete ohne Namen (bluetoothctl zeigt dann die MAC mit Bindestrichen) nicht anbieten
+        return name.replace("-", ":").upper() != mac.upper()
+
+    def list_devices(self):
+        devs = {}
+        # BlueZ 5: 'devices Paired'
+        r = run(["bluetoothctl", "devices", "Paired"])
+        if r and r.returncode == 0:
+            for line in r.stdout.splitlines():
+                parts = line.strip().split(None, 2)
+                if len(parts) >= 3 and parts[0] == "Device":
+                    mac = parts[1]
+                    name = parts[2]
+                    devs[mac] = {"mac": mac, "name": name, "paired": True, "connected": False, "icon": "bluetooth"}
+        r = run(["bluetoothctl", "devices"])
+        if r and r.returncode == 0:
+            for line in r.stdout.splitlines():
+                parts = line.strip().split(None, 2)
+                if len(parts) >= 3 and parts[0] == "Device":
+                    mac = parts[1]
+                    name = parts[2]
+                    if mac not in devs and self._named(mac, name):
+                        devs[mac] = {"mac": mac, "name": name, "paired": False, "connected": False, "icon": "bluetooth"}
+
+        for mac, d in list(devs.items())[:25]:
+            info = run(["bluetoothctl", "info", mac])
+            if info and info.returncode == 0:
+                for line in info.stdout.splitlines():
+                    line = line.strip()
+                    if line.startswith("Connected: yes"):
+                        d["connected"] = True
+                    elif line.startswith("Icon:"):
+                        icon_type = line.split(":", 1)[1].strip()
+                        if any(w in icon_type for w in ("audio", "headset", "headphone")):
+                            d["icon"] = "audio"
+                        elif any(w in icon_type for w in ("gamepad", "joystick", "input-gaming")):
+                            d["icon"] = "gamepad"
+        return sorted(devs.values(), key=lambda x: (-x["connected"], -x["paired"], x["name"].lower()))
+
+    def start_scan(self):
+        with self.lock:
+            if self._scanning:
+                return
+            self._scanning = True
+
+        def _do_scan():
+            try:
+                run(["bluetoothctl", "--timeout", "10", "scan", "on"], timeout=15)
+            finally:
+                with self.lock:
+                    self._scanning = False
+
+        threading.Thread(target=_do_scan, daemon=True).start()
+
+    def pair(self, mac):
+        run(["bluetoothctl", "pair", mac], timeout=20)
+        run(["bluetoothctl", "trust", mac], timeout=10)
+        r = run(["bluetoothctl", "connect", mac], timeout=20)
+        return bool(r and r.returncode == 0)
+
+    def connect(self, mac):
+        r = run(["bluetoothctl", "connect", mac], timeout=20)
+        return bool(r and r.returncode == 0)
+
+    def disconnect(self, mac):
+        r = run(["bluetoothctl", "disconnect", mac], timeout=15)
+        return bool(r and r.returncode == 0)
+
+    def remove(self, mac):
+        r = run(["bluetoothctl", "remove", mac], timeout=15)
+        return bool(r and r.returncode == 0)
+
+    def power(self, on):
+        r = run(["bluetoothctl", "power", "on" if on else "off"], timeout=10)
+        return bool(r and r.returncode == 0)
+
+
+BLUETOOTH = BluetoothManager()
 
 
 # ---------------------------------------------------------------------------
@@ -1965,6 +2083,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, {"systems": summary})
             roms = ROMS.list_roms(system)
             return self._json(200, {"system": ROMS.canonical_system(system), "count": len(roms), "roms": roms})
+        if path == "/api/bluetooth/status":
+            return self._json(200, BLUETOOTH.status())
         if path == "/tiles.json":
             try:
                 c = json.loads(CONFIG.read_text(encoding="utf-8"))
@@ -2162,6 +2282,44 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(400, {"error": f"Emulator nicht gefunden: {e.filename or e}"})
                 except (ValueError, RuntimeError) as e:
                     return self._json(400, {"error": str(e)})
+            if parts == ["api", "bluetooth", "scan"]:
+                BLUETOOTH.start_scan()
+                return self._json(200, BLUETOOTH.status())
+            if parts == ["api", "bluetooth", "pair"]:
+                mac = str(self._body().get("mac", ""))
+                if not BLUETOOTH.MAC_RE.match(mac):
+                    return self._json(400, {"error": "ungueltige Geraeteadresse"})
+                ok = BLUETOOTH.pair(mac)
+                return self._json(200, {"ok": ok, "status": BLUETOOTH.status()})
+            if parts == ["api", "bluetooth", "connect"]:
+                mac = str(self._body().get("mac", ""))
+                if not BLUETOOTH.MAC_RE.match(mac):
+                    return self._json(400, {"error": "ungueltige Geraeteadresse"})
+                ok = BLUETOOTH.connect(mac)
+                return self._json(200, {"ok": ok, "status": BLUETOOTH.status()})
+            if parts == ["api", "bluetooth", "disconnect"]:
+                mac = str(self._body().get("mac", ""))
+                if not BLUETOOTH.MAC_RE.match(mac):
+                    return self._json(400, {"error": "ungueltige Geraeteadresse"})
+                ok = BLUETOOTH.disconnect(mac)
+                return self._json(200, {"ok": ok, "status": BLUETOOTH.status()})
+            if parts == ["api", "bluetooth", "remove"]:
+                mac = str(self._body().get("mac", ""))
+                if not BLUETOOTH.MAC_RE.match(mac):
+                    return self._json(400, {"error": "ungueltige Geraeteadresse"})
+                ok = BLUETOOTH.remove(mac)
+                return self._json(200, {"ok": ok, "status": BLUETOOTH.status()})
+            if parts == ["api", "bluetooth", "power"]:
+                b = self._body()
+                on = b.get("powered") if "powered" in b else b.get("on")
+                ok = BLUETOOTH.power(bool(on))
+                return self._json(200, {"ok": ok, "status": BLUETOOTH.status()})
+            if parts == ["api", "bluetooth", "service"]:
+                b = self._body()
+                on = (b.get("action") == "start") if "action" in b else bool(b.get("on"))
+                subprocess.run(["sudo", "-n", PKG_HELPER, "bluetooth", "on" if on else "off"],
+                               capture_output=True, text=True, timeout=30)
+                return self._json(200, BLUETOOTH.status())
             if parts[:2] == ["api", "volume"] and len(parts) == 3:
                 return self._json(200, volume_set(parts[2]) or {})
             if parts[:2] == ["api", "power"] and len(parts) == 3 and parts[2] in POWER:

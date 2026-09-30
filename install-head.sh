@@ -54,7 +54,7 @@ done
 PKGS="xinit xauth xset xrandr setxkbmap $GPU_PKGS \
   openbox dbus elogind xrdb pulseaudio-utils curl python3 python3-evdev wmctrl unclutter-xfixes \
   firefox vlc mpv samba flatpak adwaita-qt adwaita-qt6 gnome-themes-extra xsetroot python3-gobject libwebkit2gtk41 pcmanfm gvfs xterm \
-  pipewire wireplumber alsa-utils \
+  pipewire wireplumber alsa-utils bluez libspa-bluetooth \
   noto-fonts-ttf noto-fonts-emoji noto-fonts-cjk dejavu-fonts-ttf \
   NetworkManager chrony htop nano fastfetch mousepad"
 MISSING=""
@@ -148,7 +148,7 @@ TERM_NAME=linux
 EOF
 
 # Gruppen: Gamepad/Eingabe, Ton, Grafik
-for g in input audio video render; do
+for g in input audio video render bluetooth; do
   getent group "$g" >/dev/null && usermod -aG "$g" "$VSUSER" || true
 done
 

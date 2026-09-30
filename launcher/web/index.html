@@ -269,6 +269,8 @@
   .romcard .romicon svg { width: 100%; height: 100%; }
   .romcard .romname { font-size: calc(16px * var(--f)); font-weight: 500; z-index: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .romcard .romsub { font-size: calc(12px * var(--f)); color: var(--text-dim); z-index: 1; margin-top: calc(2px * var(--f)); }
+  .btlist { display: flex; flex-direction: column; gap: calc(6px * var(--f)); margin-top: calc(8px * var(--f)); align-items: flex-start; }
+  .btlist > .row { flex-wrap: nowrap; margin: 0; }
   /* Globales OSD-Keyboard */
   #osk.dialog { z-index: 45; }
   .osk-band { display: flex; flex-direction: column; gap: calc(14px * var(--f)); max-width: 90vw; margin: 0 auto; width: 100%; }
@@ -1180,8 +1182,12 @@ const DEMO_SETT = { scale: 1.75, scales: [1, 1.25, 1.5, 1.75, 2, 2.25], theme: '
   audio: { ok: true, outputs: [{ card: 'c', profile: 'output:hdmi-stereo', label: 'Digital Stereo (HDMI)', active: true }, { card: 'c', profile: 'output:analog-stereo', label: 'Analog Stereo', active: false }] },
   volume: { level: 45, muted: false }, net: { hostname: 'void', addresses: [{ iface: 'enp1s0', ip: '192.168.178.49' }] } };
 
+let btState = null, btScanning = false;
 async function loadSettings() {
-  try { sett = offline ? DEMO_SETT : await getJSON('/api/settings'); } catch { toast(T('settings.loadFailed'), true); return; }
+  try {
+    sett = offline ? DEMO_SETT : await getJSON('/api/settings');
+    try { btState = offline ? { available: true, service: true, powered: true, devices: [{ mac: '11:22:33:44:55:66', name: 'Xbox Wireless Controller', paired: true, connected: true }] } : await getJSON('/api/bluetooth/status'); } catch { btState = { available: false }; }
+  } catch { toast(T('settings.loadFailed'), true); return; }
   renderSettings();
   refreshVs(false);
 }
@@ -1299,6 +1305,56 @@ function renderSettings() {
       ? `${esc(T('settings.shareHow'))}<br><b>\\\\${esc(sett.net.hostname)}\\share</b>` + (ip ? `<br>${esc(T('settings.shareOr'))} <b>\\\\${esc(ip)}\\share</b>` : '') + `<br>${T('settings.shareLogin', { user: `<b>${esc(sett.share.user || '')}</b>` })}`
       : esc(T('settings.shareOff'));
     fc.appendChild(fi);
+  }
+
+  // Bluetooth
+  const bc = col(tr, T('bt.title'));
+  if (!btState || !btState.available) {
+    const bi = document.createElement('div'); bi.className = 'info';
+    bi.textContent = T('bt.unsupported');
+    bc.appendChild(bi);
+  } else if (!btState.service) {
+    const bi = document.createElement('div'); bi.className = 'info';
+    bi.textContent = T('bt.serviceOff');
+    bc.appendChild(bi);
+    const rb = row(bc);
+    const srv = pill(esc(T('bt.startService')), btStartService); srv.dataset.key = 'btsrv'; rb.appendChild(srv);
+  } else {
+    const rbt = row(bc);
+    const pwr = pill(esc(T(btState.powered ? 'bt.powerOff' : 'bt.powerOn')), btTogglePower, btState.powered); pwr.dataset.key = 'btpwr'; rbt.appendChild(pwr);
+    if (btState.powered) {
+      const scn = pill(esc(btScanning ? T('bt.scanning') : T('bt.scan')), btScan); scn.dataset.key = 'btscan'; rbt.appendChild(scn);
+      const devs = btState.devices || [];
+      if (devs.length) {
+        const rd = row(bc, T('bt.available'));
+        rd.classList.add('btlist');
+        for (const d of devs.slice(0, 10)) {
+          const isConn = !!d.connected, isPaired = !!d.paired;
+          const statusTxt = isConn ? ` · ${T('bt.connected')}` : isPaired ? ` · ${T('bt.paired')}` : '';
+          const b = pill(`${esc(d.name || d.mac)}<span class="sig">${statusTxt}</span>`, () => {
+            if (isConn) btDisconnect(d.mac);
+            else if (isPaired) btConnect(d.mac);
+            else btPair(d.mac);
+          }, isConn);
+          b.dataset.key = 'bt' + d.mac.replace(/[^A-Za-z0-9]/g, '');
+          if (isPaired) {
+            const dr = document.createElement('div');
+            dr.className = 'row';
+            dr.appendChild(b);
+            const rm = pill(esc(T('bt.remove')), () => btRemove(d.mac));
+            rm.dataset.key = 'btrm' + d.mac.replace(/[^A-Za-z0-9]/g, '');
+            dr.appendChild(rm);
+            rd.appendChild(dr);
+          } else {
+            rd.appendChild(b);
+          }
+        }
+      } else {
+        const bi = document.createElement('div'); bi.className = 'info';
+        bi.textContent = btScanning ? T('bt.scanning') : T('bt.noDevices');
+        bc.appendChild(bi);
+      }
+    }
   }
 
   // System
@@ -1437,6 +1493,87 @@ async function wifiConnect(ssid, pw) {
   toast(T('wifi.connecting', { ssid }));
   try { sett = await api('/api/wifi/connect', { ssid, password: pw }); wifiPick = null; toast(T('wifi.connected', { ssid })); renderSettings(); }
   catch (e) { toast(T('wifi.failed', { msg: e.message }), true); }
+}
+async function btTogglePower() {
+  if (!btState) return;
+  const target = !btState.powered;
+  toast(T(target ? 'bt.poweringOn' : 'bt.poweringOff'));
+  try {
+    const res = await api('/api/bluetooth/power', { powered: target });
+    btState = res.status || btState;
+    renderSettings();
+  } catch (e) { toast(T('common.failedMsg', { msg: e.message }), true); }
+}
+async function btStartService() {
+  toast(T('bt.startingService'));
+  try {
+    btState = await api('/api/bluetooth/service', { action: 'start' });
+    renderSettings();
+  } catch (e) { toast(T('common.failedMsg', { msg: e.message }), true); }
+}
+async function btScan() {
+  if (btScanning) return;
+  btScanning = true;
+  toast(T('bt.scanningToast'));
+  renderSettings();
+  try {
+    await api('/api/bluetooth/scan', {});
+    const start = Date.now();
+    const iv = setInterval(async () => {
+      try {
+        btState = await getJSON('/api/bluetooth/status');
+        if (layer() === 'settings') renderSettings();
+        if (!btState.scanning || Date.now() - start > 14000) {
+          clearInterval(iv);
+          btScanning = false;
+          if (layer() === 'settings') renderSettings();
+        }
+      } catch {
+        clearInterval(iv);
+        btScanning = false;
+      }
+    }, 1500);
+  } catch (e) {
+    btScanning = false;
+    renderSettings();
+    toast(T('common.failedMsg', { msg: e.message }), true);
+  }
+}
+async function btConnect(mac) {
+  toast(T('bt.connecting'));
+  try {
+    const res = await api('/api/bluetooth/connect', { mac });
+    btState = res.status || btState;
+    toast(res.ok ? T('bt.connectedToast') : T('bt.connectFailed'), !res.ok);
+    renderSettings();
+  } catch (e) { toast(T('common.failedMsg', { msg: e.message }), true); }
+}
+async function btDisconnect(mac) {
+  toast(T('bt.disconnecting'));
+  try {
+    const res = await api('/api/bluetooth/disconnect', { mac });
+    btState = res.status || btState;
+    toast(T('bt.disconnectedToast'));
+    renderSettings();
+  } catch (e) { toast(T('common.failedMsg', { msg: e.message }), true); }
+}
+async function btPair(mac) {
+  toast(T('bt.pairing'));
+  try {
+    const res = await api('/api/bluetooth/pair', { mac });
+    btState = res.status || btState;
+    toast(res.ok ? T('bt.pairedToast') : T('bt.pairFailed'), !res.ok);
+    renderSettings();
+  } catch (e) { toast(T('common.failedMsg', { msg: e.message }), true); }
+}
+async function btRemove(mac) {
+  toast(T('bt.disconnecting'));
+  try {
+    const res = await api('/api/bluetooth/remove', { mac });
+    btState = res.status || btState;
+    toast(T('bt.disconnectedToast'));
+    renderSettings();
+  } catch (e) { toast(T('common.failedMsg', { msg: e.message }), true); }
 }
 
 /* ============================================================ Fernsehen */

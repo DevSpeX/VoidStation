@@ -52,7 +52,7 @@ done
 say "1/8  Pakete"
 MISSING=""
 for p in curl elogind xrdb pulseaudio-utils mpv samba flatpak adwaita-qt adwaita-qt6 gnome-themes-extra xsetroot python3-gobject libwebkit2gtk41 \
-         htop nano fastfetch mousepad; do
+         bluez libspa-bluetooth htop nano fastfetch mousepad; do
   xbps-query "$p" >/dev/null 2>&1 || MISSING="$MISSING $p"
 done
 if [ -n "$MISSING" ]; then xbps-install -Sy $MISSING || warn "Paketinstallation fehlgeschlagen"; else echo "alles da"; fi
@@ -120,6 +120,9 @@ for t in [t for g in c["groups"] for t in g["tiles"]]:
 json.dump(c, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 PYEOF
 xbps-query vba-m >/dev/null 2>&1 && xbps-remove -Ry vba-m >/dev/null 2>&1 && echo "defektes vba-m entfernt"
+
+# Bluetooth: bluetoothctl braucht die Gruppe bluetooth (wirkt nach dem naechsten Neustart)
+getent group bluetooth >/dev/null && usermod -aG bluetooth "$VSUSER" || true
 
 say "3/8  AppCenter-Helfer (installiert nur freigegebene Pakete)"
 install -o root -g root -m 755 "$TV/voidstation-pkg" /usr/local/sbin/voidstation-pkg
