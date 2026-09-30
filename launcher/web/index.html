@@ -251,6 +251,18 @@
   .jobband pre { margin: 0; font: calc(12.5px * var(--f))/1.35 "DejaVu Sans Mono", monospace; color: var(--text-dim); white-space: pre-wrap; max-height: calc(110px * var(--f)); overflow: hidden; }
   .spin { width: calc(14px * var(--f)); height: calc(14px * var(--f)); border: 2px solid var(--text-faint); border-top-color: var(--text); border-radius: 50%; animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  /* Globales OSD-Keyboard */
+  #osk.dialog { z-index: 45; }
+  .osk-band { display: flex; flex-direction: column; gap: calc(14px * var(--f)); max-width: 90vw; margin: 0 auto; width: 100%; }
+  .osk-top { display: flex; align-items: center; justify-content: space-between; gap: calc(16px * var(--f)); }
+  .osk-inpbox { flex: 1; display: flex; align-items: center; background: var(--surface-card); border: 2px solid var(--border-subtle); padding: calc(8px * var(--f)) calc(16px * var(--f)); gap: calc(10px * var(--f)); }
+  .osk-inpbox.focused { border-color: var(--focus); }
+  .osk-label { font-size: calc(13px * var(--f)); color: var(--text-dim); }
+  .osk-val { flex: 1; font-size: calc(22px * var(--f)); color: var(--text-primary); min-height: 1.2em; border: none; background: transparent; outline: none; }
+  .osk-grid { display: grid; grid-template-columns: repeat(11, 1fr); gap: calc(5px * var(--f)); max-width: calc(750px * var(--f)); width: 100%; margin: 0 auto; }
+  .osk-grid .key { height: calc(44px * var(--f)); border-radius: 2px; }
+  .osk-bottom { display: flex; gap: calc(10px * var(--f)); justify-content: center; max-width: calc(750px * var(--f)); width: 100%; margin: 0 auto; }
+  .osk-bottom .btn { flex: 1; min-width: 0; text-align: center; }
 
   /* ---------- Dialog ---------- */
   .dialog { position: fixed; inset: 0; z-index: 30; display: none; align-items: center; background: var(--surface-overlay); }
@@ -493,6 +505,27 @@
 <div class="hint" id="hint"></div>
 <div class="splash" id="splash"><div class="inner"><div id="splashIcon"></div><div class="name" id="splashName"></div><div class="ring"></div><div class="shint" id="splashHint"></div></div><div class="skey" id="splashKey" data-i18n-html="splash.key"><b>Esc / B</b> im Hintergrund weiter starten</div></div>
 
+<!-- OSD Virtual Keyboard -->
+<div class="dialog osk-dialog" id="osk" role="dialog" aria-modal="true">
+  <div class="band osk-band">
+    <div class="osk-top">
+      <div class="osk-inpbox">
+        <span class="osk-label" id="oskLabel"></span>
+        <input class="osk-val" id="oskVal" type="text" readonly>
+      </div>
+      <button class="round osknav" id="oskClose" data-act="oskclose" aria-label="Schließen" data-i18n-aria="common.cancel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="osk-grid" id="oskGrid"></div>
+    <div class="osk-bottom">
+      <button class="btn osknav" id="oskSpace" data-act="oskspace" data-i18n="osk.space">Leerzeichen</button>
+      <button class="btn osknav" id="oskBack" data-act="oskback" data-i18n="osk.backspace">Löschen</button>
+      <button class="btn osknav" id="oskShift" data-act="oskshift" data-i18n="osk.shift">Shift</button>
+      <button class="btn osknav" id="oskSym" data-act="osksym" data-i18n="osk.symbols">?123</button>
+      <button class="btn osknav" id="oskSubmit" data-act="osksubmit" data-i18n="osk.enter">Fertig</button>
+    </div>
+  </div>
+</div>
+
 <div class="dialog" id="dialog" role="dialog" aria-modal="true">
   <div class="band">
     <h3 data-i18n="power.title">Ausschalten</h3>
@@ -651,6 +684,7 @@ function fitGrids() {
 
 /* ============================================================ Ebenen */
 function layer() {
+  if ($('#osk')?.classList.contains('open')) return 'osk';
   if ($('#adlg').classList.contains('open')) return 'adlg';
   if ($('#dialog').classList.contains('open')) return 'dialog';
   if ($('#tv').classList.contains('open')) return 'tv';
@@ -660,7 +694,7 @@ function layer() {
   if ($('#inst').classList.contains('open')) return 'inst';                 // Installer liegt unter den anderen Ebenen
   return 'home';
 }
-const SCOPE = { home: '.nav', radio: '.rnav', settings: '.snav', dialog: '.dnav', tv: '.tnav', apps: '.anav', adlg: '.adnav', inst: '.inav' };
+const SCOPE = { home: '.nav', radio: '.rnav', settings: '.snav', dialog: '.dnav', tv: '.tnav', apps: '.anav', adlg: '.adnav', inst: '.inav', osk: '.osknav' };
 function navItems() { return $$(SCOPE[layer()]).filter(e => !e.disabled && e.offsetParent !== null); }
 function updateHint() {
   const h = {
@@ -671,6 +705,7 @@ function updateHint() {
     apps:     [T('hint.appInstall'), T('hint.back')],
     adlg:     [...($('#adText').classList.contains('fits') ? [] : [T('hint.scrollText')]), T('hint.cancel')],
     dialog:   [T('hint.cancel')],
+    osk:      [T('hint.select'), T('osk.space'), T('osk.backspace'), T('common.cancel')],
     inst:     instHints()
   }[layer()];
   const tr = curTrack();
@@ -853,7 +888,14 @@ function activate(el = focusEl) {
   if (act === 'volup') return volume('up');
   if (act === 'voldown') return volume('down');
   if (act === 'mute') return volume('mute');
-  if (el.tagName === 'INPUT') return el.focus();
+  if (act === 'oskclose') return closeOsk();
+  if (act === 'oskspace') return oskAddChar(' ');
+  if (act === 'oskback') return oskBackspace();
+  if (act === 'oskshift') return oskToggleShift();
+  if (act === 'osksym') return oskToggleSym();
+  if (act === 'osksubmit') return oskSubmit();
+  if (el._oskChar) return oskAddChar(el._oskChar);
+  if (el.tagName === 'INPUT' && el.id !== 'oskVal') return openOsk(el);
   if (el.dataset.query) { $('#rSearch').value = el.dataset.query; return search(el.dataset.query); }
   if (el._station) return radioPlay(el._station);
   if (el._set) return el._set();
@@ -874,7 +916,8 @@ function activate(el = focusEl) {
 function back() {
   if (splashTile) return splashToBackground();
   const l = layer();
-  if (l === 'adlg') closeAdlg();
+  if (l === 'osk') closeOsk();
+  else if (l === 'adlg') closeAdlg();
   else if (l === 'dialog') closeDialog();
   else if (l === 'tv' && tvQuery) { tvQuery = ''; $('#tSearch').value = ''; tvSearch(); }
   else if (l === 'radio' && results) { results = null; $('#rSearch').value = ''; renderStations(); }
@@ -884,6 +927,7 @@ function back() {
 }
 function secondary() {
   const l = layer();
+  if (l === 'osk') return oskBackspace();
   if (l === 'home' && focusEl?._tile) {
     const t = focusEl._tile;
     if (running.includes(t.id)) closeApp(t);
@@ -2302,13 +2346,124 @@ const DEMO_PROBE = { uefi: true, secureboot: false, arch: 'x86_64', ram: 3.7 * G
               { path: '/dev/nvme0n1p2', start: 534528, sectors: 777000000, size: 397824000000, fstype: 'zfs_member', role: 'os', os: 'FreeBSD', locked: true }],
       free: [{ start: 777534528, sectors: 199000000, bytes: 101888000000 }], options: { whole: true, free: [{ start: 777534528, sectors: 199000000, bytes: 101888000000 }] } }] };
 
+let oskTarget = null, oskShift = false, oskSym = false, oskNav = false;
+function openOsk(targetInput) {
+  oskTarget = targetInput;
+  const osk = $('#osk');
+  if (!osk) return;
+  oskShift = false;
+  oskSym = false;
+  oskNav = false;
+  $('#oskLabel').textContent = targetInput.placeholder || targetInput.getAttribute('aria-label') || '';
+  $('#oskVal').value = targetInput.value || '';
+  renderOskKeys();
+  osk.classList.add('open');
+  requestAnimationFrame(() => osk.classList.add('shown'));
+  const firstKey = $('#oskGrid .key') || $('#oskSubmit');
+  setFocus(firstKey, true);
+  updateHint();
+}
+function closeOsk() {
+  const osk = $('#osk');
+  if (!osk || !osk.classList.contains('open')) return;
+  oskNav = false;
+  osk.classList.remove('shown');
+  setTimeout(() => {
+    osk.classList.remove('open');
+    if (oskTarget && document.contains(oskTarget) && oskTarget.offsetParent !== null) {
+      setFocus(oskTarget, true);
+    } else {
+      const l = layer();
+      setFocus(lastFocus[l] || $(`#${l} ${SCOPE[l]}`), true);
+    }
+    updateHint();
+  }, 150);
+}
+function oskAddChar(c) {
+  const inp = $('#oskVal');
+  inp.value += c;
+  if (oskTarget) {
+    oskTarget.value = inp.value;
+    oskTarget.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  if (oskShift) { oskShift = false; renderOskKeys(); }
+}
+function oskBackspace() {
+  const inp = $('#oskVal');
+  inp.value = inp.value.slice(0, -1);
+  if (oskTarget) {
+    oskTarget.value = inp.value;
+    oskTarget.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
+function oskToggleShift() {
+  oskShift = !oskShift;
+  renderOskKeys();
+}
+function oskToggleSym() {
+  oskSym = !oskSym;
+  renderOskKeys();
+}
+function oskSubmit() {
+  if (oskTarget) {
+    oskTarget.value = $('#oskVal').value;
+    oskTarget.dispatchEvent(new Event('input', { bubbles: true }));
+    oskTarget.dispatchEvent(new Event('change', { bubbles: true }));
+    if (oskTarget.id === 'rSearch') search(oskTarget.value);
+    else if (oskTarget.id === 'tSearch') { tvQuery = oskTarget.value.trim(); tvSearch(); }
+    else if (oskTarget.id === 'wifiPw' && wifiPick) wifiConnect(wifiPick.ssid, oskTarget.value);
+  }
+  closeOsk();
+}
+function renderOskKeys() {
+  const grid = $('#oskGrid');
+  if (!grid) return;
+  const keep = focusEl?.dataset?.key;
+  grid.innerHTML = '';
+  const mapKey = LANG === 'en' ? 'us' : 'de';
+  const rows = oskSym ? OSK.sym : (OSK[mapKey] || OSK.de);
+  rows.forEach((r, ri) => {
+    [...r].forEach((c, ci) => {
+      const ch = oskShift ? c.toUpperCase() : c;
+      const b = document.createElement('button');
+      b.className = 'key osknav';
+      b.textContent = ch;
+      b._oskChar = ch;
+      b.dataset.key = `ok-${ri}-${ci}`;
+      grid.appendChild(b);
+    });
+  });
+  $('#oskShift').textContent = oskShift ? '⇧ SHIFT' : '⇧ Shift';
+  $('#oskShift').classList.toggle('on', oskShift);
+  $('#oskSym').textContent = oskSym ? T('osk.letters') : T('osk.symbols');
+  const again = keep && $(`#oskGrid [data-key="${CSS.escape(keep)}"]`);
+  if (again) setFocus(again, true);
+}
+
 /* ============================================================ Eingabe: Tastatur */
 const KEYMAP = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
 addEventListener('keydown', e => {
   if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) held.key = true;
   if (e.repeat && focusEl?._hold) return e.preventDefault();
+  if (layer() === 'osk') {
+    if (e.key === 'Escape') { e.preventDefault(); closeOsk(); return; }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (oskNav && focusEl) activate(focusEl);
+      else oskSubmit();
+      return;
+    }
+    if (e.key === 'Backspace') { e.preventDefault(); oskNav = false; oskBackspace(); return; }
+    if (KEYMAP[e.key]) { e.preventDefault(); oskNav = true; move(KEYMAP[e.key]); return; }
+    if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      e.preventDefault();
+      oskNav = false;
+      oskAddChar(e.key);
+      return;
+    }
+  }
   if (layer() === 'inst' && instKey(e)) return;
-  const inp = document.activeElement?.tagName === 'INPUT' ? document.activeElement : null;
+  const inp = document.activeElement?.tagName === 'INPUT' && document.activeElement.id !== 'oskVal' ? document.activeElement : null;
   if (inp) {
     if (e.key === 'Enter') { e.preventDefault(); if (inp.id === 'rSearch') search(inp.value); else if (inp.id === 'tSearch') { tvQuery = inp.value.trim(); tvSearch(); } else if (inp.id === 'wifiPw') wifiConnect(wifiPick.ssid, inp.value); }
     else if (e.key === 'Escape') { e.preventDefault(); inp.blur(); }
@@ -2376,8 +2531,16 @@ function padLoop(ts) {
   }
 }
 function fire(k) {
-  const inInput = document.activeElement?.tagName === 'INPUT';
+  const inInput = document.activeElement?.tagName === 'INPUT' && document.activeElement.id !== 'oskVal';
   if (inInput && k !== 'b') return;
+  if (layer() === 'osk') {
+    if (k === 'x') return oskBackspace();
+    if (k === 'y') return oskAddChar(' ');
+    if (k === 'b') return closeOsk();
+    if (k === 'start') return oskSubmit();
+    if (k === 'a') return activate();
+    return move(k);
+  }
   const osk = layer() === 'inst' && ['account', 'host'].includes(I?.step);
   if (osk && (k === 'lb' || k === 'rb')) return oskNextField(k === 'lb' ? -1 : 1);
   if (k === 'start' && layer() === 'inst' && ['device', 'manual'].includes(I?.step)) return $('#iTrack [data-key="next"]')?._set();

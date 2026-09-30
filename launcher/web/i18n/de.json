@@ -518,5 +518,12 @@
   "hint.instOpen": "<b>Enter / A</b> öffnen",
   "hint.instVol": "<b>LB / RB</b> leiser / lauter",
   "hint.instReboot": "<b>Enter / A</b> neu starten",
-  "pad.connected": "Controller verbunden: {name}"
+  "pad.connected": "Controller verbunden: {name}",
+  "osk.space": "Leerzeichen",
+  "osk.backspace": "Löschen",
+  "osk.enter": "Fertig",
+  "osk.shift": "Shift",
+  "osk.symbols": "?123",
+  "osk.letters": "ABC",
+  "osk.openKeyboard": "Bildschirmtastatur"
 }
