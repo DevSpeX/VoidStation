@@ -791,7 +791,7 @@ class IPTV:
                     continue
                 seen.add(dedup)
                 key = hashlib.sha1(url.encode()).hexdigest()[:12]
-                e = {"key": key, "name": c["name"], "alt": c.get("alt_names") or [],
+                e = {"key": key, "cid": c["id"], "name": c["name"], "alt": c.get("alt_names") or [],
                      "country": c.get("country") or "", "cats": c.get("categories") or [],
                      "quality": s.get("quality") or "", "logo": logos.get(c["id"], ""),
                      "url": url, "ref": s.get("referrer") or "", "ua": s.get("user_agent") or ""}
@@ -814,7 +814,7 @@ class IPTV:
 
     @staticmethod
     def public(e):
-        return {k: e[k] for k in ("key", "name", "country", "cats", "quality", "logo")}
+        return {k: e[k] for k in ("key", "cid", "name", "country", "cats", "quality", "logo") if k in e}
 
     def search(self, q, country, cat, limit=80):
         self.ensure()
@@ -885,6 +885,223 @@ def tvfavs_save(items):
 
 
 TV = IPTV()
+
+
+# ---------------------------------------------------------------------------
+#  EPG: Elektronischer Programmführer für TV-Sender
+# ---------------------------------------------------------------------------
+EPG_CONFIG_FILE = Path("/usr/local/share/voidstation/epg-url")
+
+
+class EPGManager:
+    """Verwaltet Programmvorschau (EPG) für TV-Sender."""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.cache_file = CACHE / "epg.json"
+        self.data = {}
+        self.name_map = {}
+        self.loaded_at = 0.0
+        self.last_attempt = 0.0
+        self.loading = False
+        # Beim Start nur den kompakten JSON-Cache lesen (dauert wenige Millisekunden)
+        self._load_cache()
+
+    @staticmethod
+    def _get_url():
+        env = os.environ.get("VOIDSTATION_EPG_URL", "").strip()
+        if env:
+            return env
+        for p in (EPG_CONFIG_FILE, BASE / "epg-url"):
+            try:
+                if p.exists():
+                    u = p.read_text(encoding="utf-8").strip()
+                    if u:
+                        return u
+            except OSError:
+                pass
+        return ""
+
+    def ensure(self):
+        url = self._get_url()
+        has_local = any(p.exists() for p in (CACHE / "epg.xml.gz", CACHE / "epg.xml", BASE / "epg.xml.gz", BASE / "epg.xml"))
+        if not url and not has_local:
+            return
+        now = time.time()
+        with self.lock:
+            if self.loading:
+                return
+            # Daten noch aktuell (< 24 h)?
+            if self.data and (now - self.loaded_at < 86400):
+                return
+            # Nach einem Fehler/Versuch mindestens 1 Stunde warten
+            if now - self.last_attempt < 3600:
+                return
+            self.loading = True
+            self.last_attempt = now
+        threading.Thread(target=self._fetch_and_load, daemon=True).start()
+
+    def _fetch_and_load(self):
+        try:
+            url = self._get_url()
+            if url:
+                day = 86400
+                is_gz = url.split("?")[0].endswith(".gz")
+                xml_dest = CACHE / ("epg.xml.gz" if is_gz else "epg.xml")
+                try:
+                    fetch(url, xml_dest, day)
+                except Exception as e:
+                    log("EPG Download fehlgeschlagen:", e)
+
+            # XMLTV im Hintergrund parsen und in epg.json cachen
+            self._parse_xml_source()
+        finally:
+            with self.lock:
+                self.loading = False
+
+    @staticmethod
+    def _parse_ts(s):
+        s = s.strip()
+        if not s:
+            return 0
+        from datetime import datetime, timezone
+        try:
+            if " " in s:
+                return datetime.strptime(s, "%Y%m%d%H%M%S %z").timestamp()
+            return datetime.strptime(s[:14], "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc).timestamp()
+        except Exception:
+            return 0
+
+    def _load_cache(self):
+        for p in (self.cache_file, BASE / "epg.json"):
+            if p.exists():
+                try:
+                    raw = json.loads(p.read_text(encoding="utf-8"))
+                    with self.lock:
+                        self.data = raw.get("programs", raw)
+                        self.name_map = raw.get("name_map", {})
+                        self.loaded_at = float(raw.get("loaded_at", p.stat().st_mtime))
+                    return True
+                except Exception as e:
+                    log("EPG Cache nicht lesbar:", e)
+        return False
+
+    def _parse_xml_source(self):
+        """Parst XMLTV im Hintergrund und schreibt eine kleine epg.json (nur jetzt bis +24h)."""
+        import gzip
+        import xml.etree.ElementTree as ET
+
+        source_file = None
+        for p in (CACHE / "epg.xml.gz", CACHE / "epg.xml", BASE / "epg.xml.gz", BASE / "epg.xml"):
+            if p.exists():
+                source_file = p
+                break
+
+        if not source_file:
+            return
+
+        try:
+            with open(source_file, "rb") as test_f:
+                magic = test_f.read(2)
+            is_gz = (magic == b"\x1f\x8b")
+
+            f = gzip.open(source_file, "rb") if is_gz else open(source_file, "rb")
+            data = {}
+            name_map = {}
+            now_ts = time.time()
+            cutoff_past = now_ts - 7200       # 2 Stunden Puffer in die Vergangenheit
+            cutoff_future = now_ts + 86400    # bis +24 Stunden vorausschauend
+
+            try:
+                for event, elem in ET.iterparse(f, events=("end",)):
+                    if elem.tag == "channel":
+                        cid = elem.get("id", "").strip()
+                        dn_el = elem.find("display-name")
+                        if cid and dn_el is not None and dn_el.text:
+                            n_clean = dn_el.text.strip().lower()
+                            name_map[n_clean] = cid
+                            name_map[n_clean.replace(" ", "")] = cid
+                            name_map[n_clean.replace(" hd", "").strip()] = cid
+                        elem.clear()
+                    elif elem.tag == "programme":
+                        ch = elem.get("channel", "").strip()
+                        s_str = elem.get("start", "").strip()
+                        e_str = elem.get("stop", "").strip()
+                        s_ts = self._parse_ts(s_str)
+                        e_ts = self._parse_ts(e_str)
+                        # Nur relevante Sendungen speichern -> kleine epg.json
+                        if s_ts and e_ts and e_ts >= cutoff_past and s_ts <= cutoff_future:
+                            t_el = elem.find("title")
+                            d_el = elem.find("desc")
+                            title = t_el.text if t_el is not None and t_el.text else ""
+                            desc = d_el.text if d_el is not None and d_el.text else ""
+                            data.setdefault(ch, []).append({"start": s_ts, "end": e_ts, "title": title, "desc": desc})
+                        elem.clear()
+            finally:
+                f.close()
+
+            with self.lock:
+                self.data = data
+                self.name_map = name_map
+                self.loaded_at = now_ts
+
+            # Kompakte epg.json schreiben (atomarer Tmp-Write)
+            try:
+                CACHE.mkdir(parents=True, exist_ok=True)
+                payload = json.dumps({"loaded_at": now_ts, "name_map": name_map, "programs": data}, ensure_ascii=False)
+                tmp = self.cache_file.with_suffix(".tmp")
+                tmp.write_text(payload, encoding="utf-8")
+                tmp.replace(self.cache_file)
+            except Exception as e:
+                log("EPG Cache schreiben fehlgeschlagen:", e)
+
+        except Exception as e:
+            log("EPG XML-Parsing fehlgeschlagen:", e)
+
+    def get_program(self, channel_id, channel_name=""):
+        self.ensure()
+        with self.lock:
+            prog = self.data.get(channel_id)
+            if not prog and channel_name:
+                clean_name = channel_name.strip().lower()
+                mapped = (self.name_map.get(clean_name) or
+                          self.name_map.get(clean_name.replace(" ", "")) or
+                          self.name_map.get(clean_name.replace(" hd", "").strip()))
+                if mapped:
+                    prog = self.data.get(mapped)
+            if not prog and channel_name:
+                prog = self.data.get(channel_name)
+
+        now_ts = time.time()
+        if prog and isinstance(prog, list):
+            current, next_p = None, None
+            for p in prog:
+                start = p.get("start", 0)
+                end = p.get("end", 0)
+                if start <= now_ts < end:
+                    dur = max(1, end - start)
+                    progress = min(100, max(0, int((now_ts - start) / dur * 100)))
+                    current = {
+                        "title": p.get("title", ""),
+                        "desc": p.get("desc", ""),
+                        "start": time.strftime("%H:%M", time.localtime(start)),
+                        "stop": time.strftime("%H:%M", time.localtime(end)),
+                        "end": time.strftime("%H:%M", time.localtime(end)),
+                        "progress": progress
+                    }
+                elif now_ts < start and not next_p:
+                    next_p = {
+                        "title": p.get("title", ""),
+                        "start": time.strftime("%H:%M", time.localtime(start)),
+                        "stop": time.strftime("%H:%M", time.localtime(end)),
+                        "end": time.strftime("%H:%M", time.localtime(end))
+                    }
+            if current:
+                return {"current": current, "next": next_p}
+        return None
+
+
+EPG = EPGManager()
 
 
 # ---------------------------------------------------------------------------
@@ -2024,6 +2241,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, TV.search(g("q"), g("country"), g("cat")))
         if path == "/api/tv/favs":
             return self._json(200, [IPTV.public(f) for f in tvfavs_load()])
+        if path == "/api/tv/epg":
+            qs = urllib.parse.parse_qs(url.query)
+            ch_id = qs.get("id", [""])[0] or qs.get("channel_id", [""])[0]
+            ch_name = qs.get("name", [""])[0] or qs.get("channel_name", [""])[0] or ch_id
+            return self._json(200, EPG.get_program(ch_id, ch_name) or {})
         if path == "/api/apps":
             return self._json(200, apps_payload())
         if path == "/api/selfupdate":

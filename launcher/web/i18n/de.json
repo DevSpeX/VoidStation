@@ -167,6 +167,7 @@
   "tv.running": "läuft · Win/Guide wechselt zurück",
   "tv.count": "{n} Sender",
   "tv.free": "frei empfangbare Livestreams",
+  "tv.epgNext": "Danach: {title}",
   "apps.title": "AppCenter",
   "apps.loadFailed": "AppCenter nicht ladbar",
   "apps.checkUpd": "Nach Updates suchen",

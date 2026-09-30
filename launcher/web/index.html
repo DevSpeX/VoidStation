@@ -251,6 +251,15 @@
   .jobband pre { margin: 0; font: calc(12.5px * var(--f))/1.35 "DejaVu Sans Mono", monospace; color: var(--text-dim); white-space: pre-wrap; max-height: calc(110px * var(--f)); overflow: hidden; }
   .spin { width: calc(14px * var(--f)); height: calc(14px * var(--f)); border: 2px solid var(--text-faint); border-top-color: var(--text); border-radius: 50%; animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  /* EPG */
+  .epg-info { display: flex; flex-direction: column; gap: calc(3px * var(--f)); }
+  .epg-line { display: flex; align-items: center; gap: calc(10px * var(--f)); font-size: calc(14px * var(--f)); }
+  .epg-line strong { color: var(--text-primary); font-weight: 500; }
+  .epg-line span { color: var(--text-dim); }
+  .epg-time { color: var(--text-faint); font-size: calc(12px * var(--f)); margin-left: auto; }
+  .epg-bar { width: calc(80px * var(--f)); height: calc(4px * var(--f)); background: var(--divider); border-radius: 2px; overflow: hidden; display: inline-block; vertical-align: middle; }
+  .epg-fill { display: block; height: 100%; background: var(--status-ok-text); }
+  .epg-next { font-size: calc(12.5px * var(--f)); color: var(--text-dim); }
   /* ROMs Browser */
   .romgrid { display: grid; grid-template-rows: repeat(var(--srows, 3), var(--u)); grid-auto-columns: calc(var(--u) * 1.5); grid-auto-flow: column dense; gap: var(--gap); }
   .romcard {
@@ -1666,13 +1675,44 @@ async function tvFav(ch) {
   try { tvFavs = await api(isFav ? '/api/tv/unfav' : '/api/tv/fav', { key: ch.key }); toast(isFav ? T('common.favRemoved') : T('common.favAdded')); renderTv(); }
   catch { toast(T('common.saveFailed'), true); }
 }
+let tvEpg = null, tvEpgTimer = null;
+async function refreshTvEpg() {
+  if (!tvNow || offline) { tvEpg = null; renderTvNowHeader(); return; }
+  try {
+    tvEpg = await getJSON('/api/tv/epg?id=' + encodeURIComponent(tvNow.cid || tvNow.key || '') + '&name=' + encodeURIComponent(tvNow.name || ''));
+  } catch { tvEpg = null; }
+  renderTvNowHeader();
+}
+function renderTvNowHeader() {
+  if (!tvNow) {
+    $('#tNow').innerHTML = `<strong>${esc(tvStatus?.count ? T('tv.count', { n: num(tvStatus.count) }) : T('tv.title'))}</strong><span>${esc(T('tv.free'))}</span>`;
+    return;
+  }
+  let extra = `<span>${esc(T('tv.running'))}</span>`;
+  if (tvEpg && tvEpg.current) {
+    const cur = tvEpg.current;
+    const prog = cur.progress ? `<span class="epg-bar"><b class="epg-fill" style="width:${Math.min(100, Math.max(0, cur.progress))}%"></b></span>` : '';
+    const next = tvEpg.next ? `<span class="epg-next">${esc(T('tv.epgNext', { title: tvEpg.next.title }))}</span>` : '';
+    extra = `<div class="epg-info"><div class="epg-line"><strong>${esc(cur.title)}</strong> ${prog} <span class="epg-time">${esc(cur.start || '')}${cur.stop ? '–' + esc(cur.stop) : ''}</span></div>${next}</div>`;
+  }
+  $('#tNow').innerHTML = `<strong>${esc(tvNow.name)}</strong>${extra}`;
+}
 function setTvNow(now) {
   const prev = tvNow?.key;
   tvNow = now || null;
   const tile = $('#track .tile.tvtile');
   if (tile) { tile.classList.toggle('playing', !!tvNow); tile.querySelector('.st').textContent = tvNow ? tvNow.name : ''; tile.querySelector('.ti').textContent = tvNow ? (tvNow.country ? regionName(tvNow.country) : T('common.live')) : ''; }
-  $('#tNow').innerHTML = tvNow ? `<strong>${esc(tvNow.name)}</strong><span>${esc(T('tv.running'))}</span>` : `<strong>${esc(tvStatus?.count ? T('tv.count', { n: num(tvStatus.count) }) : T('tv.title'))}</strong><span>${esc(T('tv.free'))}</span>`;
-  if (prev !== tvNow?.key) $$('#tTrack .chan').forEach(e => e.classList.toggle('playing', !!tvNow && e._chan.key === tvNow.key));
+  renderTvNowHeader();
+  if (prev !== tvNow?.key) {
+    $$('#tTrack .chan').forEach(e => e.classList.toggle('playing', !!tvNow && e._chan.key === tvNow.key));
+    clearInterval(tvEpgTimer);
+    if (tvNow) {
+      refreshTvEpg();
+      tvEpgTimer = setInterval(refreshTvEpg, 30000);
+    } else {
+      tvEpg = null;
+    }
+  }
   if ($('#tStop')) $('#tStop').disabled = !tvNow;
 }
 
