@@ -1737,6 +1737,123 @@ KEYMAPS = {"de": ["de"], "us": ["us"], "gb": ["gb"]}
 
 
 # ---------------------------------------------------------------------------
+#  ROMs & Emulatoren: Spiele aus der Samba-Freigabe ~/share/ROMs/<system>
+# ---------------------------------------------------------------------------
+class ROMManager:
+    """Verwaltet Spiele (ROMs) aus der Samba-Freigabe ~/share/ROMs/<system>."""
+    # Mapping von Kachel-ID auf Ordnername in ~/share/ROMs/
+    TILE_TO_SYSTEM = {
+        "gba": "gba",
+        "snes9x": "snes",
+        "nestopia": "nes",
+        "duckstation": "psx",
+        "melonds": "nds",
+        "ppsspp": "psp",
+        "flycast": "dreamcast",
+        "dolphin": "gamecube",
+        "retroarch": "retroarch",
+    }
+    SYSTEM_TO_TILE = {v: k for k, v in TILE_TO_SYSTEM.items()}
+
+    EXTENSIONS = {
+        "gba": [".gba", ".gbc", ".gb", ".zip", ".7z"],
+        "snes": [".sfc", ".smc", ".zip", ".7z"],
+        "nes": [".nes", ".zip", ".7z"],
+        "psx": [".iso", ".cue", ".bin", ".chd", ".pbp"],
+        "psp": [".iso", ".cso", ".pbp"],
+        "nds": [".nds", ".zip"],
+        "gamecube": [".iso", ".rvz", ".gcm"],
+        "dreamcast": [".cdi", ".gdi", ".chd"],
+        "n64": [".z64", ".n64", ".v64"],
+        "c64": [".d64", ".t64", ".prg", ".crt"],
+        "atari2600": [".a26", ".bin"],
+        "megadrive": [".md", ".bin", ".smd", ".gen", ".zip", ".7z"],
+        "genesis": [".md", ".bin", ".smd", ".gen", ".zip", ".7z"],
+        "scummvm": [".scummvm"],
+        "dos": [".conf", ".exe", ".bat"],
+    }
+    # Befehle aus catalog.json als Basis/Fallback
+    EMULATOR_CMD = {
+        "gba": ["mgba-qt"],
+        "snes": ["snes9x-gtk"],
+        "nes": ["nestopia"],
+        "psx": ["~/.local/share/voidstation/apps/duckstation/AppRun"],
+        "psp": ["PPSSPPSDL", "ppsspp", "PPSSPPQt"],   # erster vorhandener
+        "nds": ["melonDS"],
+        "dreamcast": ["flatpak", "run", "org.flycast.Flycast"],
+        "gamecube": ["dolphin-emu"],
+        "megadrive": ["mednafen"],
+        "genesis": ["mednafen"],
+    }
+
+    def __init__(self):
+        self.rom_dir = Path.home() / "share" / "ROMs"
+
+    def canonical_system(self, sys_or_tile):
+        return self.TILE_TO_SYSTEM.get(sys_or_tile, sys_or_tile)
+
+    def list_roms(self, system):
+        canon = self.canonical_system(system)
+        sys_dir = self.rom_dir / canon
+        if not sys_dir.is_dir():
+            return []
+        valid_exts = set(self.EXTENSIONS.get(canon, [".zip"]))
+        roms = []
+        try:
+            for item in sorted(sys_dir.iterdir()):
+                if item.is_file() and item.suffix.lower() in valid_exts:
+                    name = item.stem
+                    clean_name = re.sub(r"\s*[\(\[][^()\[\]]*[\)\]]", "", name).strip() or name
+                    size_bytes = item.stat().st_size
+                    size_mb = round(size_bytes / (1024 * 1024), 1)
+                    size_str = f"{size_mb} MB" if size_mb >= 1 else f"{round(size_bytes / 1024)} KB"
+                    roms.append({
+                        "id": hashlib.sha1(str(item).encode()).hexdigest()[:10],
+                        "name": clean_name,
+                        "filename": item.name,
+                        "system": canon,
+                        "size": size_str,
+                        "bytes": size_bytes,
+                    })
+        except OSError as e:
+            log(f"ROMs fuer {canon} nicht lesbar:", e)
+        return roms
+
+    def launch(self, system, filename):
+        canon = self.canonical_system(system)
+        safe_name = os.path.basename(filename)
+        sys_dir = (self.rom_dir / canon).resolve()
+        target = (sys_dir / safe_name).resolve()
+
+        if not target.is_file() or not target.is_relative_to(sys_dir):
+            raise ValueError("Spieldatei nicht gefunden")
+
+        # 1. Kachel-Befehl (tiles.json), 2. Katalog (catalog.json) – nur als Liste;
+        #    Shell-Befehle (z. B. PPSSPP: "for b in ...; do exec $b; done") koennen keine Datei uebergeben
+        cmd = None
+        tid = self.SYSTEM_TO_TILE.get(canon, canon)
+        for src in (find_tile(system), find_tile(tid), catalog_app(system), catalog_app(tid)):
+            if src and isinstance(src.get("cmd"), list):
+                cmd = expand(src["cmd"]) + [str(target)]
+                break
+        # 3. Fallback: erstes vorhandene Programm aus EMULATOR_CMD
+        if not cmd and canon in self.EMULATOR_CMD:
+            cands = self.EMULATOR_CMD[canon]
+            if canon == "psp":
+                exe = next((c for c in cands if shutil.which(c)), None)
+                cmd = [exe, str(target)] if exe else None
+            else:
+                cmd = expand(cands) + [str(target)]
+        if not cmd:
+            raise ValueError(f"Kein Emulator fuer {canon} konfiguriert")
+
+        return APPS.start(f"rom_{canon}", cmd)
+
+
+ROMS = ROMManager()
+
+
+# ---------------------------------------------------------------------------
 #  HTTP
 # ---------------------------------------------------------------------------
 class Handler(BaseHTTPRequestHandler):
@@ -1836,6 +1953,18 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200, wifi_scan())
             except RuntimeError as e:
                 return self._json(502, {"error": str(e)})
+        if path == "/api/roms":
+            qs = urllib.parse.parse_qs(url.query)
+            system = qs.get("system", [""])[0]
+            if not system:
+                summary = {}
+                for s in ROMS.EXTENSIONS:
+                    r = ROMS.list_roms(s)
+                    if r:
+                        summary[s] = len(r)
+                return self._json(200, {"systems": summary})
+            roms = ROMS.list_roms(system)
+            return self._json(200, {"system": ROMS.canonical_system(system), "count": len(roms), "roms": roms})
         if path == "/tiles.json":
             try:
                 c = json.loads(CONFIG.read_text(encoding="utf-8"))
@@ -2022,6 +2151,17 @@ class Handler(BaseHTTPRequestHandler):
                 except RuntimeError as e:
                     return self._json(502, {"error": str(e)})
                 return self._json(200, settings_payload())
+            if parts == ["api", "roms", "launch"]:
+                b = self._body()
+                sys_id = str(b.get("system", ""))
+                filename = str(b.get("file") or b.get("filename") or b.get("path") or "")
+                try:
+                    res = ROMS.launch(sys_id, filename)
+                    return self._json(200, {"result": res, "running": APPS.running()})
+                except OSError as e:          # Emulator nicht installiert
+                    return self._json(400, {"error": f"Emulator nicht gefunden: {e.filename or e}"})
+                except (ValueError, RuntimeError) as e:
+                    return self._json(400, {"error": str(e)})
             if parts[:2] == ["api", "volume"] and len(parts) == 3:
                 return self._json(200, volume_set(parts[2]) or {})
             if parts[:2] == ["api", "power"] and len(parts) == 3 and parts[2] in POWER:

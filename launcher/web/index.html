@@ -251,6 +251,24 @@
   .jobband pre { margin: 0; font: calc(12.5px * var(--f))/1.35 "DejaVu Sans Mono", monospace; color: var(--text-dim); white-space: pre-wrap; max-height: calc(110px * var(--f)); overflow: hidden; }
   .spin { width: calc(14px * var(--f)); height: calc(14px * var(--f)); border: 2px solid var(--text-faint); border-top-color: var(--text); border-radius: 50%; animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  /* ROMs Browser */
+  .romgrid { display: grid; grid-template-rows: repeat(var(--srows, 3), var(--u)); grid-auto-columns: calc(var(--u) * 1.5); grid-auto-flow: column dense; gap: var(--gap); }
+  .romcard {
+    position: relative; overflow: hidden; cursor: pointer;
+    background: var(--surface-card); color: var(--text); border: 2px solid transparent;
+    transition: transform .18s var(--ease), box-shadow .18s, border-color .18s;
+    padding: calc(14px * var(--f)); display: flex; flex-direction: column; justify-content: flex-end; outline: none;
+    opacity: 0; animation: tileIn .5s var(--ease) forwards;
+  }
+  .romcard::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(160deg, rgba(255,255,255,.07), transparent 45%, rgba(0,0,0,.18)); }
+  .romcard.focus {
+    box-shadow: 0 0 0 calc(3px * var(--f)) var(--bg-main), 0 0 0 calc(6px * var(--f)) var(--focus);
+    transform: scale(1.03); z-index: 2; border-color: var(--focus);
+  }
+  .romcard .romicon { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); opacity: 0.22; width: 44%; height: 44%; }
+  .romcard .romicon svg { width: 100%; height: 100%; }
+  .romcard .romname { font-size: calc(16px * var(--f)); font-weight: 500; z-index: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .romcard .romsub { font-size: calc(12px * var(--f)); color: var(--text-dim); z-index: 1; margin-top: calc(2px * var(--f)); }
   /* Globales OSD-Keyboard */
   #osk.dialog { z-index: 45; }
   .osk-band { display: flex; flex-direction: column; gap: calc(14px * var(--f)); max-width: 90vw; margin: 0 auto; width: 100%; }
@@ -480,6 +498,15 @@
   <div class="stage"><div class="track" id="tTrack"></div></div>
 </section>
 
+<!-- ROMs & Spiele -->
+<section class="layer" id="roms">
+  <header><div class="htitle"><button class="round romnav" data-act="back" aria-label="Zurück" data-i18n-aria="common.back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1 id="romTitle" data-i18n="roms.title">Spiele</h1></div><div class="nowline" id="romNow"></div></header>
+  <div class="bar">
+    <button class="pill romnav" id="romStartEmu" data-act="startemu"><span data-i18n="roms.startEmu">Emulator ohne Spiel starten</span></button>
+  </div>
+  <div class="stage"><div class="track" id="romTrack"></div></div>
+</section>
+
 <!-- AppCenter -->
 <section class="layer" id="apps">
   <header><div class="htitle"><button class="round anav" data-act="back" aria-label="Zurück" data-i18n-aria="common.back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1 data-i18n="apps.title">AppCenter</h1></div><div class="nowline" id="aNow"></div></header>
@@ -677,6 +704,7 @@ function fitGrid(track, sel, max) {
   if (k < 1 && u) track.style.setProperty('--u', (u * k) + 'px');
 }
 function fitGrids() {
+  fitGrid($('#romTrack'), '.romgrid', 3);
   fitGrid($('#aTrack'), '.agrid', 3);
   fitGrid($('#tTrack'), '.sgrid', 3);
   fitGrid($('#rTrack'), '.sgrid', 3);
@@ -687,6 +715,7 @@ function layer() {
   if ($('#osk')?.classList.contains('open')) return 'osk';
   if ($('#adlg').classList.contains('open')) return 'adlg';
   if ($('#dialog').classList.contains('open')) return 'dialog';
+  if ($('#roms').classList.contains('open')) return 'roms';
   if ($('#tv').classList.contains('open')) return 'tv';
   if ($('#apps').classList.contains('open')) return 'apps';
   if ($('#radio').classList.contains('open')) return 'radio';
@@ -694,13 +723,14 @@ function layer() {
   if ($('#inst').classList.contains('open')) return 'inst';                 // Installer liegt unter den anderen Ebenen
   return 'home';
 }
-const SCOPE = { home: '.nav', radio: '.rnav', settings: '.snav', dialog: '.dnav', tv: '.tnav', apps: '.anav', adlg: '.adnav', inst: '.inav', osk: '.osknav' };
+const SCOPE = { home: '.nav', radio: '.rnav', settings: '.snav', dialog: '.dnav', tv: '.tnav', apps: '.anav', adlg: '.adnav', inst: '.inav', roms: '.romnav', osk: '.osknav' };
 function navItems() { return $$(SCOPE[layer()]).filter(e => !e.disabled && e.offsetParent !== null); }
 function updateHint() {
   const h = {
     home:     [T('hint.open'), T('hint.close'), T('hint.home')],
     radio:    [T('hint.play'), T('hint.fav'), T('hint.volume'), T('hint.back')],
     settings: [T('hint.select'), T('hint.back')],
+    roms:     [T('hint.romLaunch'), T('hint.back')],
     tv:       [T('hint.tvOn'), T('hint.fav'), T('hint.homeShort'), T('hint.back')],
     apps:     [T('hint.appInstall'), T('hint.back')],
     adlg:     [...($('#adText').classList.contains('fits') ? [] : [T('hint.scrollText')]), T('hint.cancel')],
@@ -887,6 +917,7 @@ function activate(el = focusEl) {
   if (act === 'fav') return toggleFav();
   if (act === 'volup') return volume('up');
   if (act === 'voldown') return volume('down');
+  if (act === 'startemu') return launchEmuStandalone();
   if (act === 'mute') return volume('mute');
   if (act === 'oskclose') return closeOsk();
   if (act === 'oskspace') return oskAddChar(' ');
@@ -903,7 +934,9 @@ function activate(el = focusEl) {
   if (el._tile?.type === 'settings') return openLayer('settings');
   if (el._tile?.type === 'tv') return openLayer('tv');
   if (el._tile?.type === 'apps') return openLayer('apps');
+  if (el._tile?.type === 'roms') return openRoms(el._tile);
   if (el._tile?.type === 'install') return openInstaller();
+  if (el._tile && isEmulator(el._tile.id)) return checkAndLaunchEmulator(el._tile, el);
   if (act === 'tvstop') return tvStop();
   if (act === 'checkupd') return jobStart('check');
   if (act === 'doupd') return confirmUpdate();
@@ -911,6 +944,7 @@ function activate(el = focusEl) {
   if (el._flt) return el._flt();
   if (el._app) return appDialog(el._app);
   if (el._ad) return el._ad();
+  if (el._rom) return launchRom(el._rom);
   if (el._tile) return launch(el._tile, el);
 }
 function back() {
@@ -919,6 +953,7 @@ function back() {
   if (l === 'osk') closeOsk();
   else if (l === 'adlg') closeAdlg();
   else if (l === 'dialog') closeDialog();
+  else if (l === 'roms') closeLayer();
   else if (l === 'tv' && tvQuery) { tvQuery = ''; $('#tSearch').value = ''; tvSearch(); }
   else if (l === 'radio' && results) { results = null; $('#rSearch').value = ''; renderStations(); }
   else if (l === 'settings' && wifiPick) { wifiPick = null; renderSettings(); }
@@ -1033,6 +1068,7 @@ function openLayer(id) {
   if (id === 'settings') loadSettings();
   if (id === 'tv') { tvOpen(); refreshVolume(); }
   if (id === 'apps') loadApps();
+  if (id === 'roms') renderRoms();
   const keep = lastFocus[id] && document.contains(lastFocus[id]) && lastFocus[id].offsetParent !== null ? lastFocus[id] : null;
   const first = { radio: $('#rTrack .station.playing') || $('#rTrack .rnav'), settings: $('#sTrack .snav'), tv: $('#tTrack .chan'), apps: $('#aTrack .appcard') }[id];
   setFocus(keep || first || $(`#${id} ${SCOPE[id]}`), true);
@@ -2345,6 +2381,85 @@ const DEMO_PROBE = { uefi: true, secureboot: false, arch: 'x86_64', ram: 3.7 * G
       parts: [{ path: '/dev/nvme0n1p1', start: 2048, sectors: 532480, size: 272629760, fstype: 'vfat', role: 'esp' },
               { path: '/dev/nvme0n1p2', start: 534528, sectors: 777000000, size: 397824000000, fstype: 'zfs_member', role: 'os', os: 'FreeBSD', locked: true }],
       free: [{ start: 777534528, sectors: 199000000, bytes: 101888000000 }], options: { whole: true, free: [{ start: 777534528, sectors: 199000000, bytes: 101888000000 }] } }] };
+
+/* ============================================================ ROMs & Spiele */
+const EMU_SYSTEMS = ['gba', 'snes', 'snes9x', 'nes', 'nestopia', 'psx', 'duckstation', 'psp', 'ppsspp', 'nds', 'melonds', 'dreamcast', 'flycast', 'gamecube', 'dolphin', 'c64', 'vice', 'atari2600', 'stella'];
+function isEmulator(id) { return EMU_SYSTEMS.includes(id); }
+let curRomTile = null;
+
+async function checkAndLaunchEmulator(tile, el) {
+  try {
+    const res = await getJSON('/api/roms?system=' + encodeURIComponent(tile.id));
+    if (res && (res.count > 0 || (res.roms && res.roms.length > 0))) {
+      return openRoms(tile);
+    }
+  } catch {}
+  return launch(tile, el);
+}
+
+async function openRoms(tile) {
+  curRomTile = tile;
+  openLayer('roms');
+}
+async function renderRoms() {
+  if (!curRomTile) return;
+  const tr = $('#romTrack');
+  tr.innerHTML = ''; tr.dataset.x = 0; tr.style.transform = 'none';
+  const sysName = L(curRomTile.label) || curRomTile.id;
+  $('#romTitle').textContent = T('roms.title', { system: sysName });
+  let data = null;
+  try {
+    data = offline ? { system: curRomTile.id, count: 0, roms: [] } : await getJSON('/api/roms?system=' + encodeURIComponent(curRomTile.id));
+  } catch {
+    data = { system: curRomTile.id, count: 0, roms: [] };
+  }
+  const host = sett?.net?.hostname || 'voidstation';
+  const roms = Array.isArray(data) ? data : (data.roms || []);
+  $('#romNow').innerHTML = `<strong>${esc(sysName)}</strong><span>${esc(T('roms.count', { count: roms.length }))}</span>`;
+  if (roms.length) {
+    const g = document.createElement('div');
+    g.className = 'romgrid';
+    roms.forEach((r, i) => {
+      const card = document.createElement('div');
+      card.className = 'romcard romnav';
+      card.style.animationDelay = (i * 25) + 'ms';
+      card._rom = r;
+      card.innerHTML = `<div class="romicon">${ICONS[curRomTile.icon] || ICONS.gamepad}</div>` +
+        `<div class="romname">${esc(r.title || r.name)}</div>` +
+        `<div class="romsub">${esc(r.size || (r.bytes ? gb(r.bytes) : ''))}</div>`;
+      g.appendChild(card);
+    });
+    section(tr, T('roms.count', { count: roms.length }), g);
+  } else {
+    const wrap = document.createElement('div');
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.textContent = T('roms.noGames');
+    const info = document.createElement('div');
+    info.className = 'info';
+    info.style.marginTop = '12px';
+    info.textContent = T('roms.hint', { host, system: data.system || curRomTile.id });
+    wrap.append(empty, info);
+    section(tr, sysName, wrap);
+  }
+  fitGrid(tr, '.romgrid', 3);
+  const first = $('#romTrack .romcard') || $('#romStartEmu');
+  if (first) setFocus(first, true);
+}
+async function launchRom(rom) {
+  if (!curRomTile || !rom) return;
+  toast(T('common.starting', null, 'Starte …') + ' ' + (rom.title || rom.name));
+  try {
+    await api('/api/roms/launch', { system: curRomTile.id, file: rom.filename });
+  } catch {
+    toast(T('home.launchFailed', { name: rom.title || rom.name }), true);
+  }
+}
+async function launchEmuStandalone() {
+  if (!curRomTile) return;
+  closeLayer();
+  launch(curRomTile, $('#track .tile[data-id="' + CSS.escape(curRomTile.id) + '"]') || document.body);
+}
 
 let oskTarget = null, oskShift = false, oskSym = false, oskNav = false;
 function openOsk(targetInput) {

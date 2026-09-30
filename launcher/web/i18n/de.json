@@ -525,5 +525,11 @@
   "osk.shift": "Shift",
   "osk.symbols": "?123",
   "osk.letters": "ABC",
-  "osk.openKeyboard": "Bildschirmtastatur"
+  "osk.openKeyboard": "Bildschirmtastatur",
+  "roms.title": "Spiele · {system}",
+  "roms.noGames": "Keine Spiele gefunden",
+  "roms.hint": "Kopiere Spieldateien auf die Freigabe unter \\\\{host}\\share\\ROMs\\{system}",
+  "roms.startEmu": "Emulator ohne Spiel starten",
+  "roms.count": "{count} Spiele",
+  "hint.romLaunch": "<b>Enter / A</b> Spiel starten"
 }
