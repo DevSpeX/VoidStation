@@ -136,12 +136,41 @@ Neue Texte gehören immer in **beide** Dateien – `build.sh` bricht ab, wenn in
 - Englisch heißt `en_US`: 12-Stunden-Uhr (8:15 PM), Datum und Zahlen im US-Format.
 - Screenshots der englischen Oberfläche: `VS_LANG=en python3 tools/screenshots.py`.
 
+## Themes & Designs
+
+Unter **Einstellungen → Anzeige → Design · Theme** stehen verschiedene Themes zur Auswahl (z. B. `Dunkel`, `Hell`, `Hoher Kontrast`, `Nord`). Das gewählte Theme wird in `settings.json` gespeichert und bleibt bei Updates erhalten.
+
+### Eigene Themes hinzufügen (Drop-in)
+Neue Themes können als CSS-Datei direkt in `launcher/web/themes/<theme-name>.css` abgelegt werden:
+
+```css
+/* launcher/web/themes/matrix.css */
+:root[data-theme="matrix"] {
+  --bg-main: #051008;
+  --bg-radial-1: #0d2814;
+  --bg-radial-2: #020a04;
+  --surface-base: #0a1f10;
+  --surface-raised: #10331b;
+  --surface-card: #143d20;
+  --surface-card-hover: #1c542c;
+  --surface-active: #00ff66;
+  --text-primary: #a3ffc2;
+  --text-secondary: rgba(163, 255, 194, 0.75);
+  --border-focus: #00ff66;
+  --border-subtle: #1c542c;
+  /* ... */
+}
+```
+
+VoidStation erkennt neue CSS-Dateien im Theme-Ordner automatisch und bietet sie direkt in den Einstellungen an.
+
 ## Aufbau
 
 | Pfad | Inhalt |
 |---|---|
 | `launcher/launcher.py` | Backend: HTTP-API auf 127.0.0.1:8765, Apps starten/umschalten, Radio, TV, AppCenter, Einstellungen |
 | `launcher/web/index.html` | Oberfläche (Kacheln, Radio, TV, AppCenter, Einstellungen) |
+| `launcher/web/themes/` | Themes als modulare CSS-Dateien (`default-dark`, `default-light`, `high-contrast`, `nord`) |
 | `launcher/web/i18n/` | Texte der Oberfläche: `de.json`, `en.json` |
 | `launcher/voidstation-shell.py` | Vollbild-Fenster (WebKitGTK) für die Startseite; Firefox als Rückfall |
 | `launcher/tiles.json` | Standard-Kacheln |

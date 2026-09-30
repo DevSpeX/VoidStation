@@ -1,0 +1,42 @@
+/* VoidStation Theme: default-dark (VoidStation Classic Dark) */
+:root, :root[data-theme="default-dark"] {
+  --bg-main: #0e1012;
+  --bg-radial-1: #1b1f24;
+  --bg-radial-2: #14171b;
+  --surface-base: #16191d;
+  --surface-raised: #1b1e22;
+  --surface-card: #22262b;
+  --surface-card-hover: #2e343b;
+  --surface-active: #4a5260;
+  --surface-dialog: #1a1d21;
+  --surface-overlay: rgba(6, 7, 8, 0.75);
+
+  --text-primary: #ecebe8;
+  --text-secondary: rgba(236, 235, 232, 0.72);
+  --text-dim: rgba(236, 235, 232, 0.66);
+  --text-faint: rgba(236, 235, 232, 0.45);
+  --text-inverse: #0e1012;
+
+  --border-subtle: #2c3035;
+  --border-muted: rgba(255, 255, 255, 0.22);
+  --border-focus: #f2efe9;
+  --focus-ring: 0 0 0 2px var(--border-focus);
+  --divider: #2a2e33;
+
+  --status-ok-bg: #2f6d4f;
+  --status-ok-text: #8fd1ad;
+  --status-warn-bg: rgba(242, 193, 78, 0.15);
+  --status-warn-border: rgba(242, 193, 78, 0.55);
+  --status-warn-text: #f5d27a;
+  --status-danger-bg: #6e2b2b;
+  --status-danger-text: #f08a7a;
+  --status-info-bg: #2d3763;
+
+  --accent-radio: #3b2f4f;
+  --accent-tv: #24414a;
+  --tile-default-c: #2a2e33;
+
+  --bg: var(--bg-main);
+  --text: var(--text-primary);
+  --focus: var(--border-focus);
+}

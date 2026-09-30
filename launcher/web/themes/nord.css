@@ -1,0 +1,47 @@
+/* VoidStation Theme: nord (Arctic Nord Palette) */
+:root[data-theme="nord"] {
+  --bg-main: #242933;
+  --bg-radial-1: #2e3440;
+  --bg-radial-2: #1e222a;
+  --surface-base: #2e3440;
+  --surface-raised: #3b4252;
+  --surface-card: #3b4252;
+  --surface-card-hover: #434c5e;
+  --surface-active: #5e81ac;
+  --surface-dialog: #2e3440;
+  --surface-overlay: rgba(22, 25, 31, 0.8);
+
+  --text-primary: #eceff4;
+  --text-secondary: #e5e9f0;
+  --text-dim: #d8dee9;
+  --text-faint: #9aa5b8;
+  --text-inverse: #2e3440;
+
+  --border-subtle: #4c566a;
+  --border-muted: rgba(216, 222, 233, 0.2);
+  --border-focus: #88c0d0;
+  --focus-ring: 0 0 0 2px var(--border-focus);
+  --divider: #434c5e;
+
+  --status-ok-bg: #a3be8c;
+  --status-ok-text: #a3be8c;
+  --status-warn-bg: rgba(235, 203, 139, 0.18);
+  --status-warn-border: rgba(235, 203, 139, 0.65);
+  --status-warn-text: #ebcb8b;
+  --status-danger-bg: #bf616a;
+  --status-danger-text: #bf616a;
+  --status-info-bg: #81a1c1;
+
+  --accent-radio: #5e5473;
+  --accent-tv: #3e5a68;
+  --tile-default-c: #3b4252;
+
+  --bg: var(--bg-main);
+  --text: var(--text-primary);
+  --focus: var(--border-focus);
+}
+
+:root[data-theme="nord"] .pill.on,
+:root[data-theme="nord"] .key.on {
+  color: #eceff4;
+}

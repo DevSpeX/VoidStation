@@ -1,0 +1,47 @@
+/* VoidStation Theme: high-contrast (Accessibility High Contrast) */
+:root[data-theme="high-contrast"] {
+  --bg-main: #000000;
+  --bg-radial-1: #000000;
+  --bg-radial-2: #000000;
+  --surface-base: #000000;
+  --surface-raised: #111111;
+  --surface-card: #181818;
+  --surface-card-hover: #262626;
+  --surface-active: #ffff00;
+  --surface-dialog: #000000;
+  --surface-overlay: rgba(0, 0, 0, 0.9);
+
+  --text-primary: #ffffff;
+  --text-secondary: #f0f0f0;
+  --text-dim: #d0d0d0;
+  --text-faint: #aaaaaa;
+  --text-inverse: #000000;
+
+  --border-subtle: #ffffff;
+  --border-muted: #ffffff;
+  --border-focus: #ffff00;
+  --focus-ring: 0 0 0 3px #ffff00;
+  --divider: #ffffff;
+
+  --status-ok-bg: #008000;
+  --status-ok-text: #00ff00;
+  --status-warn-bg: #332b00;
+  --status-warn-border: #ffff00;
+  --status-warn-text: #ffff00;
+  --status-danger-bg: #800000;
+  --status-danger-text: #ff5555;
+  --status-info-bg: #003366;
+
+  --accent-radio: #330066;
+  --accent-tv: #004d40;
+  --tile-default-c: #222222;
+
+  --bg: var(--bg-main);
+  --text: var(--text-primary);
+  --focus: var(--border-focus);
+}
+
+:root[data-theme="high-contrast"] .pill.on,
+:root[data-theme="high-contrast"] .key.on {
+  color: #000000;
+}

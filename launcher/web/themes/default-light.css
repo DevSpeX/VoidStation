@@ -1,0 +1,82 @@
+/* VoidStation Theme: default-light (Clean Daylight) */
+:root[data-theme="default-light"] {
+  --bg-main: #f0f2f5;
+  --bg-radial-1: #e4e7eb;
+  --bg-radial-2: #d8dce2;
+  --surface-base: #e8ecf1;
+  --surface-raised: #ffffff;
+  --surface-card: #ffffff;
+  --surface-card-hover: #eef2f6;
+  --surface-active: #b8c8dc;
+  --surface-dialog: #ffffff;
+  --surface-overlay: rgba(15, 20, 25, 0.55);
+
+  --text-primary: #15181c;
+  --text-secondary: rgba(21, 24, 28, 0.78);
+  --text-dim: rgba(21, 24, 28, 0.62);
+  --text-faint: rgba(21, 24, 28, 0.42);
+  --text-inverse: #ffffff;
+
+  --border-subtle: #d0d5dc;
+  --border-muted: rgba(0, 0, 0, 0.15);
+  --border-focus: #1a73e8;
+  --focus-ring: 0 0 0 2px var(--border-focus);
+  --divider: #d8dce2;
+
+  --status-ok-bg: #388e3c;
+  --status-ok-text: #1b5e20;
+  --status-warn-bg: rgba(245, 166, 35, 0.18);
+  --status-warn-border: rgba(245, 166, 35, 0.7);
+  --status-warn-text: #b26a00;
+  --status-danger-bg: #c62828;
+  --status-danger-text: #b71c1c;
+  --status-info-bg: #1565c0;
+
+  --accent-radio: #5c4b75;
+  --accent-tv: #2b5b66;
+  --tile-default-c: #e2e6eb;
+
+  --bg: var(--bg-main);
+  --text: var(--text-primary);
+  --focus: var(--border-focus);
+}
+
+:root[data-theme="default-light"] .pill.on,
+:root[data-theme="default-light"] .key.on {
+  color: #15181c;
+}
+
+/* Startseiten-Kacheln haben dunkle/gesättigte Akzentfarben: Schrift, Icons und Uhr weiß */
+:root[data-theme="default-light"] #track .tile {
+  color: #ffffff;
+}
+
+:root[data-theme="default-light"] #track .tile .sub {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+:root[data-theme="default-light"] #track .tile.clock .date,
+:root[data-theme="default-light"] #track .tile.radio .now .ti {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+:root[data-theme="default-light"] #track .tile .run {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* Sender-, Radio- und App-Karten sind hell: dunkle Schrift – außer der gerade laufende Sender (dunkler Akzent) */
+:root[data-theme="default-light"] .station,
+:root[data-theme="default-light"] .appcard {
+  color: var(--text-primary);
+}
+
+:root[data-theme="default-light"] .station .star,
+:root[data-theme="default-light"] .chan .q {
+  color: var(--text-dim);
+}
+
+:root[data-theme="default-light"] .station.playing,
+:root[data-theme="default-light"] .station.playing .star,
+:root[data-theme="default-light"] .chan.playing .q {
+  color: #ffffff;
+}

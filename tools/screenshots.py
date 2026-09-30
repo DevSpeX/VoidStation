@@ -45,6 +45,7 @@ COUNTRIES = [{"code": c, "n": n} for c, n in [("DE", 212), ("AT", 48), ("CH", 61
 SETTINGS = {
     "lang": LANG, "langs": [{"id": "de", "label": "Deutsch"}, {"id": "en", "label": "English"}],
     "scale": float(os.environ.get("SCALE", "1.25")), "scales": [1, 1.25, 1.5, 1.75, 2, 2.25],
+    "theme": "default-dark", "themes": ["default-dark", "default-light", "high-contrast", "nord"],
     "cursor": {"theme": "Bibata-Modern-Ice", "size": 48,
                "themes": [{"id": "Bibata-Modern-Ice", "label": "Hell"}, {"id": "Bibata-Modern-Classic", "label": "Dunkel"}],
                "sizes": [32, 48, 64, 80, 96]},

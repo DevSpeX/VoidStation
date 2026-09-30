@@ -383,12 +383,21 @@ def volume_set(action):
 #  Einstellungen (Skalierung, Aufloesung, Audioausgang, Netzwerk)
 # ---------------------------------------------------------------------------
 SETTINGS = BASE / "settings.json"
-DEFAULTS = {"scale": 1.75, "resolution": None, "cursor_theme": "Bibata-Modern-Ice", "cursor_size": 48, "lang": None}
+DEFAULTS = {"scale": 1.75, "resolution": None, "cursor_theme": "Bibata-Modern-Ice", "cursor_size": 48, "lang": None, "theme": "default-dark"}
 # Sprachen der Oberflaeche (Texte in web/i18n/<id>.json); Anzeige immer in der eigenen Sprache
 LANGS = [{"id": "de", "label": "Deutsch"}, {"id": "en", "label": "English"}]
 CURSOR_SIZES = [32, 48, 64, 80, 96]
 CURSOR_NAMES = {"Bibata-Modern-Ice": "Hell", "Bibata-Modern-Classic": "Dunkel", "Adwaita": "Adwaita"}
 SCALES = [1.0, 1.25, 1.5, 1.75, 2.0, 2.25]
+
+
+def available_themes():
+    td = WEB / "themes"
+    if td.is_dir():
+        found = [p.stem for p in sorted(td.glob("*.css"))]
+        if found:
+            return found
+    return ["default-dark", "default-light", "high-contrast", "nord"]
 
 
 def settings_load():
@@ -1559,6 +1568,7 @@ def settings_payload():
     s = settings_load()
     return {"version": vs_version(), "ssh": ssh_state(), "live": LIVE, "lang": ui_lang(s), "langs": LANGS,
             "scale": s["scale"], "scales": SCALES,
+            "theme": s.get("theme", "default-dark"), "themes": available_themes(),
             "cursor": {"theme": s.get("cursor_theme"), "size": s.get("cursor_size"),
                        "themes": [{"id": t, "label": CURSOR_NAMES[t]} for t in cursor_themes()],
                        "sizes": CURSOR_SIZES}, "displays": xrandr_info(),
@@ -1971,6 +1981,12 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(400, {"error": "ungueltige Skalierung"})
                 s = settings_load(); s["scale"] = val; settings_save(s)
                 apply_appearance(s)
+                return self._json(200, settings_payload())
+            if parts == ["api", "settings", "theme"]:
+                th = str(self._body().get("theme", "")).strip()
+                if th not in available_themes():
+                    return self._json(400, {"error": "unbekanntes Theme"})
+                s = settings_load(); s["theme"] = th; settings_save(s)
                 return self._json(200, settings_payload())
             if parts == ["api", "settings", "cursor"]:
                 b = self._body()
