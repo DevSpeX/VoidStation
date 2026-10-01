@@ -51,7 +51,9 @@ sudo bash update.sh               # Aktualisieren, eigene Kacheln/Favoriten blei
 **Am Fernseher:** Einstellungen → Updates → *Aktualisieren* – der einzige Update-Knopf. Er prüft und installiert
 alles in einem Durchgang: Void-Pakete (inkl. Kernel), Flatpaks, AppImages, Proton-GE und VoidStation selbst
 (in dieser Reihenfolge; was aktuell ist, wird übersprungen). Die Geräte prüfen kurz nach dem Start und dann alle
-6 Stunden selbst und zeigen unten rechts einen Hinweis. Der Update-Dialog zeigt, was neu ist und welche Pakete
+6 Stunden selbst. Neue VoidStation-Versionen zeigt unten rechts sofort ein Hinweis – das Update bringt wartende
+Systemupdates gleich mit. Reine Systemupdates meldet der Hinweis erst, wenn das System seit 30, 60 oder 90 Tagen
+nicht mehr aktuell war (Einstellungen → Updates → *Systemupdates melden nach*, Standard 90). Der Update-Dialog zeigt, was neu ist und welche Pakete
 kommen. Eigene Kacheln, Favoriten und Einstellungen bleiben erhalten. Ein Neustart wird nur verlangt, wenn ein
 neuer Kernel oder eine neue VoidStation-Version installiert wurde.
 

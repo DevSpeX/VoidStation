@@ -1339,6 +1339,7 @@ function catSub(id) {
     case 'updates':
       if (sett.live) return esc(T('settings.liveShort'));
       if (updInfo) return UPD_MARK + '<b>' + esc(updNoteText(updInfo)) + '</b>';
+      if (vsState?.system?.count) return esc(vsVersion()) + ' · ' + esc(T('upd.noteSystem', { n: num(vsState.system.count) }));   // noch nicht faellig: ohne Warnzeichen
       return esc(vsVersion()) + (vsState ? ' · ' + esc(vsState.remote ? T('upd.allCurrent') : T('upd.unreachable')) : '');
     case 'system': return sett.ssh === undefined ? esc(sett.net.hostname) : esc(T('settings.ssh') + ': ' + T(sett.ssh ? 'common.on' : 'common.off'));
   }
@@ -1535,11 +1536,19 @@ const SET_PAGES = {
     if (vsState?.reboot && (vsState.reboot.kernel || vsState.reboot.voidstation)) {
       const rb = pill(esc(T('upd.rebootNow')), () => power('reboot')); rb.dataset.key = 'updreboot'; rvs.appendChild(rb);
     }
-    const rch = row(col(tr, T('settings.channel')));
+    const cch = col(tr, T('settings.channel'));
+    const rch = row(cch);
     const cur = (vsState && vsState.channel) || 'stable';
     for (const [id, lab] of [['stable', T('channel.stable')], ['main', T('channel.main')]]) {
       const b = pill(lab, () => setChannel(id), cur === id); b.dataset.key = 'ch' + id; rch.appendChild(b);
     }
+    // Reine Systemupdates erst nach dieser Frist melden (VoidStation-Updates immer sofort, Systemupdates fahren dann mit)
+    const cd = cch;                                         // gleiche Spalte wie der Kanal: passt auch bei 720p auf eine Seite
+    const rd = row(cd, T('settings.sysRemind'));
+    for (const d of sett.sysupd_choices || [30, 60, 90]) {
+      const b = pill(esc(T('settings.days', { n: d })), () => setSysDays(d), (sett.sysupd_days || 90) === d); b.dataset.key = 'sd' + d; rd.appendChild(b);
+    }
+    const dh = document.createElement('div'); dh.className = 'info'; dh.textContent = T('settings.sysRemindHint'); cd.appendChild(dh);
   },
   system(tr) {
     const rsys = row(col(tr, T('settings.power')));
@@ -1599,6 +1608,8 @@ function showVs() {
   const si = $('#sysInfo'); if (!si || !vsState?.system) return;
   const y = vsState.system, sum = sysSummary(vsState);
   let line = sum ? `<b>${esc(sum)}</b>` : esc(y.checked ? T('upd.sysCurrent') : T('upd.sysUnchecked'));
+  if (sum && y.due_at && !y.due && !vsState.available)                 // wartet still bis zur Erinnerung
+    line += `<br>${esc(T('upd.sysDueAt', { date: new Date(y.due_at * 1000).toLocaleDateString(loc(), { day: 'numeric', month: 'long', year: 'numeric' }) }))}`;
   if (y.error && !y.pkgs.length) line = esc(T('upd.sysError'));
   const rb = vsState.reboot || {};
   if (rb.kernel || rb.voidstation) line += `<br><b>${esc(T(rb.kernel ? 'upd.rebootKernel' : 'upd.rebootVs'))}</b>`;
@@ -1615,6 +1626,12 @@ async function setSsh(on) {
 async function setChannel(ch) {
   if (ch === 'main' && !(vsState && vsState.channel === 'main')) toast(T('channel.testWarn'));
   try { vsState = await api('/api/selfupdate/channel', { channel: ch }); } catch (e) { return toast(T('common.failedMsg', { msg: e.message }), true); }
+  renderSettings();
+}
+async function setSysDays(d) {
+  if (sett.sysupd_days === d) return;
+  try { vsState = await api('/api/settings/sysupd', { days: d }); sett.sysupd_days = d; }
+  catch (e) { return toast(T('common.failedMsg', { msg: e.message }), true); }
   renderSettings();
 }
 async function refreshVs(force) {

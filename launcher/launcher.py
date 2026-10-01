@@ -383,7 +383,9 @@ def volume_set(action):
 #  Einstellungen (Skalierung, Aufloesung, Audioausgang, Netzwerk)
 # ---------------------------------------------------------------------------
 SETTINGS = BASE / "settings.json"
-DEFAULTS = {"scale": 1.75, "resolution": None, "cursor_theme": "Bibata-Modern-Ice", "cursor_size": 48, "lang": None, "theme": "default-dark"}
+DEFAULTS = {"scale": 1.75, "resolution": None, "cursor_theme": "Bibata-Modern-Ice", "cursor_size": 48, "lang": None, "theme": "default-dark",
+            "sysupd_days": 90}
+SYSUPD_DAYS = (30, 60, 90)                  # Erinnerung an Systemupdates (ohne VoidStation-Update) nach … Tagen
 # Sprachen der Oberflaeche (Texte in web/i18n/<id>.json); Anzeige immer in der eigenen Sprache
 LANGS = [{"id": "de", "label": "Deutsch"}, {"id": "en", "label": "English"}]
 CURSOR_SIZES = [32, 48, 64, 80, 96]
@@ -1669,6 +1671,29 @@ KERNEL_PKG = re.compile(r"^linux(\d+\.\d+)?$")
 _SCACHE = {"t": 0.0, "pkgs": [], "flatpak": [], "appimage": [], "proton": None, "error": None,
            "db": None, "retry": 0.0}
 BOOT_BUILD = None                           # VoidStation-Stand beim Start der Oberflaeche (main)
+SYS_STAMP = BASE / "sysupdate.json"         # {"current": <Zeitpunkt, an dem zuletzt keine Void-Pakete ausstanden>}
+
+
+def sysupd_days(s=None):
+    d = (s or settings_load()).get("sysupd_days")
+    return d if d in SYSUPD_DAYS else DEFAULTS["sysupd_days"]
+
+
+def sys_current_since():
+    """Seit wann gelten die Systemupdates als offen? Fehlt der Wert (Geraete vor 0.9.0),
+    beginnt die Frist jetzt – kein Hinweis direkt nach dem Update auf 0.9.0."""
+    try:
+        return float(json.loads(SYS_STAMP.read_text())["current"])
+    except (OSError, ValueError, KeyError, TypeError):
+        sys_mark_current()
+        return time.time()
+
+
+def sys_mark_current():
+    try:
+        SYS_STAMP.write_text(json.dumps({"current": time.time()}))
+    except OSError as e:
+        log("sysupdate.json:", e)
 
 
 def xbps_busy():
@@ -1764,6 +1789,8 @@ def _sys_check(sync, logf=None):
         res["t"] = time.time()
     res["db"] = pkgdb_stamp()
     _SCACHE.update(res)
+    if not res["pkgs"] and not res["error"]:
+        sys_mark_current()                         # alles aktuell (auch nach Update im Terminal): Frist beginnt neu
 
 
 def sys_check(sync):
@@ -1793,9 +1820,12 @@ def sys_state():
     kernel = next((p["version"] for p in pkgs if KERNEL_PKG.match(p["name"])), None)
     names = {a["id"]: a["name"] for a in catalog()["apps"]} if _SCACHE["appimage"] else {}
     count = len(pkgs) + len(_SCACHE["flatpak"]) + len(_SCACHE["appimage"]) + (1 if _SCACHE["proton"] else 0)
+    days = sysupd_days()
+    due_at = sys_current_since() + days * 86400 if pkgs else None
     return {"pkgs": [p["name"] for p in pkgs], "kernel": kernel, "flatpak": len(_SCACHE["flatpak"]),
             "appimage": [names.get(i, i) for i in _SCACHE["appimage"]], "proton": _SCACHE["proton"],
-            "count": count, "error": _SCACHE["error"], "checked": _SCACHE["t"] or None}
+            "count": count, "error": _SCACHE["error"], "checked": _SCACHE["t"] or None,
+            "days": days, "due_at": due_at, "due": bool(due_at and time.time() >= due_at)}
 
 
 def updates_state(force=False):
@@ -1806,14 +1836,15 @@ def updates_state(force=False):
         busy = JOBS.busy() or xbps_busy()
     sysst = sys_state()
     return {**vs, "system": sysst, "reboot": reboot_needed(), "busy": busy,
-            "any": bool(vs["available"] or sysst["count"])}
+            "any": bool(vs["available"] or sysst["count"]), "notify": bool(vs["available"] or sysst["due"])}
 
 
 def updates_badge():
-    """Kurzfassung fuer /api/status (Hinweis unten rechts)."""
+    """Kurzfassung fuer /api/status (Hinweis unten rechts). Neue VoidStation-Versionen sofort,
+    reine Systemupdates erst, wenn die eingestellte Frist (30/60/90 Tage) abgelaufen ist."""
     vs, sysst, rb = vs_state(), sys_state(), reboot_needed()
-    return {"available": bool(vs["available"] or sysst["count"]), "version": vs["remote"] if vs["available"] else None,
-            "system": sysst["count"], "reboot": rb["kernel"] or rb["voidstation"]}
+    return {"available": bool(vs["available"] or sysst["due"]), "version": vs["remote"] if vs["available"] else None,
+            "system": sysst["count"] if sysst["due"] else 0, "reboot": rb["kernel"] or rb["voidstation"]}
 
 
 def updates_background_check():
@@ -1970,7 +2001,8 @@ def settings_payload():
             "cursor": {"theme": s.get("cursor_theme"), "size": s.get("cursor_size"),
                        "themes": [{"id": t, "label": CURSOR_NAMES[t]} for t in cursor_themes()],
                        "sizes": CURSOR_SIZES}, "displays": xrandr_info(),
-            "audio": audio_info(), "volume": volume_get(), "net": net_info(), "share": share_info()}
+            "audio": audio_info(), "volume": volume_get(), "net": net_info(), "share": share_info(),
+            "sysupd_days": sysupd_days(s), "sysupd_choices": SYSUPD_DAYS}
 
 
 # ---------------------------------------------------------------------------
@@ -2622,6 +2654,13 @@ class Handler(BaseHTTPRequestHandler):
                 except RuntimeError as e:
                     return self._json(409, {"error": str(e)})
                 return self._json(200, JOBS.current())
+            if parts == ["api", "settings", "sysupd"]:
+                days = self._body().get("days")
+                if days not in SYSUPD_DAYS:
+                    return self._json(400, {"error": "ungueltige Frist"})
+                s = settings_load(); s["sysupd_days"] = days; settings_save(s)
+                log("Systemupdate-Erinnerung nach", days, "Tagen")
+                return self._json(200, updates_state())
             if parts == ["api", "settings", "lang"]:
                 lang = str(self._body().get("lang", ""))
                 if lang not in {l["id"] for l in LANGS}:

@@ -6,7 +6,7 @@ Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, foll
 ## 0.9.0 – 2026-10-01
 - Updates in one place: Settings → Updates → “Update” checks and installs everything in one go – Void packages (incl. the kernel), Flatpaks, AppImages, Proton-GE and VoidStation itself; anything already up to date is skipped
 - The AppCenter no longer has update buttons, it is only for installing and removing programs
-- Devices now also check for system updates (every 6 hours); the hint at the bottom right shows them, the confirmation lists all packages
+- Devices now also check for system updates (every 6 hours). New VoidStation versions show up right away and bring pending system updates along; system-only updates are flagged at the bottom right only after 30, 60 or 90 days (default 90, Settings → Updates) – no daily nagging on a rolling release. The confirmation lists all packages
 - Updates done in a terminal (`sudo xbps-install -Su`) are detected: finished updates disappear from the display, and after a new kernel “Restart required” appears
 - A restart is only requested when it is really needed (new kernel or new VoidStation version)
 - New in the terminal: `vsctl update` does the same as the button in Settings, with a live log
