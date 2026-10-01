@@ -67,8 +67,11 @@
     --ease: cubic-bezier(.1, .9, .2, 1);
     font-family: "Noto Sans", "Segoe UI", "DejaVu Sans", sans-serif;
   }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg-main); color: var(--text-primary); user-select: none; }
+  *, *::before, *::after { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-user-drag: none; }
+  input, textarea { -webkit-user-select: text; user-select: text; }
+  img, svg, a { -webkit-user-drag: none; user-drag: none; }
+  .tile img, .tile svg, .logo, .logo img, .logo svg { pointer-events: none; -webkit-user-drag: none; user-drag: none; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg-main); color: var(--text-primary); -webkit-user-select: none; user-select: none; }
   body {
     display: flex; flex-direction: column;
     background:
@@ -444,8 +447,8 @@
   .ipanel .st.ok .m { color: var(--status-ok-text); } .ipanel .st.bad .m { color: var(--status-danger-text); } .ipanel .st.keep .m { color: var(--text-dim); }
   .mono { font: calc(12.5px * var(--f))/1.4 "DejaVu Sans Mono", monospace; color: var(--text-dim); white-space: pre-wrap; word-break: break-word; max-height: calc(var(--iu) * .9); overflow: hidden; }
   /* Aufteilen (neben einem System) */
-  .split { position: relative; display: flex; gap: 3px; width: calc(var(--iu) * 4.2); height: calc(var(--iu) * 1.25); cursor: pointer; outline: none; }
-  .split > .a, .split > .b { position: relative; overflow: hidden; min-width: 22%; padding: calc(14px * var(--f)); box-sizing: border-box; transition: flex-basis .2s var(--ease); }
+  .split { position: relative; display: flex; gap: 3px; width: calc(var(--iu) * 4.2); height: calc(var(--iu) * 1.25); cursor: pointer; outline: none; -webkit-user-select: none; user-select: none; }
+  .split > .a, .split > .b { position: relative; overflow: hidden; min-width: 22%; padding: calc(14px * var(--f)); box-sizing: border-box; transition: flex-basis .2s var(--ease); pointer-events: none; -webkit-user-select: none; user-select: none; }
   .split .a { background: var(--status-info-bg); } .split .b { background: var(--status-ok-bg); }
   .split .nm { font-size: calc(15px * var(--f)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .split .sz { font-size: calc(var(--iu) * .26); font-weight: 300; line-height: 1.15; }
@@ -1060,7 +1063,7 @@ function activate(el = focusEl) {
   if (act === 'osksym') return oskToggleSym();
   if (act === 'osksubmit') return oskSubmit();
   if (el._oskChar) return oskAddChar(el._oskChar);
-  if (el.tagName === 'INPUT' && el.id !== 'oskVal') return openOsk(el);
+  if ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && el.id !== 'oskVal') return openOsk(el);
   if (el.dataset.query) { $('#rSearch').value = el.dataset.query; return search(el.dataset.query); }
   if (el._station) return radioPlay(el._station);
   if (el._set) return el._set();
@@ -2512,8 +2515,39 @@ function rBeside() {
   // dir = Richtung des Griffs: nach links (−1) bekommt VoidStation mehr Platz, nach rechts (+1) weniger
   sp._adj = dir => { I.newSize = Math.max(MIN_ROOT, Math.min(o.max_new, Math.round((I.newSize - dir * step) / GiB) * GiB)); draw(); };
   sp._set = () => instGo('account');
-  sp.addEventListener('click', e => { const r = sp.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width;
-    I.newSize = Math.max(MIN_ROOT, Math.min(o.max_new, Math.round(o.size * (1 - x) / GiB) * GiB)); draw(); e.stopPropagation(); setFocus(sp); });
+  const updateSplit = e => {
+    const r = sp.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    I.newSize = Math.max(MIN_ROOT, Math.min(o.max_new, Math.round(o.size * (1 - x) / GiB) * GiB));
+    draw();
+  };
+  let sliding = false;
+  sp.addEventListener('mousedown', e => {
+    if (e.button === 0) {
+      sliding = true;
+      e.preventDefault();
+      e.stopPropagation();
+      setFocus(sp);
+      updateSplit(e);
+    }
+  });
+  window.addEventListener('mousemove', e => {
+    if (sliding) {
+      e.preventDefault();
+      updateSplit(e);
+    }
+  });
+  window.addEventListener('mouseup', e => {
+    if (sliding) {
+      sliding = false;
+      e.preventDefault();
+    }
+  });
+  sp.addEventListener('click', e => {
+    e.stopPropagation();
+    setFocus(sp);
+    updateSplit(e);
+  });
   draw();
   const rowb = document.createElement('div'); rowb.className = 'srow';
   const mk = (txt, fn, key) => { const b = document.createElement('button'); b.className = 'pill inav'; b.textContent = txt; b._set = fn; b.dataset.key = key; return b; };
@@ -3101,6 +3135,11 @@ function oskSubmit() {
     if (oskTarget.id === 'rSearch') search(oskTarget.value);
     else if (oskTarget.id === 'tSearch') { tvQuery = oskTarget.value.trim(); tvSearch(); }
     else if (oskTarget.id === 'wifiPw' && wifiPick) wifiConnect(wifiPick.ssid, oskTarget.value);
+    else {
+      oskTarget.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+      const form = oskTarget.closest('form');
+      if (form) (form.requestSubmit ? form.requestSubmit() : form.submit());
+    }
   }
   closeOsk();
 }
@@ -3134,7 +3173,7 @@ const KEYMAP = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDow
 addEventListener('keydown', e => {
   if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) held.key = true;
   if (e.repeat && focusEl?._hold) return e.preventDefault();
-  if (layer() === 'osk') {
+  if (layer() === 'osk' && e.isTrusted) {          // nur echte Tasten; oskSubmit schickt selbst ein Enter an das Feld
     if (e.key === 'Escape') { e.preventDefault(); closeOsk(); return; }
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -3172,9 +3211,19 @@ addEventListener('keydown', e => {
 
 addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') held.key = false; });
 
-/* ============================================================ Eingabe: Maus */
+/* ============================================================ Eingabe: Maus & Ziehschutz */
+document.addEventListener('dragstart', e => e.preventDefault());
+document.addEventListener('selectstart', e => { if (!['INPUT', 'TEXTAREA'].includes(e.target?.tagName)) e.preventDefault(); });
+document.addEventListener('focusin', e => {
+  const el = e.target;
+  if ((el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && el.id !== 'oskVal' && !el.readOnly && !el.disabled) {
+    if (layer() !== 'osk') openOsk(el);
+  }
+});
 document.addEventListener('mouseover', e => { const el = e.target.closest(SCOPE[layer()]); if (el && el !== focusEl) setFocus(el); });
 document.addEventListener('click', e => {
+  const inp = e.target.closest('input, textarea');
+  if (inp && inp.id !== 'oskVal' && !inp.readOnly && !inp.disabled) return openOsk(inp);
   const sa = e.target.closest('.sarr');
   if (sa) { e.stopPropagation(); return jumpGroup(Number(sa.dataset.dir)); }
   if (e.target.closest('#updNote')) return openUpdate();
@@ -3208,8 +3257,13 @@ function padLoop(ts) {
   for (const g of gps) {
     const bt = i => g.buttons[i] && g.buttons[i].pressed;
     const ax = g.axes[0] || 0, ay = g.axes[1] || 0;
-    want.left ||= bt(14) || ax < -0.55; want.right ||= bt(15) || ax > 0.55;
-    want.up ||= bt(12) || ay < -0.55;   want.down ||= bt(13) || ay > 0.55;
+    // Steuerkreuz als Achse (z. B. DualSense ohne Standard-Belegung: 0 LX, 1 LY, 2 L2, 3 RX, 4 RY, 5 R2, 6/7 Kreuz)
+    const hat = g.mapping !== 'standard' && g.axes.length >= 8;
+    const hatX = hat ? g.axes[6] : 0, hatY = hat ? g.axes[7] : 0;
+    want.left  ||= bt(14) || ax < -0.55 || hatX < -0.55;
+    want.right ||= bt(15) || ax > 0.55  || hatX > 0.55;
+    want.up    ||= bt(12) || ay < -0.55 || hatY < -0.55;
+    want.down  ||= bt(13) || ay > 0.55  || hatY > 0.55;
     want.a ||= bt(0); want.b ||= bt(1); want.x ||= bt(2); want.y ||= bt(3);
     want.lb ||= bt(4); want.rb ||= bt(5); want.lt ||= bt(6); want.rt ||= bt(7); want.select ||= bt(8); want.start ||= bt(9);
   }

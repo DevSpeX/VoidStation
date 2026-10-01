@@ -152,6 +152,19 @@ for g in input audio video render bluetooth; do
   getent group "$g" >/dev/null && usermod -aG "$g" "$VSUSER" || true
 done
 
+# Bluetooth & Controller: DualSense / DualShock drahtlos (ClassicBondedOnly=false, UserspaceHID=true)
+if [ -f /etc/bluetooth/input.conf ]; then
+  grep -q '^UserspaceHID=true' /etc/bluetooth/input.conf || sed -i 's/^#*UserspaceHID=.*/UserspaceHID=true/' /etc/bluetooth/input.conf
+  grep -q '^ClassicBondedOnly=false' /etc/bluetooth/input.conf || sed -i 's/^#*ClassicBondedOnly=.*/ClassicBondedOnly=false/' /etc/bluetooth/input.conf
+fi
+mkdir -p /etc/udev/rules.d
+cat > /etc/udev/rules.d/70-gamepad.rules <<'EOF'
+# PlayStation DualSense & DualShock (USB & Bluetooth)
+KERNEL=="hidraw*", ATTRS{idVendor}=="054c", MODE="0660", TAG+="uaccess"
+SUBSYSTEM=="input", ATTRS{idVendor}=="054c", MODE="0660", TAG+="uaccess"
+KERNEL=="uinput", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
+EOF
+
 # ---------------------------------------------------------------------
 say "5/8  Firefox-Profile (Startseite + YouTube)"
 for p in home youtube; do
@@ -159,8 +172,10 @@ for p in home youtube; do
   cp "$TV/firefox/user-common.js" "$TV/profiles/$p/user.js"
 done
 cat "$TV/firefox/user-youtube.js" >> "$TV/profiles/youtube/user.js"
-install -d /etc/firefox/policies
+install -d /etc/firefox/policies /usr/local/share/voidstation
 cp "$TV/firefox/policies.json" /etc/firefox/policies/policies.json
+# Bildschirmtastatur fuer Firefox (FX OSK, von Mozilla signiert) – per Richtlinie aus lokaler Datei, auch offline
+install -m 644 "$TV/firefox/fx_osk.xpi" /usr/local/share/voidstation/fx_osk.xpi
 
 # ---------------------------------------------------------------------
 say "6/8  Ton (PipeWire) einrichten"

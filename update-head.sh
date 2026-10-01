@@ -126,6 +126,19 @@ xbps-query vba-m >/dev/null 2>&1 && xbps-remove -Ry vba-m >/dev/null 2>&1 && ech
 # Bluetooth: bluetoothctl braucht die Gruppe bluetooth (wirkt nach dem naechsten Neustart)
 getent group bluetooth >/dev/null && usermod -aG bluetooth "$VSUSER" || true
 
+# Bluetooth & Controller: DualSense / DualShock drahtlos (ClassicBondedOnly=false, UserspaceHID=true)
+if [ -f /etc/bluetooth/input.conf ]; then
+  grep -q '^UserspaceHID=true' /etc/bluetooth/input.conf || sed -i 's/^#*UserspaceHID=.*/UserspaceHID=true/' /etc/bluetooth/input.conf
+  grep -q '^ClassicBondedOnly=false' /etc/bluetooth/input.conf || sed -i 's/^#*ClassicBondedOnly=.*/ClassicBondedOnly=false/' /etc/bluetooth/input.conf
+fi
+mkdir -p /etc/udev/rules.d
+cat > /etc/udev/rules.d/70-gamepad.rules <<'EOF'
+# PlayStation DualSense & DualShock (USB & Bluetooth)
+KERNEL=="hidraw*", ATTRS{idVendor}=="054c", MODE="0660", TAG+="uaccess"
+SUBSYSTEM=="input", ATTRS{idVendor}=="054c", MODE="0660", TAG+="uaccess"
+KERNEL=="uinput", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
+EOF
+
 say "3/8  AppCenter-Helfer (installiert nur freigegebene Pakete)"
 install -o root -g root -m 755 "$TV/voidstation-pkg" /usr/local/sbin/voidstation-pkg
 ln -sfn "$TV/vsctl" /usr/local/bin/vsctl          # "vsctl update" im Terminal = Einstellungen → Updates
@@ -293,6 +306,10 @@ gtk-icon-theme-name="Adwaita"
 gtk-cursor-theme-name="Bibata-Modern-Ice"
 gtk-cursor-theme-size=48
 GTK
+# Firefox-Richtlinien + Bildschirmtastatur (FX OSK, per Richtlinie aus lokaler Datei)
+install -d /etc/firefox/policies /usr/local/share/voidstation
+[ -f "$TV/firefox/policies.json" ] && cp "$TV/firefox/policies.json" /etc/firefox/policies/policies.json
+[ -f "$TV/firefox/fx_osk.xpi" ] && install -m 644 "$TV/firefox/fx_osk.xpi" /usr/local/share/voidstation/fx_osk.xpi
 # bestehende Firefox-Profile ebenfalls dunkel schalten
 for uj in "$TV"/profiles/*/user.js; do
   [ -f "$uj" ] || continue

@@ -73,6 +73,10 @@ bluetooth_ctl() {
   case "$1" in
     on)
       [ -d /etc/sv/bluetoothd ] || xbps-install -Sy bluez || return 1
+      if [ -f /etc/bluetooth/input.conf ]; then
+        grep -q '^UserspaceHID=true' /etc/bluetooth/input.conf || sed -i 's/^#*UserspaceHID=.*/UserspaceHID=true/' /etc/bluetooth/input.conf
+        grep -q '^ClassicBondedOnly=false' /etc/bluetooth/input.conf || sed -i 's/^#*ClassicBondedOnly=.*/ClassicBondedOnly=false/' /etc/bluetooth/input.conf
+      fi
       [ -e /var/service/bluetoothd ] || ln -s /etc/sv/bluetoothd /var/service/
       echo "Bluetooth an"
       ;;
