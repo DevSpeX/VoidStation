@@ -3,6 +3,13 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.11.1 – 2026-10-01
+- The on-screen keyboard opens for every input field, also on mouse click – and now in Firefox/YouTube too (“FX OSK” extension, works offline)
+- PlayStation controllers (DualSense/DualShock) via Bluetooth; the D-pad also works on controllers that report it as an axis
+- Logos and tiles can no longer be dragged by accident, no text selection while navigating
+- Installer: the size split next to another system can be dragged with the mouse
+- Thanks to DevSpeX!
+
 ## 0.11.0 – 2026-10-01
 - Installation also works in BIOS mode (Legacy/CSM): older PCs and virtual machines with default settings (VirtualBox, QEMU) no longer need UEFI. BIOS mode offers “Use the whole SSD”; installing next to other systems and manual partitioning remain UEFI-only
 - An SSD installed in BIOS mode also boots when the firmware is later switched to UEFI (GRUB for both modes)

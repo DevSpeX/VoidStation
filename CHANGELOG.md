@@ -4,6 +4,13 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.11.1 – 2026-10-01
+- Bildschirmtastatur öffnet sich bei jedem Eingabefeld, auch per Mausklick – und jetzt auch in Firefox/YouTube (Erweiterung „FX OSK“, funktioniert offline)
+- PlayStation-Controller (DualSense/DualShock) per Bluetooth; Steuerkreuz funktioniert auch bei Controllern, die es als Achse melden
+- Logos und Kacheln lassen sich nicht mehr versehentlich ziehen, kein Markieren von Text beim Bedienen
+- Installer: Größenaufteilung neben einem anderen System lässt sich mit der Maus ziehen
+- Danke an DevSpeX!
+
 ## 0.11.0 – 2026-10-01
 - Installation auch im BIOS-Modus (Legacy/CSM): ältere PCs und virtuelle Maschinen mit Standardeinstellungen (VirtualBox, QEMU) brauchen kein UEFI mehr. Im BIOS-Modus gibt es den Weg „Ganze SSD“; neben anderen Systemen und „Selbst einteilen“ bleiben dem UEFI-Modus vorbehalten
 - Eine im BIOS-Modus installierte SSD startet auch, wenn die Firmware später auf UEFI umgestellt wird (GRUB für beide Modi)
