@@ -3,6 +3,11 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.8.3 – 2026-10-01
+- Settings adapt to every resolution and scale: long lists (Wi-Fi, Bluetooth) scroll along instead of disappearing under the hint line; long names wrap
+- Page titles shrink when space is tight instead of overlapping the page arrows
+- Fixed: at large scales (e.g. 2.25× at 720p) opening Radio could hang the interface (endless re-layout loop)
+
 ## 0.8.2 – 2026-10-01
 - Settings: the top row of tiles is no longer cut off, and the focus frame on the bottom row no longer covers the hint line
 

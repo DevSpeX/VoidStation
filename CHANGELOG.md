@@ -4,6 +4,11 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.8.3 – 2026-10-01
+- Einstellungen passen sich jeder Auflösung und Skalierung an: lange Listen (WLAN, Bluetooth) scrollen mit, statt unter der Hinweiszeile zu verschwinden; lange Namen brechen um
+- Seitentitel werden bei wenig Platz kleiner, statt sich mit den Blätter-Pfeilen zu überlappen
+- Behoben: bei großer Skalierung (z. B. 2,25× bei 720p) konnte sich die Oberfläche beim Öffnen von Radio aufhängen (Endlosschleife beim Einpassen)
+
 ## 0.8.2 – 2026-10-01
 - Einstellungen: die obere Kachelreihe wird nicht mehr abgeschnitten, der Fokusrahmen der unteren Reihe überdeckt nicht mehr die Hinweiszeile
 

@@ -228,6 +228,19 @@
   .info { font-size: calc(16px * var(--f)); color: var(--text-dim); line-height: 1.5; }
   .info b { color: var(--text); font-weight: 400; }
   .wifi .sig { color: var(--text-faint); font-size: .85em; }
+  /* Unterseiten: Spalte nie hoeher als der Platz ueber der Hinweiszeile – sonst scrollt sie senkrecht mit dem Fokus */
+  #sTrack > .group:not(.sethome) { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+  #sTrack > .group:not(.sethome) > h2 { flex: none; }
+  #sTrack .col { flex: 0 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; padding-bottom: 2px; }
+  #sTrack .col .vol { flex-wrap: wrap; }
+  #sTrack .col .vol .meter { width: min(calc(120px * var(--f)), 20vw); }
+  #sTrack .col::-webkit-scrollbar { display: none; }
+  #sTrack .col.more { -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 36px * var(--f)), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 36px * var(--f)), transparent); }
+  /* Knoepfe in den Spalten: Fliesstext statt Flex, damit lange Namen samt Status sauber umbrechen */
+  #sTrack .col .pill { display: inline-block; max-width: 100%; white-space: normal; text-align: left; line-height: 1.25; padding: calc(9px * var(--f)) calc(16px * var(--f)); overflow-wrap: break-word; }
+  #sTrack .col .btlist > .row { flex-wrap: wrap; }   /* "Entkoppeln" rutscht bei wenig Platz unter das Geraet statt zu zerbroeseln */
+  #sTrack .col .pill.on::before { margin-right: calc(8px * var(--f)); }
+  #sTrack .col .field { max-width: 100%; }
   /* Einstellungen: Uebersicht mit Bereichs-Kacheln */
   /* ohne Ueberschrift darueber: Platz lassen, sonst schneidet die Buehne Fokusrahmen und Vergroesserung der oberen Reihe ab */
   #sTrack > .group.sethome { padding-top: calc(12px * var(--f) + var(--u) * .03); }
@@ -330,6 +343,10 @@
 
   /* ---------- Installer (nur Live-System) ---------- */
   #inst { --iu: var(--u); --gap: calc(10px * var(--f)); }
+  /* Unterseiten-Titel weichen den Blaetter-Pfeilen aus (Kuerzung mit … statt Ueberlappung) */
+  .layer header .htitle { flex: 0 1 auto; min-width: 0; }
+  .layer header .nowline { flex: 0 50 auto; min-width: min(calc(110px * var(--f)), 20vw); }   /* schrumpft zuerst, der Titel zuletzt */
+  .layer header h1 { font-size: min(calc(52px * var(--f)), 7vw); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-bottom: .08em; }
   #inst h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-bottom: .08em; }
   #inst .htitle { flex: 1; }
   button.tile { border: 0; padding: 0; font: inherit; text-align: left; color: var(--text); }
@@ -683,7 +700,25 @@ async function getJSON(path) {
 
 /* ============================================================ Skalierung
    f = Skalierung × Hoehe/768. Kacheln wachsen mit, die Zeilenzahl passt sich an (3 → 2 → 1). */
+/* layout() kann sich ueber updateHint() selbst ausloesen (Hinweiszeile bekommt "blaettern" → zweite Zeile → Kacheln
+   kleiner → nichts mehr zu blaettern → Hinweis weg → ...). Darum: hoechstens 3 Durchlaeufe; kippt es hin und her, bleibt
+   der Blaetter-Hinweis fuer diese Ebene/Groesse stehen (sicherer Zustand: Kacheln etwas kleiner, nichts liegt unter dem Hinweis). */
+let layoutBusy = false, layoutAgain = false;
+const pagesSticky = new Set();
+const stickyKey = () => `${layer()}|${innerWidth}x${innerHeight}|${scale}`;
 function layout() {
+  if (layoutBusy) { layoutAgain = true; return; }
+  layoutBusy = true;
+  try {
+    for (let pass = 0; pass < 3; pass++) {
+      layoutAgain = false;
+      layoutOnce();
+      if (!layoutAgain) break;
+      if (pass === 1) { pagesSticky.add(stickyKey()); updateHint(); }
+    }
+  } finally { layoutBusy = false; }
+}
+function layoutOnce() {
   const r = innerHeight / 768;
   const f = scale * r;
   const root = document.documentElement.style;
@@ -737,6 +772,7 @@ function fitGrids() {
   fitGrid($('#tTrack'), '.sgrid', 3);
   fitGrid($('#rTrack'), '.sgrid', 3);
   fitGrid($('#sTrack'), '.setgrid', 3, setRing());
+  $$('#sTrack .col').forEach(colMore);
 }
 
 /* ============================================================ Ebenen */
@@ -768,7 +804,7 @@ function updateHint() {
     inst:     instHints()
   }[layer()];
   const tr = curTrack();
-  if (tr && tr.scrollWidth - innerWidth > 4) h.splice(h.length - (layer() === 'home' ? 0 : 1), 0, T('hint.pages'));
+  if (tr && (tr.scrollWidth - innerWidth > 4 || pagesSticky.has(stickyKey()))) h.splice(h.length - (layer() === 'home' ? 0 : 1), 0, T('hint.pages'));
   const note = updInfo && TRACKS[layer()]
     ? `<button class="updnote" id="updNote"><svg viewBox="0 0 24 24"><path d="M12 2.5L1.5 21h21z" fill="#f2c14e"/><path d="M12 9v5.5M12 17.7v.1" stroke="#1a1d21" stroke-width="2.3" stroke-linecap="round"/></svg>` +
       `<b>${esc(updInfo.version ? T('upd.note', { version: updInfo.version }) : T('upd.badgeGeneric'))}</b><span class="k">${esc(T('upd.noteKey'))}</span></button>` : '';
@@ -853,8 +889,25 @@ function setFocus(el, instant) {
   lastFocus[layer()] = el;
   const tr = el.closest('.track');
   if (tr) keepVisible(tr, el, instant);
+  const sc = el.closest('#sTrack .col');
+  if (sc) keepVisibleY(sc, el);
   updScroll();
 }
+// Einstellungs-Spalte senkrecht so verschieben, dass das fokussierte Element ganz zu sehen ist
+function keepVisibleY(sc, el) {
+  if (sc.scrollHeight <= sc.clientHeight + 1) return colMore(sc);
+  const items = [...sc.querySelectorAll('.snav')];
+  if (el === items[0]) sc.scrollTop = 0;                               // erstes Element: auch Ueberschriften darueber zeigen
+  else if (el === items[items.length - 1]) sc.scrollTop = sc.scrollHeight;   // letztes: auch Text darunter zeigen
+  // in jedem Fall: das Element selbst ganz zeigen, nach Moeglichkeit mit etwas Vorschau auf das Naechste
+  const r = el.getBoundingClientRect(), c = sc.getBoundingClientRect();
+  const f = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--f')) || 1;
+  const m = Math.max(0, Math.min(40 * f, (c.height - r.height) / 2));
+  if (r.top < c.top + (el === items[0] ? 0 : m)) sc.scrollTop -= (c.top + (el === items[0] ? 0 : m)) - r.top;
+  else if (r.bottom > c.bottom - m) sc.scrollTop += r.bottom - (c.bottom - m);
+  colMore(sc);
+}
+function colMore(sc) { sc.classList.toggle('more', sc.scrollTop + sc.clientHeight < sc.scrollHeight - 2); }
 /* ---- Blaettern: Pfeile oben rechts, Gruppenspruenge mit LT/RT bzw. Bild auf/ab */
 const TRACKS = { home: '#track', radio: '#rTrack', tv: '#tTrack', apps: '#aTrack', settings: '#sTrack', inst: '#iTrack' };
 function curTrack() { const sel = TRACKS[layer()]; return sel ? $(sel) : null; }
@@ -878,6 +931,14 @@ function updScroll() {
   }
   const sc = !!tr && max >= 4;
   if (sc !== lastScrollable) { lastScrollable = sc; updateHint(); }
+  fitTitle();
+}
+// Titel der offenen Unterseite verkleinern (bis 60 %), wenn er neben Blaetter-Pfeilen und Statuszeile keinen Platz hat
+function fitTitle() {
+  const h = $$('.layer.open header h1').pop(); if (!h) return;
+  h.style.fontSize = '';
+  let fs = parseFloat(getComputedStyle(h).fontSize); const min = fs * 0.6;
+  while (h.scrollWidth > h.clientWidth + 1 && fs > min) { fs = Math.max(min, fs * 0.92); h.style.fontSize = fs + 'px'; }
 }
 function jumpGroup(dir) {
   if (splashTile) return;
@@ -1231,6 +1292,7 @@ function pill(label, fn, on, extra) {
 function col(track, title) {
   const c = document.createElement('div');
   c.className = 'col';
+  c.addEventListener('scroll', () => colMore(c), { passive: true });
   section(track, title, c);
   return c;
 }
@@ -1497,8 +1559,10 @@ function renderSettings(want) {
   let cat = sCat && SET_CATS.find(c => c.id === sCat && (!c.show || c.show()));
   if (!cat) sCat = null;
   $('#settings h1').textContent = cat ? cat.title() : T('settings.title');
+  fitTitle();
   $('#sNet').innerHTML = sett.net.addresses.length ? `<strong>${esc(sett.net.addresses[0].ip)}</strong><span>${esc(sett.net.hostname)}</span>` : `<strong>${esc(T('settings.offline'))}</strong>`;
-  if (cat) SET_PAGES[cat.id](tr); else renderSettingsHome(tr);
+  if (cat) { SET_PAGES[cat.id](tr); requestAnimationFrame(() => $$('#sTrack .col').forEach(colMore)); }
+  else renderSettingsHome(tr);
   showVs();
   showVol(sett.volume);
   if (layer() === 'settings') {
