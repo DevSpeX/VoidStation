@@ -306,22 +306,18 @@ gtk-icon-theme-name="Adwaita"
 gtk-cursor-theme-name="Bibata-Modern-Ice"
 gtk-cursor-theme-size=48
 GTK
-# bestehende Firefox-Profile ebenfalls dunkel schalten und OSK-Erweiterung hinterlegen
-install -d /etc/firefox/policies /usr/lib/firefox/browser/extensions
+# Firefox-Richtlinien + Bildschirmtastatur (FX OSK, per Richtlinie aus lokaler Datei)
+install -d /etc/firefox/policies /usr/local/share/voidstation
 [ -f "$TV/firefox/policies.json" ] && cp "$TV/firefox/policies.json" /etc/firefox/policies/policies.json
-[ -f "$TV/firefox/fx_osk.xpi" ] && cp "$TV/firefox/fx_osk.xpi" "/usr/lib/firefox/browser/extensions/{87ce8680-7931-493f-9125-19c2c7ca092a}.xpi"
-for p in "$TV"/profiles/*; do
-  [ -d "$p" ] || continue
-  install -d "$p/extensions"
-  [ -f "$TV/firefox/fx_osk.xpi" ] && cp "$TV/firefox/fx_osk.xpi" "$p/extensions/{87ce8680-7931-493f-9125-19c2c7ca092a}.xpi"
-  uj="$p/user.js"
+[ -f "$TV/firefox/fx_osk.xpi" ] && install -m 644 "$TV/firefox/fx_osk.xpi" /usr/local/share/voidstation/fx_osk.xpi
+# bestehende Firefox-Profile ebenfalls dunkel schalten
+for uj in "$TV"/profiles/*/user.js; do
   [ -f "$uj" ] || continue
   grep -q 'prefers-color-scheme.content-override' "$uj" || cat >> "$uj" <<'JS'
 user_pref("layout.css.prefers-color-scheme.content-override", 0);
 user_pref("browser.theme.toolbar-theme", 0);
 user_pref("browser.theme.content-theme", 0);
 JS
-  grep -q 'extensions.autoDisableScopes' "$uj" || echo 'user_pref("extensions.autoDisableScopes", 0);' >> "$uj"
 done
 chown -R "$VSUSER:$VSUSER" "$HOMEDIR/.config" "$HOMEDIR/.gtkrc-2.0"
 echo "dunkles Theme eingerichtet (Mauszeiger-Stil und -Größe unter Einstellungen)"

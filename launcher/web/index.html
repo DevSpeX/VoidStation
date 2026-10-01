@@ -3173,7 +3173,7 @@ const KEYMAP = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDow
 addEventListener('keydown', e => {
   if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) held.key = true;
   if (e.repeat && focusEl?._hold) return e.preventDefault();
-  if (layer() === 'osk') {
+  if (layer() === 'osk' && e.isTrusted) {          // nur echte Tasten; oskSubmit schickt selbst ein Enter an das Feld
     if (e.key === 'Escape') { e.preventDefault(); closeOsk(); return; }
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -3257,10 +3257,9 @@ function padLoop(ts) {
   for (const g of gps) {
     const bt = i => g.buttons[i] && g.buttons[i].pressed;
     const ax = g.axes[0] || 0, ay = g.axes[1] || 0;
-    const hatX = (g.axes.length > 6 && Math.abs(g.axes[6]) > 0.55) ? g.axes[6]
-               : (g.axes.length > 4 && Math.abs(g.axes[4]) > 0.55 && g.axes[4] !== -1) ? g.axes[4] : 0;
-    const hatY = (g.axes.length > 7 && Math.abs(g.axes[7]) > 0.55) ? g.axes[7]
-               : (g.axes.length > 5 && Math.abs(g.axes[5]) > 0.55 && g.axes[5] !== -1) ? g.axes[5] : 0;
+    // Steuerkreuz als Achse (z. B. DualSense ohne Standard-Belegung: 0 LX, 1 LY, 2 L2, 3 RX, 4 RY, 5 R2, 6/7 Kreuz)
+    const hat = g.mapping !== 'standard' && g.axes.length >= 8;
+    const hatX = hat ? g.axes[6] : 0, hatY = hat ? g.axes[7] : 0;
     want.left  ||= bt(14) || ax < -0.55 || hatX < -0.55;
     want.right ||= bt(15) || ax > 0.55  || hatX > 0.55;
     want.up    ||= bt(12) || ay < -0.55 || hatY < -0.55;

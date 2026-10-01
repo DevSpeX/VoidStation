@@ -168,14 +168,14 @@ EOF
 # ---------------------------------------------------------------------
 say "5/8  Firefox-Profile (Startseite + YouTube)"
 for p in home youtube; do
-  install -d "$TV/profiles/$p/extensions"
+  install -d "$TV/profiles/$p"
   cp "$TV/firefox/user-common.js" "$TV/profiles/$p/user.js"
-  [ -f "$TV/firefox/fx_osk.xpi" ] && cp "$TV/firefox/fx_osk.xpi" "$TV/profiles/$p/extensions/{87ce8680-7931-493f-9125-19c2c7ca092a}.xpi"
 done
 cat "$TV/firefox/user-youtube.js" >> "$TV/profiles/youtube/user.js"
-install -d /etc/firefox/policies /usr/lib/firefox/browser/extensions
+install -d /etc/firefox/policies /usr/local/share/voidstation
 cp "$TV/firefox/policies.json" /etc/firefox/policies/policies.json
-[ -f "$TV/firefox/fx_osk.xpi" ] && cp "$TV/firefox/fx_osk.xpi" "/usr/lib/firefox/browser/extensions/{87ce8680-7931-493f-9125-19c2c7ca092a}.xpi"
+# Bildschirmtastatur fuer Firefox (FX OSK, von Mozilla signiert) – per Richtlinie aus lokaler Datei, auch offline
+install -m 644 "$TV/firefox/fx_osk.xpi" /usr/local/share/voidstation/fx_osk.xpi
 
 # ---------------------------------------------------------------------
 say "6/8  Ton (PipeWire) einrichten"
