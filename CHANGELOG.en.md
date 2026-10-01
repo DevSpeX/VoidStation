@@ -3,6 +3,21 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.10.0 – 2026-10-01
+- AppCenter rebuilt: “Installed” and the categories on the left, the apps as tiles on the right – the list scrolls down instead of sideways, and the number of columns adapts to resolution and scaling
+- “Installed” shows everything on the device at a glance, grouped by category – including programs installed outside the AppCenter
+- Controls: up / down switches the category and shows it right away, right goes into the apps, left goes back; LT / RT (PgUp/PgDn) jumps to the previous / next category from anywhere; the mouse wheel scrolls the list
+- Much more choice (60 instead of 22 apps), still curated:
+  - Gaming: Heroic Games Launcher, Lutris, itch, Prism Launcher (Minecraft), Steam Link, Discord
+  - Emulators: PCSX2 (PS2), Rosalie's Mupen GUI (N64), Azahar (3DS), Cemu (Wii U), MAME (arcade)
+  - Games: SuperTuxKart, SuperTux, Neverball, Luanti, Xonotic, Hedgewars, Battle for Wesnoth, OpenTTD
+  - Media: Jellyfin, Plex HTPC, Spotify, FreeTube, Strawberry; Kodi now comes with controller support and streaming add-ons
+  - Streaming: Netflix, Prime Video, Disney+, Joyn, RTL+, Pluto TV, Twitch
+  - Browsers: Firefox (normal, with address bar), Chromium, Brave, LibreWolf
+  - Tools: Mission Center, LocalSend (send files from your phone), AntiMicroX (controller mapping)
+- Streaming apps with copy protection (Netflix & co.) enable Widevine in their Firefox profile
+- The AppCenter opens faster: installation status is checked with one call for all apps instead of one per app
+
 ## 0.9.0 – 2026-10-01
 - Updates in one place: Settings → Updates → “Update” checks and installs everything in one go – Void packages (incl. the kernel), Flatpaks, AppImages, Proton-GE and VoidStation itself; anything already up to date is skipped
 - The AppCenter no longer has update buttons, it is only for installing and removing programs

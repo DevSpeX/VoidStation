@@ -17,7 +17,7 @@ TILES = json.loads((REPO / "launcher" / "tiles.json").read_text(encoding="utf-8"
 TILES["user"] = "Paul"
 CAT = json.loads((REPO / "launcher" / "catalog.json").read_text(encoding="utf-8"))
 LANG = os.environ.get("VS_LANG", "de")
-INSTALLED = {"retroarch", "duckstation", "kodi", "youtube-tv"}
+INSTALLED = {"steam", "retroarch", "duckstation", "kodi", "youtube-tv", "supertuxkart", "jellyfin", "netflix"}
 
 RADIO_NOW = {"station": {"name": "Deutschlandfunk", "url": "https://example.invalid/dlf"}, "title": "Nachrichten"}
 RADIO_FAVS = [
@@ -63,9 +63,11 @@ def apps():
     out = []
     for a in CAT["apps"]:
         out.append({"id": a["id"], "name": a["name"], "desc": a["desc"], "cat": a["cat"],
-                    "type": a["source"]["type"], "installed": a["id"] in INSTALLED,
+                    "type": a["source"]["type"], "installed": a["id"] in INSTALLED, "tile": a["id"] in INSTALLED,
                     "icon": a.get("tile", {}).get("icon", "globe"), "color": a.get("tile", {}).get("color", "#2f3238")})
-    return {"categories": CAT["categories"], "apps": out, "job": None}
+    out.append({"id": "desk-org.gnome.Calculator", "name": "Rechner", "desc": "", "cat": "Auf diesem Gerät", "type": "local",
+                "installed": True, "tile": False, "icon": "store", "color": "#2f3238"})
+    return {"categories": CAT["categories"], "local_cat": "Auf diesem Gerät", "apps": out, "job": None}
 
 
 class H(SimpleHTTPRequestHandler):

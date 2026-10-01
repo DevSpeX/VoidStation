@@ -259,9 +259,36 @@
   .fchips { display: flex; flex-direction: column; gap: calc(10px * var(--f)); max-width: 42vw; }
   .fchips .row { gap: calc(8px * var(--f)); }
 
-  /* AppCenter */
-  .agrid { display: grid; grid-template-rows: repeat(var(--arows, 2), calc(var(--u) * .95)); grid-auto-columns: calc(var(--u) * 1.9); grid-auto-flow: column; gap: var(--gap); }
-  .appcard { --c: var(--surface-card); }
+  /* AppCenter: links Kategorien, rechts die Apps – senkrecht scrollend, Spaltenzahl passt sich der Breite an */
+  .astage { display: flex; gap: calc(var(--u) * .22); padding-left: calc(var(--pad-x) - 10px * var(--f)); }
+  .acats { flex: none; width: min(calc(235px * var(--f)), 32vw); min-height: 0; overflow-y: auto; overflow-x: hidden;
+    scrollbar-width: none; display: flex; flex-direction: column; gap: calc(4px * var(--f)); padding: calc(10px * var(--f)); }
+  .acats::-webkit-scrollbar, .apane::-webkit-scrollbar { display: none; }
+  .acat { flex: none; display: flex; align-items: center; gap: calc(10px * var(--f)); min-height: calc(44px * var(--f)); padding: calc(6px * var(--f)) calc(12px * var(--f));
+    background: transparent; color: var(--text-dim); border: 2px solid transparent; outline: none; cursor: pointer; text-align: left; font-size: calc(16px * var(--f)); }
+  .acat svg { flex: none; width: calc(22px * var(--f)); height: calc(22px * var(--f)); }
+  .acat .an { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .acat .ac { flex: none; font-size: calc(13px * var(--f)); color: var(--text-faint); }
+  .acat.on { background: var(--surface-active); color: var(--text); }
+  .acat.on .ac { color: var(--text-dim); }
+  .acat.focus { border-color: var(--focus); color: var(--text); }
+  .acat.first { margin-bottom: calc(10px * var(--f)); }              /* "Installiert" etwas abgesetzt */
+  .apane { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none;
+    padding: calc(10px * var(--f) + var(--u) * .03) var(--pad-x) calc(18px * var(--f)) calc(14px * var(--f)); }
+  /* weich ausblenden, wo noch mehr kommt (oben / unten) */
+  .apane { --mt: 0px; --mb: 0px; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--mt), #000 calc(100% - var(--mb)), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 var(--mt), #000 calc(100% - var(--mb)), transparent 100%); }
+  .apane.less { --mt: calc(30px * var(--f)); }
+  .apane.more { --mb: calc(40px * var(--f)); }
+  .ahead { display: flex; align-items: baseline; gap: calc(14px * var(--f)); margin: 0 0 calc(14px * var(--f)); min-width: 0; }
+  .ahead h2 { margin: 0; font-weight: 300; font-size: calc(26px * var(--f)); white-space: nowrap; }
+  .ahead span { color: var(--text-faint); font-size: calc(15px * var(--f)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .asec + .asec { margin-top: calc(22px * var(--f)); }
+  .asec h3 { margin: 0 0 calc(10px * var(--f)); font-weight: 400; font-size: calc(16px * var(--f)); color: var(--text-dim); letter-spacing: .02em; }
+  .agrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(var(--u) * 1.75)), 1fr)); grid-auto-rows: calc(var(--u) * .95); gap: var(--gap); }
+  .apane .empty { max-width: none; }
+  @keyframes tileUp { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+  .appcard { --c: var(--surface-card); animation-name: tileUp; animation-duration: .45s; }
   .appcard .aicon { position: absolute; left: 6%; top: 10%; width: calc(var(--u) * .26); height: calc(var(--u) * .26); display: grid; place-items: center; background: var(--ac); }
   .appcard .aicon svg { width: 62%; height: 62%; }
   .appcard .aname { position: absolute; left: calc(12% + var(--u) * .26); right: 6%; top: 10%; font-size: calc(var(--u) * .105); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -548,7 +575,7 @@
 <!-- AppCenter -->
 <section class="layer" id="apps">
   <header><div class="htitle"><button class="round anav" data-act="back" aria-label="Zurück" data-i18n-aria="common.back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1 data-i18n="apps.title">AppCenter</h1></div><div class="nowline" id="aNow"></div></header>
-  <div class="stage"><div class="track" id="aTrack"></div></div>
+  <div class="stage astage"><nav class="acats" id="aCats"></nav><div class="apane" id="aPane"></div></div>
 </section>
 <div class="jobband" id="job"><div class="jt"><div class="spin" id="jobSpin"></div><span id="jobTitle"></span></div><pre id="jobLog"></pre></div>
 
@@ -623,6 +650,11 @@ const ICONS = {
   bluetooth:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M14 15l20 18-10 8V7l10 8-20 18"/></svg>',
   update:   '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M39 20A15.5 15.5 0 0 0 10.5 15M9 28a15.5 15.5 0 0 0 28.5 5"/><path d="M10 7v8.5h8.5M38 41v-8.5h-8.5"/></svg>',
   power:    '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M24 6v17"/><path d="M14.5 11.5a15 15 0 1 0 19 0"/></svg>',
+  check:    '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="18"/><path d="M15.5 24.5l6 6 11-12"/></svg>',
+  cube:     '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M24 5l17 9.5v19L24 43 7 33.5v-19z"/><path d="M7 14.5L24 24l17-9.5M24 24v19"/></svg>',
+  chat:     '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M8 9h32a3 3 0 0 1 3 3v19a3 3 0 0 1-3 3H22l-9 7v-7H8a3 3 0 0 1-3-3V12a3 3 0 0 1 3-3z"/><path d="M15 19h18M15 25h11"/></svg>',
+  send:     '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M42 6L5 21l14 6 6 14z"/><path d="M42 6L19 27"/></svg>',
+  emu:      '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><rect x="12" y="4" width="24" height="40" rx="3"/><rect x="16" y="9" width="16" height="13"/><path d="M19 30v6M16 33h6"/><circle cx="29" cy="31" r="1.6" fill="currentColor"/><circle cx="32" cy="35" r="1.6" fill="currentColor"/></svg>',
   gear:     '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><circle cx="24" cy="24" r="6"/><path d="M24 5l3 5 6-2 1 6 6 1-2 6 5 3-5 3 2 6-6 1-1 6-6-2-3 5-3-5-6 2-1-6-6-1 2-6-5-3 5-3-2-6 6-1 1-6 6 2z"/></svg>'
 };
 
@@ -764,7 +796,6 @@ function fitGrid(track, sel, max, pad = 0) {             // pad: Platz unten fre
 }
 function fitGrids() {
   fitGrid($('#romTrack'), '.romgrid', 3);
-  fitGrid($('#aTrack'), '.agrid', 3);
   fitGrid($('#tTrack'), '.sgrid', 3);
   fitGrid($('#rTrack'), '.sgrid', 3);
   fitGrid($('#sTrack'), '.setgrid', 3, setRing());
@@ -793,7 +824,7 @@ function updateHint() {
     settings: [sCat ? T('hint.select') : T('hint.open'), T('hint.back')],
     roms:     [T('hint.romLaunch'), T('hint.back')],
     tv:       [T('hint.tvOn'), T('hint.fav'), T('hint.homeShort'), T('hint.back')],
-    apps:     [T('hint.appInstall'), T('hint.back')],
+    apps:     [focusEl?.classList.contains('acat') ? T('hint.appCat') : T('hint.appInstall'), T('hint.appCats'), T('hint.back')],
     adlg:     [...($('#adText').classList.contains('fits') ? [] : [T('hint.scrollText')]), T('hint.cancel')],
     dialog:   [T('hint.cancel')],
     osk:      [T('hint.select'), T('osk.space'), T('osk.backspace'), T('common.cancel')],
@@ -887,6 +918,9 @@ function setFocus(el, instant) {
   if (tr) keepVisible(tr, el, instant);
   const sc = el.closest('#sTrack .col');
   if (sc) keepVisibleY(sc, el);
+  const ap = el.closest('#aPane, #aCats');
+  if (ap) keepVisibleV(ap, el, instant);
+  if (layer() === 'apps' && el.classList.contains('acat') !== aHintCat) { aHintCat = el.classList.contains('acat'); updateHint(); }
   updScroll();
 }
 // Einstellungs-Spalte senkrecht so verschieben, dass das fokussierte Element ganz zu sehen ist
@@ -905,7 +939,7 @@ function keepVisibleY(sc, el) {
 }
 function colMore(sc) { sc.classList.toggle('more', sc.scrollTop + sc.clientHeight < sc.scrollHeight - 2); }
 /* ---- Blaettern: Pfeile oben rechts, Gruppenspruenge mit LT/RT bzw. Bild auf/ab */
-const TRACKS = { home: '#track', radio: '#rTrack', tv: '#tTrack', apps: '#aTrack', settings: '#sTrack', inst: '#iTrack' };
+const TRACKS = { home: '#track', radio: '#rTrack', tv: '#tTrack', apps: '#aPane', settings: '#sTrack', inst: '#iTrack' };
 function curTrack() { const sel = TRACKS[layer()]; return sel ? $(sel) : null; }
 let lastScrollable = null;
 function updScroll() {
@@ -938,6 +972,7 @@ function fitTitle() {
 }
 function jumpGroup(dir) {
   if (splashTile) return;
+  if (layer() === 'apps') return aStep(dir);
   const tr = curTrack(); if (!tr) return;
   const sel = SCOPE[layer()];
   const groups = [...tr.querySelectorAll(':scope > section.group')].filter(g => g.querySelector(sel));
@@ -972,11 +1007,17 @@ function move(dir) {
   if (focusEl?._adj && (dir === 'left' || dir === 'right') && layer() === 'inst') return focusEl._adj(dir === 'left' ? -1 : 1);
   const items = navItems();
   if (!focusEl || !items.includes(focusEl)) return setFocus(items[0]);
-  const a = focusEl.getBoundingClientRect();
+  if (layer() === 'apps') return appsMove(dir);
+  const best = nearest(focusEl, items, dir);
+  if (best) setFocus(best);
+}
+// naechstes Element in Richtung dir (Bildschirm-Koordinaten)
+function nearest(from, items, dir) {
+  const a = from.getBoundingClientRect();
   const ax = a.left + a.width / 2, ay = a.top + a.height / 2;
   let best = null, bestScore = Infinity;
   for (const el of items) {
-    if (el === focusEl) continue;
+    if (el === from) continue;
     if (el.id === 'power' && dir !== 'up') continue;
     const b = el.getBoundingClientRect();
     const bx = b.left + b.width / 2, by = b.top + b.height / 2;
@@ -989,7 +1030,7 @@ function move(dir) {
     const score = main + side * 2.2;
     if (score < bestScore) { bestScore = score; best = el; }
   }
-  if (best) setFocus(best);
+  return best;
 }
 
 function activate(el = focusEl) {
@@ -1027,6 +1068,7 @@ function activate(el = focusEl) {
   if (el._chan) return tvPlay(el._chan);
   if (el._flt) return el._flt();
   if (el._app) return appDialog(el._app);
+  if (el._cat) { aSelect(el._cat); const c = aFirstCard(); return c && setFocus(c); }
   if (el._ad) return el._ad();
   if (el._rom) return launchRom(el._rom);
   if (el._tile) return launch(el._tile, el);
@@ -1159,10 +1201,10 @@ function openLayer(id) {
   if (id === 'radio') { renderStations(); refreshVolume(); }
   if (id === 'settings') { sCat = null; wifiPick = null; $('#sTrack').innerHTML = ''; loadSettings(); }   // immer mit der Uebersicht beginnen
   if (id === 'tv') { tvOpen(); refreshVolume(); }
-  if (id === 'apps') loadApps();
+  if (id === 'apps') { aFresh = true; loadApps(); }
   if (id === 'roms') renderRoms();
   const keep = lastFocus[id] && document.contains(lastFocus[id]) && lastFocus[id].offsetParent !== null ? lastFocus[id] : null;
-  const first = { radio: $('#rTrack .station.playing') || $('#rTrack .rnav'), settings: $('#sTrack .snav'), tv: $('#tTrack .chan'), apps: $('#aTrack .appcard') }[id];
+  const first = { radio: $('#rTrack .station.playing') || $('#rTrack .rnav'), settings: $('#sTrack .snav'), tv: $('#tTrack .chan'), apps: $('#aCats .acat.on') }[id];
   setFocus(keep || first || $(`#${id} ${SCOPE[id]}`), true);
   updateHint();
 }
@@ -1938,39 +1980,152 @@ function setTvNow(now) {
   if ($('#tStop')) $('#tStop').disabled = !tvNow;
 }
 
-/* ============================================================ AppCenter */
-let appsData = null, jobTimer = null;
+/* ============================================================ AppCenter
+   Links die Kategorien ("Installiert" + Katalog-Kategorien), rechts die Apps der gewaehlten Kategorie als Kacheln.
+   Die Liste scrollt senkrecht; wie viele Kacheln nebeneinander passen, ergibt sich aus der Breite. */
+const A_INST = '#installed';
+const CAT_ICON = { [A_INST]: 'check', Gaming: 'gamepad', Emulatoren: 'emu', Spiele: 'cube', Medien: 'film', Streaming: 'play', Browser: 'globe', Werkzeuge: 'gear' };
+let appsData = null, jobTimer = null, aCat = null, aHintCat = null, aFresh = false;   // aFresh: gerade geoeffnet -> Fokus auf die Kategorie
+const aLast = {};                                          // zuletzt gewaehlte App je Kategorie
 async function loadApps() {
-  try { appsData = offline ? { categories: ['Spiele'], apps: [], job: null } : await getJSON('/api/apps'); } catch { return toast(T('apps.loadFailed'), true); }
+  try { appsData = offline ? { categories: ['Gaming'], apps: [], job: null } : await getJSON('/api/apps'); } catch { return toast(T('apps.loadFailed'), true); }
   renderApps();
   if (appsData.job && appsData.job.state === 'running') watchJob();
 }
+const aLocalCat = () => appsData.local_cat || 'Auf diesem Gerät';
+const aCatName = c => c === A_INST ? T('apps.cat.installed') : L(c);
+function aCats() { return [A_INST, ...appsData.categories.filter(c => appsData.apps.some(a => a.cat === c))]; }
+function aList(c) { return c === A_INST ? appsData.apps.filter(a => a.installed) : appsData.apps.filter(a => a.cat === c); }
 function renderApps() {
-  const tr = $('#aTrack');
-  const keep = focusEl?._app?.id;
-  tr.innerHTML = ''; tr.dataset.x = 0; tr.style.transform = 'none';
-  const arows = Math.max(1, Math.min(3, Number(getComputedStyle(document.documentElement).getPropertyValue('--rows')) || 2));
-  document.documentElement.style.setProperty('--arows', arows);
-  for (const cat of appsData.categories) {
-    const list = appsData.apps.filter(a => a.cat === cat);
-    if (!list.length) continue;
-    const g = document.createElement('div'); g.className = 'agrid';
-    list.forEach((a, i) => {
-      const el = document.createElement('div');
-      el.className = 'tile appcard anav' + (a.installed ? ' inst' : '');
-      el.style.animationDelay = (i * 30) + 'ms';
-      el.style.setProperty('--ac', a.color);
-      el._app = a;
-      el.innerHTML = `<div class="aicon">${ICONS[a.icon] || ICONS.globe}</div><div class="aname">${esc(L(a.name))}</div>` +
-        `<div class="astate">${esc(a.type === 'local' ? (a.tile ? T('apps.hasTile') : T('apps.noTile')) : a.installed ? T('apps.installed') : T('apps.type.' + a.type, null, T('apps.type.xbps')))}</div>` +
-        `<div class="adesc">${esc(appDesc(a))}</div>`;
-      g.appendChild(el);
-    });
-    section(tr, L(cat), g);
+  const inApps = focusEl && focusEl.closest('#apps');
+  const keepId = inApps && focusEl._app ? focusEl._app.id : null;
+  const onCat = inApps && focusEl.classList.contains('acat');
+  const cats = aCats();
+  // beim ersten Oeffnen: "Installiert", ausser es ist noch nichts installiert
+  if (!cats.includes(aCat)) aCat = aList(A_INST).length || cats.length < 2 ? A_INST : cats[1];
+  const nav = $('#aCats'); nav.innerHTML = '';
+  for (const c of cats) {
+    const b = document.createElement('button');
+    b.className = 'acat anav' + (c === aCat ? ' on' : '') + (c === A_INST ? ' first' : '');
+    b._cat = c;
+    b.innerHTML = `${ICONS[CAT_ICON[c]] || ICONS.store}<span class="an">${esc(aCatName(c))}</span><span class="ac">${aList(c).length}</span>`;
+    nav.appendChild(b);
   }
-  fitGrid(tr, '.agrid', 3);
+  renderAppGrid(false);
   $('#aNow').innerHTML = `<strong>${esc(T('apps.optional'))}</strong><span>${esc(T('apps.autoTiles'))}</span>`;
-  if (layer() === 'apps') { const again = keep && $$('#aTrack .appcard').find(e => e._app.id === keep); setFocus(again || $('#aTrack .appcard') || $('#apps .anav'), true); }
+  if (layer() !== 'apps') return;
+  const cur = $('#aCats .acat.on');
+  if (onCat || !inApps || aFresh) { aFresh = false; return setFocus(cur, true); }
+  if (focusEl.closest('header')) return;                   // Zurueck-Knopf behaelt den Fokus
+  setFocus((keepId && $$('#aPane .appcard').find(e => e._app.id === keepId)) || aFirstCard() || cur, true);
+}
+function appCard(a, i) {
+  const el = document.createElement('div');
+  el.className = 'tile appcard anav' + (a.installed ? ' inst' : '');
+  el.style.animationDelay = Math.min(i * 25, 400) + 'ms';
+  el.style.setProperty('--ac', a.color);
+  el._app = a;
+  const state = a.type === 'local' ? (a.tile ? T('apps.hasTile') : T('apps.noTile'))
+    : a.installed ? T('apps.installed') : T('apps.type.' + a.type, null, T('apps.type.xbps'));
+  el.innerHTML = `<div class="aicon">${ICONS[a.icon] || ICONS.globe}</div><div class="aname">${esc(L(a.name))}</div>` +
+    `<div class="astate">${esc(state)}</div><div class="adesc">${esc(appDesc(a))}</div>`;
+  return el;
+}
+function aGrid(list, from = 0) {
+  const g = document.createElement('div'); g.className = 'agrid';
+  list.forEach((a, i) => g.appendChild(appCard(a, from + i)));
+  return g;
+}
+// rechte Seite neu aufbauen; top: an den Anfang scrollen (Kategorie gewechselt)
+function renderAppGrid(top) {
+  const pane = $('#aPane'), keep = pane.scrollTop;
+  pane.innerHTML = '';
+  const list = aList(aCat);
+  const head = document.createElement('div'); head.className = 'ahead';
+  head.innerHTML = `<h2>${esc(aCatName(aCat))}</h2><span>${esc(T('apps.catDesc.' + (aCat === A_INST ? 'installed' : aCat), null, ''))}</span>`;
+  pane.appendChild(head);
+  if (!list.length) {
+    const e = document.createElement('div'); e.className = 'empty'; e.textContent = T('apps.noneInstalled');
+    pane.appendChild(e);
+  } else if (aCat === A_INST) {                            // Installiert: nach Kategorien gegliedert
+    let n = 0;
+    for (const c of [...appsData.categories, aLocalCat()]) {
+      const part = list.filter(a => a.cat === c);
+      if (!part.length) continue;
+      const sec = document.createElement('section'); sec.className = 'asec';
+      sec.innerHTML = `<h3>${esc(L(c))}</h3>`;
+      sec.appendChild(aGrid(part, n)); n += part.length;
+      pane.appendChild(sec);
+    }
+  } else {
+    const sec = document.createElement('section'); sec.className = 'asec';
+    sec.appendChild(aGrid(list)); pane.appendChild(sec);
+  }
+  pane.scrollTop = top ? 0 : keep;
+  aMore();
+}
+function aMore() { const p = $('#aPane'); p.classList.toggle('more', p.scrollTop + p.clientHeight < p.scrollHeight - 2); p.classList.toggle('less', p.scrollTop > 2); }
+$('#aPane').addEventListener('scroll', aMore, { passive: true });
+function aSelect(c) {
+  if (!appsData || c === aCat) return;
+  aCat = c;
+  $$('#aCats .acat').forEach(b => b.classList.toggle('on', b._cat === c));
+  renderAppGrid(true);
+}
+function aFirstCard() {
+  const cards = $$('#aPane .appcard');
+  return cards.find(e => e._app.id === aLast[aCat]) || cards[0] || null;
+}
+// LT / RT, Bild auf / ab: vorige / naechste Kategorie
+function aStep(dir) {
+  if (!appsData) return;
+  const cats = $$('#aCats .acat'), i = cats.findIndex(b => b._cat === aCat) + dir;
+  if (i < 0 || i >= cats.length) return;
+  const inGrid = focusEl && focusEl._app;
+  if (inGrid) aLast[aCat] = focusEl._app.id;
+  aSelect(cats[i]._cat);
+  setFocus((inGrid && aFirstCard()) || cats[i]);
+}
+// Pfeiltasten im AppCenter: Kategorien hoch/runter (zeigt sie gleich an), rechts in die Apps, links zurueck
+function appsMove(dir) {
+  const f = focusEl, cur = $('#aCats .acat.on');
+  if (f.classList.contains('acat')) {
+    const cats = $$('#aCats .acat');
+    if (dir === 'up' || dir === 'down') {
+      const i = cats.indexOf(f) + (dir === 'down' ? 1 : -1);
+      if (i < 0) return setFocus($('#apps header .anav'));
+      if (i >= cats.length) return;
+      aSelect(cats[i]._cat);
+      return setFocus(cats[i]);
+    }
+    if (dir === 'right') { const c = aFirstCard(); if (c) setFocus(c); }
+    return;
+  }
+  if (f._app) {
+    const best = nearest(f, $$('#aPane .appcard'), dir);
+    if (best) return setFocus(best);
+    if (dir === 'left') { aLast[aCat] = f._app.id; return setFocus(cur); }
+    if (dir === 'up') return setFocus($('#apps header .anav'));
+    return;
+  }
+  if (dir === 'down' || dir === 'right') setFocus(cur);   // Zurueck-Knopf
+}
+// Liste senkrecht so verschieben, dass das fokussierte Element samt Rahmen zu sehen ist
+// (in der ersten Reihe einer Gruppe auch deren Ueberschrift)
+function keepVisibleV(sc, el, instant) {
+  const f = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--f')) || 1;
+  const c = sc.getBoundingClientRect(), r = el.getBoundingClientRect();
+  const m = Math.max(0, Math.min(26 * f, (c.height - r.height) / 2));
+  let top = r.top;
+  const sec = el.closest('.asec'), g = el.parentElement;
+  if (sec && g.firstElementChild && el.offsetTop === g.firstElementChild.offsetTop) {
+    const h = sec === sc.querySelector('.asec') ? sc.firstElementChild : sec.querySelector('h3');
+    if (h) top = Math.min(top, h.getBoundingClientRect().top + m);
+  }
+  let d = 0;
+  if (top - m < c.top) d = top - m - c.top;
+  else if (r.bottom + m > c.bottom) d = r.bottom + m - c.bottom;
+  if (d) sc.scrollTo({ top: sc.scrollTop + d, behavior: instant || matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
 }
 function adlg(title, text, buttons) {
   $('#adTitle').textContent = title; $('#adText').textContent = text;
@@ -2031,7 +2186,7 @@ function watchJob() {
       if (layer() === 'apps') loadApps();
       if (layer() === 'settings') { refreshVs(false); loadSettings(); }
       if (jobState.reboot) { const rb = { kernel: !!(r && r.kernel) }; setTimeout(() => rebootPrompt(rb), 400); }   // auch bei Teilerfolg (z. B. Kernel neu, Flatpak gescheitert)
-      else if (jobState.state === 'done' && jobState.action === 'install' && typeof jobState.result === 'string') setTimeout(() => adlg(T('apps.isInstalled', { name }), jobState.result, [[T('common.ok')]]), 400);
+      else if (jobState.state === 'done' && jobState.action === 'install' && typeof jobState.result === 'string') setTimeout(() => adlg(T('apps.isInstalled', { name }), T('app.' + jobState.app + '.note', null, jobState.result), [[T('common.ok')]]), 400);
     }
   };
   tick(); jobTimer = setInterval(tick, 1000);
@@ -3004,6 +3159,7 @@ document.addEventListener('click', e => {
   if (x) { e.stopPropagation(); return closeApp(x.closest('.tile')._tile); }
   const el = e.target.closest(SCOPE[layer()]);
   if (el?._hold) return;                                  // Installieren: gedrueckt halten (mousedown)
+  if (el?._cat) { aSelect(el._cat); return setFocus(el); }   // AppCenter: Kategorie zeigen, Fokus bleibt links
   if (el) { setFocus(el); activate(el); }
   else if (layer() === 'dialog' && e.target.id === 'dialog') closeDialog();
 });
@@ -3017,7 +3173,7 @@ document.addEventListener('contextmenu', e => {
   const t = e.target.closest('.tile');
   if (layer() === 'home' && t?._tile && running.includes(t._tile.id)) closeApp(t._tile); else back();
 });
-addEventListener('wheel', e => { if (layer() !== 'dialog' && layer() !== 'adlg') move((e.deltaY || e.deltaX) > 0 ? 'right' : 'left'); }, { passive: true });
+addEventListener('wheel', e => { if (!['dialog', 'adlg', 'apps'].includes(layer())) move((e.deltaY || e.deltaX) > 0 ? 'right' : 'left'); }, { passive: true });   // AppCenter: Liste scrollt selbst
 
 /* ============================================================ Eingabe: Gamepad */
 const pad = { held: {}, next: {} };

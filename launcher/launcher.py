@@ -1127,6 +1127,33 @@ def tile_ids():
     return {t.get("id") for g in load_config().get("groups", []) for t in g.get("tiles", [])}
 
 
+def installed_sets():
+    """Installierte Void-Pakete und (Benutzer-)Flatpaks – je ein Aufruf fuer den ganzen Katalog."""
+    pkgs, fps = set(), set()
+    r = run(["xbps-query", "-l"], timeout=20)
+    for line in (r.stdout.splitlines() if r and r.returncode == 0 else []):
+        parts = line.split(None, 2)                  # "ii paket-1.2_1 Beschreibung"
+        if len(parts) >= 2 and parts[0] == "ii":
+            pkgs.add(parts[1].rsplit("-", 1)[0])
+    if shutil.which("flatpak"):
+        r = run(["flatpak", "list", "--user", "--app", "--columns=application"], timeout=20)
+        fps = {x.strip() for x in (r.stdout.splitlines() if r and r.returncode == 0 else []) if x.strip()}
+    return pkgs, fps
+
+
+def app_installed_in(a, pkgs, fps, tiles):
+    s = a["source"]
+    if s["type"] == "xbps":
+        return s["pkg"] in pkgs
+    if s["type"] == "flatpak":
+        return s["ref"] in fps
+    if s["type"] == "appimage":
+        return (APPDIR / a["id"] / "AppRun").exists()
+    if s["type"] == "web":
+        return a["id"] in tiles
+    return False
+
+
 def app_installed(a):
     s = a["source"]
     if s["type"] == "xbps":
@@ -1143,9 +1170,11 @@ def app_installed(a):
 
 
 def app_cmd(a):
-    if a["source"]["type"] == "web":
-        return ["firefox", "--kiosk", "--no-remote", "--profile",
-                f"~/.local/share/voidstation/profiles/{a['id']}", a["source"]["url"]]
+    s = a["source"]
+    if s["type"] == "web":
+        kiosk = ["--kiosk"] if s.get("kiosk", True) else []      # "kiosk": false -> normaler Browser mit Leisten
+        return ["firefox", *kiosk, "--no-remote", "--profile",
+                f"~/.local/share/voidstation/profiles/{a['id']}", s["url"]]
     return a["cmd"]
 
 
@@ -1381,6 +1410,11 @@ class Jobs:
             if s.get("ua"):
                 js += f'user_pref("general.useragent.override", {json.dumps(s["ua"])});\n'
             js += 'user_pref("media.ffmpeg.vaapi.enabled", true);\n'
+            if s.get("drm"):                           # Netflix & Co.: Widevine (laedt Firefox beim ersten Bedarf selbst)
+                js += ('user_pref("media.eme.enabled", true);\n'
+                       'user_pref("media.gmp-widevinecdm.visible", true);\n'
+                       'user_pref("media.gmp-widevinecdm.enabled", true);\n'
+                       'user_pref("media.gmp-manager.updateEnabled", true);\n')
             (prof / "user.js").write_text(js)
             self._log(f"Profil angelegt: {prof}")
             return True
@@ -1913,8 +1947,13 @@ def local_apps():
     """Programme mit .desktop-Datei, die weder im Katalog noch als eigene Kachel vorkommen."""
     lang = ui_lang()
     cat = catalog()
-    known_bins = {Path(str(a["cmd"][0])).name for a in cat["apps"] if a.get("cmd")}
+    known_bins = {Path(str(a["cmd"][0])).name for a in cat["apps"] if isinstance(a.get("cmd"), list) and a["cmd"]}
     known_bins |= {a["source"].get("pkg") for a in cat["apps"] if a["source"].get("pkg")}
+    for a in cat["apps"]:                            # "for b in A B; do …" -> A und B
+        m = re.match(r"for b in ([^;]+);", a.get("cmd")) if isinstance(a.get("cmd"), str) else None
+        known_bins |= set(m.group(1).split()) if m else set()
+    known_bins.discard("flatpak")                    # Flatpaks werden ueber ihre ID erkannt, nicht ueber "flatpak run"
+    known_refs = {a["source"]["ref"] for a in cat["apps"] if a["source"].get("ref")}
     tiles = {t.get("id"): t for g in load_config().get("groups", []) for t in g.get("tiles", [])}
     tile_bins = {Path(str(t["cmd"][0])).name for t in tiles.values() if isinstance(t.get("cmd"), list) and t["cmd"]}
     out, seen = [], set()
@@ -1940,6 +1979,8 @@ def local_apps():
             if not (shutil.which(args[0]) or Path(args[0]).exists()):
                 continue
             aid = "desk-" + re.sub(r"[^A-Za-z0-9_.-]", "_", stem)
+            if stem in known_refs or (binary == "flatpak" and known_refs & set(args)):
+                continue                              # Flatpak aus dem Katalog
             if aid not in tiles and (binary in known_bins or binary in tile_bins):
                 continue                              # schon als Katalog-App oder Standard-Kachel vorhanden
             seen.add(stem)
@@ -1967,26 +2008,32 @@ def local_tile(aid, on):
                        "color": palette[sum(map(ord, aid)) % len(palette)]}})
 
 
+LOCAL_CAT = "Auf diesem Gerät"     # ausserhalb des AppCenters installiert – erscheint nur unter "Installiert"
+
+
 def apps_payload():
+    """AppCenter-Daten: Kategorien in Katalog-Reihenfolge, alle Apps mit Stand. Die Seitenleiste
+    ("Installiert" + Kategorien) baut die Oberflaeche selbst daraus."""
     cat = catalog()
+    pkgs, fps = installed_sets()
+    tiles = tile_ids()
     apps = []
     for a in cat["apps"]:
         item = {k: a[k] for k in ("id", "name", "desc", "cat")}
         item["type"] = a["source"]["type"]
-        item["installed"] = app_installed(a)
+        item["installed"] = app_installed_in(a, pkgs, fps, tiles)
+        item["tile"] = a["id"] in tiles
         item["icon"] = a.get("tile", {}).get("icon", "globe")
         item["color"] = a.get("tile", {}).get("color", "#2f3238")
         apps.append(item)
     cats = list(cat["categories"])
     try:
         for a in local_apps():
-            apps.append({"id": a["id"], "name": a["name"], "desc": a["desc"], "cat": "Auf diesem Gerät", "type": "local",
+            apps.append({"id": a["id"], "name": a["name"], "desc": a["desc"], "cat": LOCAL_CAT, "type": "local",
                          "installed": True, "tile": a["tile"], "icon": a["icon"], "color": "#2f3238"})
-            if "Auf diesem Gerät" not in cats:
-                cats.append("Auf diesem Gerät")
     except Exception as e:  # noqa: BLE001 – eine kaputte .desktop-Datei darf das AppCenter nicht verhindern
         log("Programme suchen:", e)
-    return {"categories": cats, "apps": apps, "job": JOBS.current()}
+    return {"categories": cats, "local_cat": LOCAL_CAT, "apps": apps, "job": JOBS.current()}
 
 
 def ssh_state():

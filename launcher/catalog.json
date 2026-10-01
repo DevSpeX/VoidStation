@@ -1,15 +1,18 @@
 {
   "categories": [
+    "Gaming",
+    "Emulatoren",
     "Spiele",
-    "Streaming",
     "Medien",
+    "Streaming",
+    "Browser",
     "Werkzeuge"
   ],
   "apps": [
     {
       "id": "steam",
       "name": "Steam + Proton-GE",
-      "cat": "Spiele",
+      "cat": "Gaming",
       "desc": "Steam im Big-Picture-Modus für den Fernseher, nativ aus dem Void-Repo (nonfree + multilib, 32-Bit-Grafiktreiber passend zur GPU), dazu das aktuelle Proton-GE für Windows-Spiele.",
       "source": {
         "type": "xbps",
@@ -62,9 +65,160 @@
       "start_hint": "Beim ersten Start lädt Steam Updates herunter und richtet sich ein – das kann einige Minuten dauern. Danach geht es deutlich schneller."
     },
     {
+      "id": "heroic",
+      "name": "Heroic Games Launcher",
+      "cat": "Gaming",
+      "desc": "Spiele von Epic, GOG und Amazon Prime Gaming in einem Launcher – Windows-Spiele laufen über Wine/Proton, das Heroic selbst verwaltet.",
+      "source": {
+        "type": "flatpak",
+        "ref": "com.heroicgameslauncher.hgl"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "com.heroicgameslauncher.hgl"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "wide",
+        "color": "#3b2d5c",
+        "icon": "gamepad",
+        "sub": "Epic · GOG · Amazon"
+      }
+    },
+    {
+      "id": "lutris",
+      "name": "Lutris",
+      "cat": "Gaming",
+      "desc": "Spiele-Verwaltung für alles: GOG, Humble, Epic, eigene Installationen und Emulatoren – mit fertigen Installationsskripten aus der Community.",
+      "source": {
+        "type": "xbps",
+        "pkg": "lutris"
+      },
+      "cmd": [
+        "lutris"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#4a3320",
+        "icon": "gamepad",
+        "sub": "Spiele-Verwaltung"
+      }
+    },
+    {
+      "id": "itch",
+      "name": "itch",
+      "cat": "Gaming",
+      "desc": "Indie-Spiele von itch.io kaufen, herunterladen und starten – viele davon kostenlos.",
+      "source": {
+        "type": "flatpak",
+        "ref": "io.itch.itch"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "io.itch.itch"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#5c2b2b",
+        "icon": "gamepad",
+        "sub": "Indie-Spiele"
+      }
+    },
+    {
+      "id": "prismlauncher",
+      "name": "Prism Launcher",
+      "cat": "Gaming",
+      "desc": "Minecraft (Java Edition) mit mehreren getrennten Instanzen und Modpacks von CurseForge und Modrinth. Braucht ein Minecraft-Konto.",
+      "source": {
+        "type": "xbps",
+        "pkg": "PrismLauncher",
+        "deps": [
+          "openjdk21-jre"
+        ]
+      },
+      "cmd": "for b in prismlauncher PrismLauncher; do command -v $b >/dev/null && exec $b; done",
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#2f4a2a",
+        "icon": "cube",
+        "sub": "Minecraft"
+      }
+    },
+    {
+      "id": "moonlight",
+      "name": "Moonlight",
+      "cat": "Gaming",
+      "desc": "Spiele vom Gaming-PC auf den Fernseher streamen (braucht Sunshine oder NVIDIA GameStream auf dem PC).",
+      "source": {
+        "type": "flatpak",
+        "ref": "com.moonlight_stream.Moonlight"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "com.moonlight_stream.Moonlight"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "wide",
+        "color": "#26384d",
+        "icon": "globe",
+        "sub": "PC-Streaming"
+      }
+    },
+    {
+      "id": "steamlink",
+      "name": "Steam Link",
+      "cat": "Gaming",
+      "desc": "Spiele vom eigenen PC mit Steam auf den Fernseher streamen – Steam muss auf dem PC laufen.",
+      "source": {
+        "type": "flatpak",
+        "ref": "com.valvesoftware.SteamLink"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "com.valvesoftware.SteamLink"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#1b2838",
+        "icon": "monitor",
+        "sub": "PC-Streaming"
+      }
+    },
+    {
+      "id": "discord",
+      "name": "Discord",
+      "cat": "Gaming",
+      "desc": "Sprach- und Text-Chat für Spielerunden.",
+      "source": {
+        "type": "flatpak",
+        "ref": "com.discordapp.Discord"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "com.discordapp.Discord"
+      ],
+      "tile": {
+        "group": "Programme",
+        "size": "medium",
+        "color": "#3c4380",
+        "icon": "chat",
+        "sub": "Chat"
+      }
+    },
+    {
       "id": "retroarch",
       "name": "RetroArch",
-      "cat": "Spiele",
+      "cat": "Emulatoren",
       "desc": "Alles-in-einem-Emulator für sehr viele Konsolen. Emulatorkerne lädt RetroArch selbst über sein Online-Menü.",
       "source": {
         "type": "xbps",
@@ -84,7 +238,7 @@
     {
       "id": "duckstation",
       "name": "DuckStation",
-      "cat": "Spiele",
+      "cat": "Emulatoren",
       "desc": "PlayStation 1. Sehr genau und schnell, braucht BIOS-Dateien im Ordner share/bios.",
       "source": {
         "type": "appimage",
@@ -102,9 +256,49 @@
       }
     },
     {
+      "id": "pcsx2",
+      "name": "PCSX2",
+      "cat": "Emulatoren",
+      "desc": "PlayStation 2. Braucht ein BIOS aus der eigenen Konsole und einen kräftigeren Rechner – auf schwacher Hardware laufen nur leichte Spiele flüssig.",
+      "source": {
+        "type": "flatpak",
+        "ref": "net.pcsx2.PCSX2"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "net.pcsx2.PCSX2"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#283a5c",
+        "icon": "gamepad",
+        "sub": "PlayStation 2"
+      }
+    },
+    {
+      "id": "ppsspp",
+      "name": "PPSSPP",
+      "cat": "Emulatoren",
+      "desc": "PlayStation Portable. Läuft auch auf älteren Rechnern bei vielen Spielen flüssig.",
+      "source": {
+        "type": "xbps",
+        "pkg": "ppsspp"
+      },
+      "cmd": "for b in PPSSPPSDL ppsspp PPSSPPQt; do command -v $b >/dev/null && exec $b; done",
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#27415a",
+        "icon": "handheld",
+        "sub": "PSP"
+      }
+    },
+    {
       "id": "gba",
       "name": "mGBA",
-      "cat": "Spiele",
+      "cat": "Emulatoren",
       "desc": "Game Boy, Game Boy Color und Game Boy Advance. Spiele in den Ordner share/ROMs/gba legen.",
       "source": {
         "type": "xbps",
@@ -123,27 +317,9 @@
       }
     },
     {
-      "id": "ppsspp",
-      "name": "PPSSPP",
-      "cat": "Spiele",
-      "desc": "PlayStation Portable. Läuft auch auf älteren Rechnern bei vielen Spielen flüssig.",
-      "source": {
-        "type": "xbps",
-        "pkg": "ppsspp"
-      },
-      "cmd": "for b in PPSSPPSDL ppsspp PPSSPPQt; do command -v $b >/dev/null && exec $b; done",
-      "tile": {
-        "group": "Spiele",
-        "size": "medium",
-        "color": "#27415a",
-        "icon": "handheld",
-        "sub": "PSP"
-      }
-    },
-    {
       "id": "snes9x",
       "name": "Snes9x",
-      "cat": "Spiele",
+      "cat": "Emulatoren",
       "desc": "Super Nintendo. Leichtgewichtig und bewährt.",
       "source": {
         "type": "xbps",
@@ -163,7 +339,7 @@
     {
       "id": "nestopia",
       "name": "Nestopia",
-      "cat": "Spiele",
+      "cat": "Emulatoren",
       "desc": "NES / Famicom.",
       "source": {
         "type": "xbps",
@@ -181,9 +357,32 @@
       }
     },
     {
+      "id": "rmg",
+      "name": "Rosalie's Mupen GUI",
+      "cat": "Emulatoren",
+      "desc": "Nintendo 64 – moderne Oberfläche für Mupen64Plus, gut mit dem Controller bedienbar.",
+      "source": {
+        "type": "flatpak",
+        "ref": "com.github.Rosalie241.RMG"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "com.github.Rosalie241.RMG"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#3d2f52",
+        "icon": "gamepad",
+        "sub": "Nintendo 64",
+        "label": "Nintendo 64"
+      }
+    },
+    {
       "id": "melonds",
       "name": "melonDS",
-      "cat": "Spiele",
+      "cat": "Emulatoren",
       "desc": "Nintendo DS. Beide Bildschirme nebeneinander oder übereinander.",
       "source": {
         "type": "xbps",
@@ -201,9 +400,31 @@
       }
     },
     {
+      "id": "azahar",
+      "name": "Azahar",
+      "cat": "Emulatoren",
+      "desc": "Nintendo 3DS (Nachfolger von Citra und Lime3DS). Spiele müssen entschlüsselt sein.",
+      "source": {
+        "type": "flatpak",
+        "ref": "org.azahar_emu.Azahar"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "org.azahar_emu.Azahar"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#5a2f3c",
+        "icon": "handheld",
+        "sub": "Nintendo 3DS"
+      }
+    },
+    {
       "id": "flycast",
       "name": "Flycast",
-      "cat": "Spiele",
+      "cat": "Emulatoren",
       "desc": "Sega Dreamcast, Naomi und Atomiswave.",
       "source": {
         "type": "flatpak",
@@ -225,7 +446,7 @@
     {
       "id": "dolphin",
       "name": "Dolphin",
-      "cat": "Spiele",
+      "cat": "Emulatoren",
       "desc": "GameCube und Wii. Anspruchsvoll – auf schwachen Rechnern laufen nur leichtere Spiele flüssig.",
       "source": {
         "type": "xbps",
@@ -243,9 +464,53 @@
       }
     },
     {
+      "id": "cemu",
+      "name": "Cemu",
+      "cat": "Emulatoren",
+      "desc": "Wii U. Anspruchsvoll – braucht Vulkan und eine kräftige Grafik; auf schwacher Hardware eher zum Ausprobieren.",
+      "source": {
+        "type": "flatpak",
+        "ref": "info.cemu.Cemu"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "info.cemu.Cemu"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#25465a",
+        "icon": "gamepad",
+        "sub": "Wii U"
+      }
+    },
+    {
+      "id": "mame",
+      "name": "MAME",
+      "cat": "Emulatoren",
+      "desc": "Arcade-Automaten aus vier Jahrzehnten. ROM-Sets in den Ordner share/ROMs/mame legen.",
+      "source": {
+        "type": "xbps",
+        "pkg": "mame"
+      },
+      "cmd": [
+        "mame",
+        "-rompath",
+        "~/share/ROMs/mame"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#4a2a2a",
+        "icon": "gamepad",
+        "sub": "Arcade"
+      }
+    },
+    {
       "id": "dosbox",
       "name": "DOSBox Staging",
-      "cat": "Spiele",
+      "cat": "Emulatoren",
       "desc": "DOS-Spiele und -Programme.",
       "source": {
         "type": "xbps",
@@ -266,7 +531,7 @@
     {
       "id": "scummvm",
       "name": "ScummVM",
-      "cat": "Spiele",
+      "cat": "Emulatoren",
       "desc": "Klassische Point-&-Click-Adventures (Monkey Island, Indiana Jones …).",
       "source": {
         "type": "xbps",
@@ -286,7 +551,7 @@
     {
       "id": "vice",
       "name": "VICE",
-      "cat": "Spiele",
+      "cat": "Emulatoren",
       "desc": "Commodore 64.",
       "source": {
         "type": "xbps",
@@ -306,7 +571,7 @@
     {
       "id": "stella",
       "name": "Stella",
-      "cat": "Spiele",
+      "cat": "Emulatoren",
       "desc": "Atari 2600.",
       "source": {
         "type": "xbps",
@@ -324,25 +589,313 @@
       }
     },
     {
-      "id": "moonlight",
-      "name": "Moonlight",
-      "cat": "Streaming",
-      "desc": "Spiele vom Gaming-PC auf den Fernseher streamen (braucht Sunshine oder NVIDIA GameStream auf dem PC).",
+      "id": "supertuxkart",
+      "name": "SuperTuxKart",
+      "cat": "Spiele",
+      "desc": "Kart-Rennen mit Tux und Freunden – bis zu vier Spieler am geteilten Bildschirm, voll mit dem Controller spielbar.",
       "source": {
-        "type": "flatpak",
-        "ref": "com.moonlight_stream.Moonlight"
+        "type": "xbps",
+        "pkg": "supertuxkart"
       },
       "cmd": [
-        "flatpak",
-        "run",
-        "com.moonlight_stream.Moonlight"
+        "supertuxkart"
       ],
       "tile": {
         "group": "Spiele",
         "size": "wide",
-        "color": "#26384d",
-        "icon": "globe",
-        "sub": "PC-Streaming"
+        "color": "#2a4a5c",
+        "icon": "gamepad",
+        "sub": "Kart-Rennen"
+      }
+    },
+    {
+      "id": "supertux",
+      "name": "SuperTux",
+      "cat": "Spiele",
+      "desc": "Klassisches Jump-’n’-Run im Stil von Super Mario.",
+      "source": {
+        "type": "xbps",
+        "pkg": "supertux2"
+      },
+      "cmd": [
+        "supertux2"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#2a3f5c",
+        "icon": "gamepad",
+        "sub": "Jump ’n’ Run"
+      }
+    },
+    {
+      "id": "neverball",
+      "name": "Neverball",
+      "cat": "Spiele",
+      "desc": "Geschicklichkeit: Kugel durch Labyrinthe rollen, indem man den Boden neigt. Neverputt (Minigolf) ist mit dabei.",
+      "source": {
+        "type": "xbps",
+        "pkg": "neverball"
+      },
+      "cmd": [
+        "neverball"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#3f4a22",
+        "icon": "gamepad",
+        "sub": "Geschicklichkeit"
+      }
+    },
+    {
+      "id": "luanti",
+      "name": "Luanti",
+      "cat": "Spiele",
+      "desc": "Freie Klötzchen-Welt (früher Minetest). Spielmodi lädt Luanti selbst aus seiner Inhalte-Datenbank.",
+      "source": {
+        "type": "xbps",
+        "pkg": "luanti"
+      },
+      "cmd": "for b in luanti minetest; do command -v $b >/dev/null && exec $b; done",
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#3a4a2a",
+        "icon": "cube",
+        "sub": "Klötzchen-Welt"
+      }
+    },
+    {
+      "id": "xonotic",
+      "name": "Xonotic",
+      "cat": "Spiele",
+      "desc": "Schneller Arena-Shooter, online und gegen Bots. Großer Download (ca. 1 GB).",
+      "source": {
+        "type": "xbps",
+        "pkg": "xonotic"
+      },
+      "cmd": [
+        "xonotic-sdl"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#2a3540",
+        "icon": "gamepad",
+        "sub": "Arena-Shooter"
+      }
+    },
+    {
+      "id": "hedgewars",
+      "name": "Hedgewars",
+      "cat": "Spiele",
+      "desc": "Rundenbasierte Igel-Schlacht im Stil von Worms – lustig zu mehreren an einem Fernseher.",
+      "source": {
+        "type": "xbps",
+        "pkg": "hedgewars"
+      },
+      "cmd": [
+        "hedgewars"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#4a3a28",
+        "icon": "gamepad",
+        "sub": "Worms-Stil"
+      }
+    },
+    {
+      "id": "wesnoth",
+      "name": "Battle for Wesnoth",
+      "cat": "Spiele",
+      "desc": "Rundenbasierte Fantasy-Strategie mit vielen Kampagnen. Am besten mit Maus.",
+      "source": {
+        "type": "xbps",
+        "pkg": "wesnoth"
+      },
+      "cmd": [
+        "wesnoth"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#4a3f2a",
+        "icon": "gamepad",
+        "sub": "Strategie",
+        "label": "Wesnoth"
+      }
+    },
+    {
+      "id": "openttd",
+      "name": "OpenTTD",
+      "cat": "Spiele",
+      "desc": "Transport-Imperium aufbauen (wie Transport Tycoon Deluxe). Grafik lädt das Spiel beim ersten Start selbst. Am besten mit Maus.",
+      "source": {
+        "type": "xbps",
+        "pkg": "openttd"
+      },
+      "cmd": [
+        "openttd"
+      ],
+      "tile": {
+        "group": "Spiele",
+        "size": "medium",
+        "color": "#2f4535",
+        "icon": "gamepad",
+        "sub": "Aufbau"
+      }
+    },
+    {
+      "id": "kodi",
+      "name": "Kodi",
+      "cat": "Medien",
+      "desc": "Großes Mediacenter für eigene Filme, Serien und Musik mit Covern und Bibliothek. Controller-Unterstützung und Streaming-Add-ons kommen gleich mit.",
+      "source": {
+        "type": "xbps",
+        "pkg": "kodi",
+        "optional": [
+          "kodi-addon-peripheral-joystick",
+          "kodi-addon-inputstream-adaptive",
+          "kodi-addon-pvr-iptvsimple"
+        ]
+      },
+      "cmd": [
+        "kodi"
+      ],
+      "tile": {
+        "group": "Unterhaltung",
+        "size": "medium",
+        "color": "#1f4150",
+        "icon": "film",
+        "sub": "Mediacenter"
+      }
+    },
+    {
+      "id": "jellyfin",
+      "name": "Jellyfin",
+      "cat": "Medien",
+      "desc": "Client für den eigenen Jellyfin-Medienserver – Filme, Serien und Musik vom Server im Netz, mit Fernseh-Oberfläche.",
+      "source": {
+        "type": "xbps",
+        "pkg": "jellyfin-desktop"
+      },
+      "cmd": "for b in jellyfin-desktop jellyfinmediaplayer jellyfin-media-player; do command -v $b >/dev/null && exec $b; done",
+      "tile": {
+        "group": "Unterhaltung",
+        "size": "medium",
+        "color": "#2b3a5c",
+        "icon": "film",
+        "sub": "Medienserver"
+      }
+    },
+    {
+      "id": "plex",
+      "name": "Plex HTPC",
+      "cat": "Medien",
+      "desc": "Plex in der Fernseh-Oberfläche – für den eigenen Plex-Server und die kostenlosen Plex-Filme und -Sender.",
+      "source": {
+        "type": "flatpak",
+        "ref": "tv.plex.PlexHTPC"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "tv.plex.PlexHTPC"
+      ],
+      "tile": {
+        "group": "Unterhaltung",
+        "size": "medium",
+        "color": "#4a3a1a",
+        "icon": "film",
+        "sub": "Medienserver"
+      }
+    },
+    {
+      "id": "spotify",
+      "name": "Spotify",
+      "cat": "Medien",
+      "desc": "Musik und Podcasts streamen. Steuerung auch vom Handy aus (Spotify Connect).",
+      "source": {
+        "type": "flatpak",
+        "ref": "com.spotify.Client"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "com.spotify.Client"
+      ],
+      "tile": {
+        "group": "Unterhaltung",
+        "size": "medium",
+        "color": "#1e4a2e",
+        "icon": "music",
+        "sub": "Musik"
+      }
+    },
+    {
+      "id": "freetube",
+      "name": "FreeTube",
+      "cat": "Medien",
+      "desc": "YouTube ohne Werbung und ohne Google-Konto – Abos bleiben auf dem Gerät.",
+      "source": {
+        "type": "flatpak",
+        "ref": "io.freetubeapp.FreeTube"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "io.freetubeapp.FreeTube"
+      ],
+      "tile": {
+        "group": "Unterhaltung",
+        "size": "medium",
+        "color": "#4a2a2e",
+        "icon": "play",
+        "sub": "YouTube ohne Werbung"
+      }
+    },
+    {
+      "id": "strawberry",
+      "name": "Strawberry",
+      "cat": "Medien",
+      "desc": "Musikplayer für die eigene Sammlung (z. B. im Ordner share/Musik), mit Cover, Wiedergabelisten und Internetradio.",
+      "source": {
+        "type": "xbps",
+        "pkg": "strawberry"
+      },
+      "cmd": [
+        "strawberry"
+      ],
+      "tile": {
+        "group": "Unterhaltung",
+        "size": "medium",
+        "color": "#5a2a3a",
+        "icon": "music",
+        "sub": "Musik"
+      }
+    },
+    {
+      "id": "gpicview",
+      "name": "Bildbetrachter",
+      "cat": "Medien",
+      "desc": "Schlanker Bildbetrachter (GPicView) für den Ordner share/Bilder.",
+      "source": {
+        "type": "xbps",
+        "pkg": "gpicview"
+      },
+      "cmd": [
+        "gpicview",
+        "~/share/Bilder"
+      ],
+      "tile": {
+        "group": "System",
+        "size": "medium",
+        "color": "#2f4538",
+        "icon": "image",
+        "sub": "Bilder",
+        "label": "Bilder"
       }
     },
     {
@@ -416,45 +969,214 @@
       }
     },
     {
-      "id": "kodi",
-      "name": "Kodi",
-      "cat": "Medien",
-      "desc": "Großes Mediacenter für eigene Filme, Serien und Musik mit Covern und Bibliothek.",
+      "id": "plutotv",
+      "name": "Pluto TV",
+      "cat": "Streaming",
+      "desc": "Kostenlose Sender und Filme, werbefinanziert – ohne Anmeldung.",
       "source": {
-        "type": "xbps",
-        "pkg": "kodi"
+        "type": "web",
+        "url": "https://pluto.tv/de/live-tv"
       },
-      "cmd": [
-        "kodi"
-      ],
       "tile": {
         "group": "Unterhaltung",
         "size": "medium",
-        "color": "#1f4150",
-        "icon": "film",
-        "sub": "Mediacenter"
+        "color": "#2e2a4a",
+        "icon": "tv",
+        "sub": "Gratis-Sender"
       }
     },
     {
-      "id": "gpicview",
-      "name": "Bildbetrachter",
-      "cat": "Medien",
-      "desc": "Schlanker Bildbetrachter (GPicView) für den Ordner share/Bilder.",
+      "id": "netflix",
+      "name": "Netflix",
+      "cat": "Streaming",
+      "desc": "Netflix im Vollbild. Braucht ein Abo; Wiedergabe unter Linux in bis zu 720p.",
+      "source": {
+        "type": "web",
+        "url": "https://www.netflix.com",
+        "drm": true
+      },
+      "tile": {
+        "group": "Unterhaltung",
+        "size": "medium",
+        "color": "#5a1c1c",
+        "icon": "play",
+        "sub": "Abo"
+      },
+      "note": "Beim ersten Video lädt Firefox das Kopierschutz-Modul (Widevine) nach. Startet ein Video nicht, kurz warten und die Seite mit F5 neu laden."
+    },
+    {
+      "id": "primevideo",
+      "name": "Prime Video",
+      "cat": "Streaming",
+      "desc": "Amazon Prime Video im Vollbild. Braucht ein Abo; Wiedergabe unter Linux in bis zu 720p.",
+      "source": {
+        "type": "web",
+        "url": "https://www.primevideo.com",
+        "drm": true
+      },
+      "tile": {
+        "group": "Unterhaltung",
+        "size": "medium",
+        "color": "#1f3a55",
+        "icon": "play",
+        "sub": "Abo"
+      },
+      "note": "Beim ersten Video lädt Firefox das Kopierschutz-Modul (Widevine) nach. Startet ein Video nicht, kurz warten und die Seite mit F5 neu laden."
+    },
+    {
+      "id": "disneyplus",
+      "name": "Disney+",
+      "cat": "Streaming",
+      "desc": "Disney+ im Vollbild. Braucht ein Abo; Wiedergabe unter Linux in bis zu 720p.",
+      "source": {
+        "type": "web",
+        "url": "https://www.disneyplus.com",
+        "drm": true
+      },
+      "tile": {
+        "group": "Unterhaltung",
+        "size": "medium",
+        "color": "#1c2a5a",
+        "icon": "play",
+        "sub": "Abo"
+      },
+      "note": "Beim ersten Video lädt Firefox das Kopierschutz-Modul (Widevine) nach. Startet ein Video nicht, kurz warten und die Seite mit F5 neu laden."
+    },
+    {
+      "id": "joyn",
+      "name": "Joyn",
+      "cat": "Streaming",
+      "desc": "ProSieben, SAT.1, kabel eins und mehr – live und auf Abruf, vieles kostenlos.",
+      "source": {
+        "type": "web",
+        "url": "https://www.joyn.de",
+        "drm": true
+      },
+      "tile": {
+        "group": "Unterhaltung",
+        "size": "medium",
+        "color": "#2a2a3a",
+        "icon": "tv",
+        "sub": "Live & Mediathek"
+      },
+      "note": "Beim ersten Video lädt Firefox das Kopierschutz-Modul (Widevine) nach. Startet ein Video nicht, kurz warten und die Seite mit F5 neu laden."
+    },
+    {
+      "id": "rtlplus",
+      "name": "RTL+",
+      "cat": "Streaming",
+      "desc": "RTL, VOX, ntv und mehr – live und auf Abruf.",
+      "source": {
+        "type": "web",
+        "url": "https://plus.rtl.de",
+        "drm": true
+      },
+      "tile": {
+        "group": "Unterhaltung",
+        "size": "medium",
+        "color": "#3a1f2f",
+        "icon": "tv",
+        "sub": "Live & Mediathek"
+      },
+      "note": "Beim ersten Video lädt Firefox das Kopierschutz-Modul (Widevine) nach. Startet ein Video nicht, kurz warten und die Seite mit F5 neu laden."
+    },
+    {
+      "id": "twitch",
+      "name": "Twitch",
+      "cat": "Streaming",
+      "desc": "Live-Streams von Spielen, Musik und mehr.",
+      "source": {
+        "type": "web",
+        "url": "https://www.twitch.tv"
+      },
+      "tile": {
+        "group": "Unterhaltung",
+        "size": "medium",
+        "color": "#3f2a66",
+        "icon": "play",
+        "sub": "Live-Streams"
+      }
+    },
+    {
+      "id": "firefox",
+      "name": "Firefox",
+      "cat": "Browser",
+      "desc": "Firefox als normaler Browser mit Adressleiste und Tabs – eigenes Profil, getrennt von YouTube und den Streaming-Apps.",
+      "source": {
+        "type": "web",
+        "url": "about:home",
+        "kiosk": false
+      },
+      "tile": {
+        "group": "Programme",
+        "size": "medium",
+        "color": "#5a3a1f",
+        "icon": "globe",
+        "sub": "Browser"
+      }
+    },
+    {
+      "id": "chromium",
+      "name": "Chromium",
+      "cat": "Browser",
+      "desc": "Freie Basis von Google Chrome, aus dem Void-Repo.",
       "source": {
         "type": "xbps",
-        "pkg": "gpicview"
+        "pkg": "chromium"
       },
       "cmd": [
-        "gpicview",
-        "~/share/Bilder"
+        "chromium"
       ],
       "tile": {
-        "group": "System",
+        "group": "Programme",
         "size": "medium",
-        "color": "#2f4538",
-        "icon": "image",
-        "sub": "Bilder",
-        "label": "Bilder"
+        "color": "#1f3f5a",
+        "icon": "globe",
+        "sub": "Browser"
+      }
+    },
+    {
+      "id": "brave",
+      "name": "Brave",
+      "cat": "Browser",
+      "desc": "Browser auf Chromium-Basis mit eingebautem Werbe- und Tracking-Blocker.",
+      "source": {
+        "type": "flatpak",
+        "ref": "com.brave.Browser"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "com.brave.Browser"
+      ],
+      "tile": {
+        "group": "Programme",
+        "size": "medium",
+        "color": "#5a2e1c",
+        "icon": "globe",
+        "sub": "Browser"
+      }
+    },
+    {
+      "id": "librewolf",
+      "name": "LibreWolf",
+      "cat": "Browser",
+      "desc": "Firefox-Ableger mit Fokus auf Privatsphäre, uBlock Origin ist schon dabei.",
+      "source": {
+        "type": "flatpak",
+        "ref": "io.gitlab.librewolf-community"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "io.gitlab.librewolf-community"
+      ],
+      "tile": {
+        "group": "Programme",
+        "size": "medium",
+        "color": "#1f3a4f",
+        "icon": "globe",
+        "sub": "Browser"
       }
     },
     {
@@ -486,6 +1208,70 @@
         "icon": "chart",
         "sub": "htop",
         "label": "Systemmonitor"
+      }
+    },
+    {
+      "id": "missioncenter",
+      "name": "Mission Center",
+      "cat": "Werkzeuge",
+      "desc": "Grafischer Systemmonitor: Prozessor, Speicher, Grafik, Netzwerk und laufende Programme auf einen Blick.",
+      "source": {
+        "type": "flatpak",
+        "ref": "io.missioncenter.MissionCenter"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "io.missioncenter.MissionCenter"
+      ],
+      "tile": {
+        "group": "System",
+        "size": "medium",
+        "color": "#2a3f4a",
+        "icon": "chart",
+        "sub": "Systemmonitor"
+      }
+    },
+    {
+      "id": "localsend",
+      "name": "LocalSend",
+      "cat": "Werkzeuge",
+      "desc": "Fotos, Videos und Dateien vom Handy oder PC im WLAN aufs Gerät schicken – ohne Kabel und ohne Cloud. Die App gibt es für Android, iOS, Windows und macOS.",
+      "source": {
+        "type": "flatpak",
+        "ref": "org.localsend.localsend_app"
+      },
+      "cmd": [
+        "flatpak",
+        "run",
+        "org.localsend.localsend_app"
+      ],
+      "tile": {
+        "group": "System",
+        "size": "medium",
+        "color": "#2a4a44",
+        "icon": "send",
+        "sub": "Dateien senden"
+      }
+    },
+    {
+      "id": "antimicrox",
+      "name": "AntiMicroX",
+      "cat": "Werkzeuge",
+      "desc": "Controller-Tasten auf Tastatur und Maus legen – für Programme und Spiele ohne eigene Controller-Unterstützung.",
+      "source": {
+        "type": "xbps",
+        "pkg": "antimicrox"
+      },
+      "cmd": [
+        "antimicrox"
+      ],
+      "tile": {
+        "group": "System",
+        "size": "medium",
+        "color": "#3a3550",
+        "icon": "gamepad",
+        "sub": "Controller-Belegung"
       }
     }
   ]

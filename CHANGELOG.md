@@ -4,6 +4,21 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.10.0 – 2026-10-01
+- AppCenter neu aufgebaut: links „Installiert“ und die Kategorien, rechts die Apps als Kacheln – die Liste scrollt nach unten statt zur Seite, die Spaltenzahl passt sich Auflösung und Skalierung an
+- „Installiert“ zeigt alles auf dem Gerät auf einen Blick, nach Kategorien gegliedert – auch Programme, die außerhalb des AppCenters installiert wurden
+- Bedienung: hoch / runter wechselt die Kategorie und zeigt sie gleich an, rechts geht in die Apps, links zurück; LT / RT (Bild ↑↓) springt von überall zur vorigen / nächsten Kategorie; Mausrad scrollt die Liste
+- Viel mehr Auswahl (60 statt 22 Apps), weiterhin kuratiert:
+  - Gaming: Heroic Games Launcher, Lutris, itch, Prism Launcher (Minecraft), Steam Link, Discord
+  - Emulatoren: PCSX2 (PS2), Rosalie's Mupen GUI (N64), Azahar (3DS), Cemu (Wii U), MAME (Arcade)
+  - Spiele: SuperTuxKart, SuperTux, Neverball, Luanti, Xonotic, Hedgewars, Battle for Wesnoth, OpenTTD
+  - Medien: Jellyfin, Plex HTPC, Spotify, FreeTube, Strawberry; Kodi bringt jetzt Controller-Unterstützung und Streaming-Add-ons mit
+  - Streaming: Netflix, Prime Video, Disney+, Joyn, RTL+, Pluto TV, Twitch
+  - Browser: Firefox (normal mit Adressleiste), Chromium, Brave, LibreWolf
+  - Werkzeuge: Mission Center, LocalSend (Dateien vom Handy schicken), AntiMicroX (Controller-Belegung)
+- Streaming-Apps mit Kopierschutz (Netflix & Co.) schalten in ihrem Firefox-Profil Widevine ein
+- AppCenter öffnet schneller: der Installationsstand wird mit je einem Aufruf für alle Apps geprüft statt einzeln
+
 ## 0.9.0 – 2026-10-01
 - Updates an einer Stelle: Einstellungen → Updates → „Aktualisieren“ prüft und installiert alles in einem Durchgang – Void-Pakete (inkl. Kernel), Flatpaks, AppImages, Proton-GE und VoidStation selbst; was aktuell ist, wird übersprungen
 - Das AppCenter hat keine Update-Knöpfe mehr, es ist nur noch fürs Installieren und Entfernen da
