@@ -548,10 +548,6 @@
 <!-- AppCenter -->
 <section class="layer" id="apps">
   <header><div class="htitle"><button class="round anav" data-act="back" aria-label="Zurück" data-i18n-aria="common.back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1 data-i18n="apps.title">AppCenter</h1></div><div class="nowline" id="aNow"></div></header>
-  <div class="bar">
-    <button class="pill anav" data-act="checkupd" data-i18n="apps.checkUpd">Nach Updates suchen</button>
-    <button class="pill anav" data-act="doupd" id="aUpd" data-i18n="apps.updateAll">Alles aktualisieren</button>
-  </div>
   <div class="stage"><div class="track" id="aTrack"></div></div>
 </section>
 <div class="jobband" id="job"><div class="jt"><div class="spin" id="jobSpin"></div><span id="jobTitle"></span></div><pre id="jobLog"></pre></div>
@@ -807,7 +803,7 @@ function updateHint() {
   if (tr && (tr.scrollWidth - innerWidth > 4 || pagesSticky.has(stickyKey()))) h.splice(h.length - (layer() === 'home' ? 0 : 1), 0, T('hint.pages'));
   const note = updInfo && TRACKS[layer()]
     ? `<button class="updnote" id="updNote"><svg viewBox="0 0 24 24"><path d="M12 2.5L1.5 21h21z" fill="#f2c14e"/><path d="M12 9v5.5M12 17.7v.1" stroke="#1a1d21" stroke-width="2.3" stroke-linecap="round"/></svg>` +
-      `<b>${esc(updInfo.version ? T('upd.note', { version: updInfo.version }) : T('upd.badgeGeneric'))}</b><span class="k">${esc(T('upd.noteKey'))}</span></button>` : '';
+      `<b>${esc(updNoteText(updInfo))}</b><span class="k">${esc(T('upd.noteKey'))}</span></button>` : '';
   $('#hint').innerHTML = h.map(s => `<span>${s}</span>`).join('') + note;
   document.documentElement.style.setProperty('--hint', ($('#hint').offsetHeight + 22 * scale * innerHeight / 768) + 'px');
   // Hinweiszeile hoeher/niedriger geworden (z. B. Update-Hinweis bricht in eine zweite Zeile um): Kacheln neu einpassen
@@ -1028,8 +1024,6 @@ function activate(el = focusEl) {
   if (el._tile?.type === 'install') return openInstaller();
   if (el._tile && isEmulator(el._tile.id)) return checkAndLaunchEmulator(el._tile, el);
   if (act === 'tvstop') return tvStop();
-  if (act === 'checkupd') return jobStart('check');
-  if (act === 'doupd') return confirmUpdate();
   if (el._chan) return tvPlay(el._chan);
   if (el._flt) return el._flt();
   if (el._app) return appDialog(el._app);
@@ -1135,20 +1129,25 @@ async function poll() {
   try { const s = await getJSON('/api/status'); setRunning(s.running || []); setRadio(s.radio || {}); setTvNow(s.tv); showUpdBadge(s.update); } catch {}
 }
 // Update verfuegbar: gelber Hinweis unten rechts, oeffnen mit Klick, U oder Select am Controller
+// Neue VoidStation-Version, Systemupdates (Void-Pakete, Flatpak, AppImages, Proton-GE) oder ausstehender Neustart
 let updToasted = null, updInfo = null;
+const updNoteText = u => u.version ? T('upd.note', { version: u.version })
+  : u.system ? T('upd.noteSystem', { n: num(u.system) }) : u.reboot ? T('upd.noteReboot') : T('upd.badgeGeneric');
 function showUpdBadge(u) {
-  const on = !!(u && u.available);
-  const changed = !!updInfo !== on || (on && updInfo.version !== u.version);
+  const on = !!(u && (u.available || u.reboot));
+  const key = on ? updNoteText(u) : null;
+  const changed = (updInfo ? updNoteText(updInfo) : null) !== key;
   updInfo = on ? u : null;
-  if (changed) updateHint();
-  if (on && updToasted !== u.version && layer() === 'home') { updToasted = u.version; toast(T('upd.toast')); }
+  if (changed) { updateHint(); if (sett && layer() === 'settings' && !sCat) updCatSubs(); }
+  // Toast nur fuer neue VoidStation-Versionen (Void-Pakete kommen fast taeglich)
+  if (on && u.version && updToasted !== u.version && layer() === 'home') { updToasted = u.version; toast(T('upd.toast')); }
 }
 function openUpdate() {
   if (!updInfo || !TRACKS[layer()] || splashTile) return;
   if (layer() !== 'settings') { $$('.layer.open').forEach(e => e.classList.remove('open', 'shown')); openLayer('settings'); }
   sCat = 'updates'; wifiPick = null;                       // direkt in den Bereich "Updates"
   if (sett) { renderSettings(); updateHint(); }
-  setTimeout(selfUpdate, 400);
+  setTimeout(runUpdates, 400);
 }
 setInterval(poll, 1500);
 
@@ -1339,8 +1338,8 @@ function catSub(id) {
     case 'share': return esc(sett.share.samba ? `\\\\${sett.net.hostname}\\share` : T('common.off'));
     case 'updates':
       if (sett.live) return esc(T('settings.liveShort'));
-      if (vsState && vsState.available) return UPD_MARK + '<b>' + esc(T('upd.note', { version: vsState.remote })) + '</b>';
-      return esc(vsVersion()) + (vsState ? ' · ' + esc(vsState.remote ? T('upd.current') : T('upd.unreachable')) : '');
+      if (updInfo) return UPD_MARK + '<b>' + esc(updNoteText(updInfo)) + '</b>';
+      return esc(vsVersion()) + (vsState ? ' · ' + esc(vsState.remote ? T('upd.allCurrent') : T('upd.unreachable')) : '');
     case 'system': return sett.ssh === undefined ? esc(sett.net.hostname) : esc(T('settings.ssh') + ': ' + T(sett.ssh ? 'common.on' : 'common.off'));
   }
   return '';
@@ -1528,9 +1527,14 @@ const SET_PAGES = {
     const vi = document.createElement('div'); vi.className = 'info'; vi.id = 'vsInfo';
     s.appendChild(vi);
     if (sett.live) return;                                 // im Live-System gibt es keine Updates
+    const si = document.createElement('div'); si.className = 'info'; si.id = 'sysInfo';
+    s.appendChild(si);
     const rvs = row(s);
-    const vu = pill(esc(T('settings.selfupdate')), selfUpdate); vu.dataset.key = 'selfupd';
+    const vu = pill(esc(T('settings.update')), runUpdates); vu.dataset.key = 'selfupd';
     rvs.appendChild(vu);
+    if (vsState?.reboot && (vsState.reboot.kernel || vsState.reboot.voidstation)) {
+      const rb = pill(esc(T('upd.rebootNow')), () => power('reboot')); rb.dataset.key = 'updreboot'; rvs.appendChild(rb);
+    }
     const rch = row(col(tr, T('settings.channel')));
     const cur = (vsState && vsState.channel) || 'stable';
     for (const [id, lab] of [['stable', T('channel.stable')], ['main', T('channel.main')]]) {
@@ -1567,13 +1571,22 @@ function renderSettings(want) {
   showVol(sett.volume);
   if (layer() === 'settings') {
     const again = keepKey && $(`#sTrack [data-key="${CSS.escape(keepKey)}"]`);
-    const upd = cat?.id === 'updates' && vsState?.available && $('#sTrack [data-key="selfupd"]');   // Update wartet: gleich auf "aktualisieren"
+    const upd = cat?.id === 'updates' && vsState?.any && $('#sTrack [data-key="selfupd"]');   // Update wartet: gleich auf "Aktualisieren"
     setFocus(again || upd || $('#sTrack .snav.on') || $('#sTrack .snav'), true);
   }
 }
-/* ---- VoidStation selbst aktualisieren */
+/* ---- Updates: VoidStation + Void-Pakete (inkl. Kernel) + Flatpak/AppImages/Proton-GE, alles mit einem Knopf */
 let vsState = null;
 const chLabel = v => T('channel.' + v.channel, null, v.channel_label);
+function sysSummary(st) {                                  // "12 Void-Pakete (Kernel 6.18.45_1) · 2 Flatpaks · …"
+  const y = st?.system; if (!y) return '';
+  const p = [];
+  if (y.pkgs.length) p.push(T('upd.sysPkgs', { n: num(y.pkgs.length) }) + (y.kernel ? ' ' + T('upd.sysKernel', { version: y.kernel.replace(/_\d+$/, '') }) : ''));
+  if (y.flatpak) p.push(T('upd.sysFlatpak', { n: num(y.flatpak) }));
+  for (const a of y.appimage) p.push(L(a));
+  if (y.proton) p.push('Proton-GE ' + y.proton);
+  return p.join(' · ');
+}
 function showVs() {
   const el = $('#vsInfo'); if (!el) return;
   const ver = vsVersion();
@@ -1583,6 +1596,13 @@ function showVs() {
     : esc(vsState.remote ? T('upd.current') : T('upd.unreachable'));
   const ch = vsState ? ` · ${esc(T('upd.channel', { channel: chLabel(vsState) }))}` : '';
   el.innerHTML = `VoidStation ${esc(ver)}${ch}<br>${st}`;
+  const si = $('#sysInfo'); if (!si || !vsState?.system) return;
+  const y = vsState.system, sum = sysSummary(vsState);
+  let line = sum ? `<b>${esc(sum)}</b>` : esc(y.checked ? T('upd.sysCurrent') : T('upd.sysUnchecked'));
+  if (y.error && !y.pkgs.length) line = esc(T('upd.sysError'));
+  const rb = vsState.reboot || {};
+  if (rb.kernel || rb.voidstation) line += `<br><b>${esc(T(rb.kernel ? 'upd.rebootKernel' : 'upd.rebootVs'))}</b>`;
+  si.innerHTML = `${esc(T('upd.system'))}<br>${line}`;
 }
 async function setSsh(on) {
   if (!!sett.ssh === on) return;
@@ -1599,25 +1619,41 @@ async function setChannel(ch) {
 }
 async function refreshVs(force) {
   if (offline) return;
-  try { vsState = await getJSON('/api/selfupdate' + (force ? '?force=1' : '')); } catch { vsState = { local: null, remote: null, available: false }; }
+  try { vsState = await getJSON('/api/updates' + (force ? '?force=1' : '')); } catch { vsState = { local: null, remote: null, available: false, any: false }; }
   if (layer() === 'settings' && $('#vsInfo')) renderSettings(); else { showVs(); updCatSubs(); }
 }
-async function selfUpdate() {
+// Der einzige Weg zu Updates: frisch pruefen, dann alles Ausstehende in einem Auftrag
+async function runUpdates() {
   if (JOBS_BUSY()) return toast(T('common.busy'));
   toast(T('upd.checking'));
   await refreshVs(true);
   $('#toast').classList.remove('show');
-  if (!vsState || !vsState.remote) return toast(T('upd.unreachable'), true);
-  if (!vsState.available) return toast(T('upd.upToDate'));
-  // "Was ist neu" in der eingestellten Sprache (changes_en ab 0.6.0, sonst deutsch)
-  const news = (vsState.changes || []).map(e => `${e.version}:\n` + ((LANG !== 'de' && e['changes_' + LANG]?.length) ? e['changes_' + LANG] : e.changes).map(c => '• ' + c).join('\n')).join('\n\n');
-  adlg(T('upd.confirmTitle'), T('upd.confirmText', { remote: vsState.remote, local: vsState.local || '–', channel: chLabel(vsState) }) +
-    (news ? `\n\n${T('upd.news')}\n${news}` : '') + '\n\n' + T('upd.keep'),
-    [[T('upd.now'), () => jobStart('selfupdate')], [T('common.cancel')]]);
+  if (!vsState) return toast(T('upd.unreachable'), true);
+  if (vsState.busy) return toast(T('upd.xbpsBusy'), true);
+  const rb = vsState.reboot || {};
+  if (!vsState.any) {
+    if (rb.kernel || rb.voidstation) return rebootPrompt(rb);
+    if (!vsState.remote) return toast(T('upd.unreachable'), true);
+    return toast(T('upd.upToDate'));
+  }
+  const parts = [];
+  if (vsState.available) {
+    // "Was ist neu" in der eingestellten Sprache (changes_en ab 0.6.0, sonst deutsch)
+    const news = (vsState.changes || []).map(e => `${e.version}:\n` + ((LANG !== 'de' && e['changes_' + LANG]?.length) ? e['changes_' + LANG] : e.changes).map(c => '• ' + c).join('\n')).join('\n\n');
+    parts.push(T('upd.confirmText', { remote: vsState.remote, local: vsState.local || '–', channel: chLabel(vsState) }) + (news ? `\n\n${T('upd.news')}\n${news}` : ''));
+  }
+  const y = vsState.system;
+  if (y && y.count) {
+    const names = y.pkgs.slice(0, 12).join(', ') + (y.pkgs.length > 12 ? ' ' + T('upd.more', { n: num(y.pkgs.length - 12) }) : '');
+    parts.push(T('upd.system') + ': ' + sysSummary(vsState) + (names ? '\n' + names : ''));
+  }
+  const restart = vsState.available || y?.kernel || rb.kernel || rb.voidstation;
+  parts.push(T(restart ? 'upd.keep' : 'upd.keepNoReboot'));
+  adlg(T('upd.confirmTitle'), parts.join('\n\n'), [[T('upd.now'), () => jobStart('update')], [T('common.cancel')]]);
 }
-function rebootPrompt(action) {
-  const [title, text] = [T('upd.doneTitle'), T('upd.doneText')];
-  adlg(title, text, [[T('upd.rebootNow'), () => power('reboot')], [T('common.later')]]);
+function rebootPrompt(rb) {
+  const text = rb && rb.kernel ? T('upd.doneTextKernel') : T('upd.doneText');
+  adlg(T('upd.doneTitle'), text, [[T('upd.rebootNow'), () => power('reboot')], [T('common.later')]]);
 }
 
 async function setLang(l) {
@@ -1886,7 +1922,7 @@ function setTvNow(now) {
 }
 
 /* ============================================================ AppCenter */
-let appsData = null, jobTimer = null, updCount = null;
+let appsData = null, jobTimer = null;
 async function loadApps() {
   try { appsData = offline ? { categories: ['Spiele'], apps: [], job: null } : await getJSON('/api/apps'); } catch { return toast(T('apps.loadFailed'), true); }
   renderApps();
@@ -1916,8 +1952,7 @@ function renderApps() {
     section(tr, L(cat), g);
   }
   fitGrid(tr, '.agrid', 3);
-  $('#aNow').innerHTML = updCount === null ? `<strong>${esc(T('apps.optional'))}</strong><span>${esc(T('apps.autoTiles'))}</span>`
-    : `<strong>${esc(updCount ? T('apps.updates', { n: num(updCount) }) : T('apps.current'))}</strong><span>${esc(T('apps.justNow'))}</span>`;
+  $('#aNow').innerHTML = `<strong>${esc(T('apps.optional'))}</strong><span>${esc(T('apps.autoTiles'))}</span>`;
   if (layer() === 'apps') { const again = keep && $$('#aTrack .appcard').find(e => e._app.id === keep); setFocus(again || $('#aTrack .appcard') || $('#apps .anav'), true); }
 }
 function adlg(title, text, buttons) {
@@ -1952,10 +1987,6 @@ function appDialog(a) {
       [T('apps.remove'), () => jobStart('remove', a), 'danger'], [T('common.cancel')]]);
   } else adlg(T('apps.installQ', { name: L(a.name) }), appDesc(a) + (a.type === 'flatpak' ? T('apps.flatpakNote') : ''), [[T('apps.install'), () => jobStart('install', a)], [T('common.cancel')]]);
 }
-function confirmUpdate() {
-  if (JOBS_BUSY()) return;
-  adlg(T('apps.updateAllQ'), T('apps.updateAllText'), [[T('upd.now'), () => jobStart('update')], [T('common.cancel')]]);
-}
 let jobState = null;
 const JOBS_BUSY = () => jobState && jobState.state === 'running';
 async function jobStart(action, a) {
@@ -1968,19 +1999,21 @@ function watchJob() {
   const tick = async () => {
     try { jobState = await getJSON('/api/apps/job'); } catch { return; }
     const name = L(jobState.name);
-    const what = ['install', 'remove', 'update', 'check', 'selfupdate'].includes(jobState.action) ? T('job.' + jobState.action, { name }) : name;
+    const what = jobState.action === 'update' ? T('job.update') : ['install', 'remove'].includes(jobState.action) ? T('job.' + jobState.action, { name }) : name;
     $('#jobTitle').textContent = what + T(jobState.state === 'running' ? 'job.running' : jobState.state === 'done' ? 'job.done' : 'job.failed');
     $('#jobSpin').style.display = jobState.state === 'running' ? '' : 'none';
     $('#jobLog').textContent = (jobState.log || []).slice(-6).join('\n');
     if (jobState.state !== 'running') {
       clearInterval(jobTimer);
-      if (jobState.action === 'check' && jobState.result) updCount = jobState.result.updates;
-      toast(jobState.state === 'done' ? T('job.toastDone', { name }) + (jobState.result && typeof jobState.result === 'string' ? ' – ' + jobState.result : '') : T('job.toastFailed', { name }), jobState.state !== 'done');
+      const upd = jobState.action === 'update', r = jobState.result;
+      if (upd && r && r.busy) toast(T('upd.xbpsBusy'), true);
+      else if (upd) toast(T(jobState.state === 'done' ? 'upd.toastDone' : 'upd.toastFailed'), jobState.state !== 'done');
+      else toast(jobState.state === 'done' ? T('job.toastDone', { name }) + (r && typeof r === 'string' ? ' – ' + r : '') : T('job.toastFailed', { name }), jobState.state !== 'done');
       setTimeout(() => band.classList.remove('show'), jobState.state === 'done' ? 2500 : 9000);
       await load();                                   // Kacheln neu aufbauen
       if (layer() === 'apps') loadApps();
-      if (layer() === 'settings') { refreshVs(true); loadSettings(); }
-      if (jobState.state === 'done' && jobState.reboot) { const act = jobState.action; setTimeout(() => rebootPrompt(act), 400); }
+      if (layer() === 'settings') { refreshVs(false); loadSettings(); }
+      if (jobState.reboot) { const rb = { kernel: !!(r && r.kernel) }; setTimeout(() => rebootPrompt(rb), 400); }   // auch bei Teilerfolg (z. B. Kernel neu, Flatpak gescheitert)
       else if (jobState.state === 'done' && jobState.action === 'install' && typeof jobState.result === 'string') setTimeout(() => adlg(T('apps.isInstalled', { name }), jobState.result, [[T('common.ok')]]), 400);
     }
   };

@@ -3,6 +3,14 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.9.0 – 2026-10-01
+- Updates in one place: Settings → Updates → “Update” checks and installs everything in one go – Void packages (incl. the kernel), Flatpaks, AppImages, Proton-GE and VoidStation itself; anything already up to date is skipped
+- The AppCenter no longer has update buttons, it is only for installing and removing programs
+- Devices now also check for system updates (every 6 hours); the hint at the bottom right shows them, the confirmation lists all packages
+- Updates done in a terminal (`sudo xbps-install -Su`) are detected: finished updates disappear from the display, and after a new kernel “Restart required” appears
+- A restart is only requested when it is really needed (new kernel or new VoidStation version)
+- New in the terminal: `vsctl update` does the same as the button in Settings, with a live log
+
 ## 0.8.3 – 2026-10-01
 - Settings adapt to every resolution and scale: long lists (Wi-Fi, Bluetooth) scroll along instead of disappearing under the hint line; long names wrap
 - Page titles shrink when space is tight instead of overlapping the page arrows

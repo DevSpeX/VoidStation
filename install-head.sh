@@ -312,6 +312,7 @@ echo "dunkles Theme eingerichtet (Mauszeiger-Stil und -Größe unter Einstellung
 
 say "Extra: AppCenter-Helfer (installiert nur freigegebene Pakete)"
 install -o root -g root -m 755 "$TV/voidstation-pkg" /usr/local/sbin/voidstation-pkg
+ln -sfn "$TV/vsctl" /usr/local/bin/vsctl          # "vsctl update" im Terminal = Einstellungen → Updates
 install -d -o root -g root -m 755 /usr/local/share/voidstation
 python3 - "$TV/catalog.json" > /usr/local/share/voidstation/allowed-packages <<'PYEOF'
 import json, sys

@@ -111,8 +111,10 @@ def add(tile, gname, pos):
     print("Kachel hinzugefuegt:", tile["label"])
 add({"id": "tv", "label": "Fernsehen", "sub": "Sender aus aller Welt", "size": "wide", "color": "#24414a", "icon": "tv", "type": "tv"}, "Unterhaltung", 1)
 add({"id": "settings", "label": "Einstellungen", "size": "medium", "color": "#3a3f46", "icon": "gear", "type": "settings"}, "System", 1)
-add({"id": "appcenter", "label": "AppCenter", "sub": "Apps & Updates", "size": "medium", "color": "#39414d", "icon": "store", "type": "apps"}, "System", 2)
+add({"id": "appcenter", "label": "AppCenter", "sub": "Programme", "size": "medium", "color": "#39414d", "icon": "store", "type": "apps"}, "System", 2)
 for t in [t for g in c["groups"] for t in g["tiles"]]:
+    if t.get("type") == "apps" and t.get("sub") == "Apps & Updates":   # Updates gibt es seit 0.9.0 nur noch in den Einstellungen
+        t["sub"] = "Programme"
     if t.get("cmd") and t["cmd"][0] == "visualboyadvance-m":
         t["cmd"] = ["mgba-qt"]; t["sub"] = "mGBA"
     if t.get("id") == "files" and t.get("cmd") == ["pcmanfm", "~"]:
@@ -126,6 +128,7 @@ getent group bluetooth >/dev/null && usermod -aG bluetooth "$VSUSER" || true
 
 say "3/8  AppCenter-Helfer (installiert nur freigegebene Pakete)"
 install -o root -g root -m 755 "$TV/voidstation-pkg" /usr/local/sbin/voidstation-pkg
+ln -sfn "$TV/vsctl" /usr/local/bin/vsctl          # "vsctl update" im Terminal = Einstellungen → Updates
 install -d -o root -g root -m 755 /usr/local/share/voidstation
 python3 - "$TV/catalog.json" > /usr/local/share/voidstation/allowed-packages <<'PYEOF'
 import json, sys

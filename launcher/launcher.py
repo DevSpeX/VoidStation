@@ -1248,6 +1248,7 @@ class Jobs:
             return
         with self.lock:
             self.job["log"] = (self.job["log"] + [line])[-60:]
+            self.job["n"] += 1                       # laufende Zeilennummer (fuer "vsctl update")
 
     def _run(self, args, cwd=None):
         self._log("$ " + " ".join(args))
@@ -1259,14 +1260,18 @@ class Jobs:
                 self._log(part)
         return p.wait()
 
+    def busy(self):
+        with self.lock:
+            return bool(self.job and self.job["state"] == "running")
+
     def start(self, action, app=None):
         with self.lock:
             if self.job and self.job["state"] == "running":
                 raise RuntimeError("Es läuft schon ein Auftrag")
-            name = app["name"] if app else ("VoidStation" if action == "selfupdate" else "System")
+            name = app["name"] if app else "Updates"
             self.job = {"action": action, "app": app["id"] if app else None,
                         "name": name, "state": "running", "reboot": False,
-                        "log": [], "started": time.time(), "result": None}
+                        "log": [], "n": 0, "started": time.time(), "result": None}
         threading.Thread(target=self._work, args=(action, app), daemon=True).start()
 
     def _finish(self, ok, result=None, reboot=False):
@@ -1276,68 +1281,75 @@ class Jobs:
             self.job["reboot"] = bool(reboot)
 
     def _selfupdate(self):
-        self._log("VoidStation wird aktualisiert …")
         ok = self._run(["sudo", "-n", PKG_HELPER, "selfupdate"]) == 0
         _VCACHE["t"] = 0.0
         return ok
 
     def _work(self, action, a):
         try:
-            if action == "install":
-                ok = self._install(a)
-                if ok:
-                    tile_add(a)
-                self._finish(ok, a.get("note") if ok else None)
-            elif action == "remove":
-                APPS.close(a["id"])
-                ok = self._remove(a)
-                if ok:
-                    tile_remove(a["id"])
-                self._finish(ok)
-            elif action == "update":
-                ok = self._run(["sudo", "-n", PKG_HELPER, "update"]) == 0
-                if shutil_which("flatpak"):
-                    self._run(["flatpak", "update", "--user", "-y", "--noninteractive"])
-                for app in catalog()["apps"]:
-                    if app["source"]["type"] == "appimage" and app_installed(app):
-                        self._appimage(app)
-                    if "proton-ge" in app["source"].get("addons", []) and app_installed(app):
-                        self._proton_ge()
-                reboot = False
-                if vs_update_status(force=True)["available"]:
-                    reboot = self._selfupdate()
-                    ok = ok and reboot
-                self._finish(ok, "Neustart empfohlen, falls der Kernel aktualisiert wurde" if ok else None, reboot)
-            elif action == "selfupdate":
-                ok = self._selfupdate()
-                self._finish(ok, None, ok)
-            elif action == "check":
-                self._log("Suche nach Updates …")
-                r = subprocess.run(["sudo", "-n", PKG_HELPER, "check"], capture_output=True, text=True, timeout=300)
-                lines = [l for l in r.stdout.splitlines() if l.strip()]
-                for l in lines[:40]:
-                    self._log(l)
-                n = len(lines)
-                if shutil_which("flatpak"):
-                    f = run(["flatpak", "remote-ls", "--user", "--updates", "--columns=application"])
-                    if f and f.returncode == 0:
-                        n += len([l for l in f.stdout.splitlines() if l.strip()])
-                if any("proton-ge" in a["source"].get("addons", []) and app_installed(a) for a in catalog()["apps"]):
-                    try:
-                        tag = proton_latest()["tag_name"]
-                        if tag not in proton_installed():
-                            self._log(f"Proton-GE: neue Version {tag}")
-                            n += 1
-                    except Exception as e:  # noqa: BLE001
-                        self._log(f"Proton-GE: {e}")
-                vs = vs_update_status(force=True)
-                if vs["available"]:
-                    self._log(f"VoidStation: neue Version {vs['remote']} (installiert: {vs['local']})")
-                    n += 1
-                self._finish(r.returncode == 0, {"updates": n, "voidstation": vs["available"]})
+            with SYS_LOCK:                           # nie gleichzeitig mit der Update-Pruefung (xbps-Sperre)
+                if action == "install":
+                    ok = self._install(a)
+                    if ok:
+                        tile_add(a)
+                    self._finish(ok, a.get("note") if ok else None)
+                elif action == "remove":
+                    APPS.close(a["id"])
+                    ok = self._remove(a)
+                    if ok:
+                        tile_remove(a["id"])
+                    self._finish(ok)
+                elif action == "update":
+                    ok, result, reboot = self._update_all()
+                    self._finish(ok, result, reboot)
+                if action in ("install", "remove"):
+                    _sys_check(sync=False)           # Paketstand hat sich geaendert
         except Exception as e:  # noqa: BLE001
             self._log(f"Fehler: {e}")
             self._finish(False)
+
+    def _update_all(self):
+        """Alle Updates in einem Durchgang: Void-Pakete (inkl. Kernel) -> Flatpak -> AppImages
+        -> Proton-GE -> VoidStation. Was aktuell ist, wird uebersprungen."""
+        if xbps_busy():
+            self._log("xbps läuft gerade (z. B. im Terminal) – bitte warten, bis es fertig ist.")
+            return False, {"busy": True}, False
+        self._log("Suche nach Updates …")
+        _sys_check(sync=True, logf=self._log)
+        s = dict(_SCACHE)
+        vs = vs_update_status(force=True)
+        ok, done = True, []
+        if s["pkgs"] or s["error"]:
+            self._log(f"== Void-Pakete: {len(s['pkgs'])} ==")
+            if self._run(["sudo", "-n", PKG_HELPER, "update"]) == 0:
+                done.append("system")
+            else:
+                ok = False
+        else:
+            self._log("Void-Pakete: aktuell")
+        if s["flatpak"] and shutil_which("flatpak"):
+            self._log(f"== Flatpak: {len(s['flatpak'])} ==")
+            ok = self._run(["flatpak", "update", "--user", "-y", "--noninteractive"]) == 0 and ok
+        for app in catalog()["apps"]:
+            if app["id"] in s["appimage"]:
+                self._log(f"== {app['name']} (AppImage) ==")
+                ok = self._appimage(app) and ok
+        if s["proton"]:
+            self._log(f"== Proton-GE {s['proton']} ==")
+            ok = self._proton_ge() and ok
+        if vs["available"]:
+            self._log(f"== VoidStation {vs['remote']} ==")
+            if self._selfupdate():
+                done.append("voidstation")
+            else:
+                ok = False
+        else:
+            self._log("VoidStation: aktuell")
+        self._log("Prüfe Stand …")
+        _sys_check(sync=True)
+        vs_update_status(force=True)
+        rb = reboot_needed()
+        return ok, {"done": done, "kernel": rb["kernel"]}, rb["kernel"] or rb["voidstation"] or "voidstation" in done
 
     def _install(self, a):
         s = a["source"]
@@ -1356,7 +1368,7 @@ class Jobs:
                 return False
             for ext in s.get("extras", []):
                 if self._run(["flatpak", "install", "--user", "-y", "--noninteractive", "flathub", ext]) != 0:
-                    self._log(f"Hinweis: Erweiterung {ext} fehlt – spaeter ueber 'Alles aktualisieren' nachholen")
+                    self._log(f"Hinweis: Erweiterung {ext} fehlt – App spaeter im AppCenter entfernen und neu installieren")
             return True
         if s["type"] == "appimage":
             return self._appimage(a)
@@ -1402,7 +1414,7 @@ class Jobs:
             self._run(["sudo", "-n", PKG_HELPER, "markauto", *deps])
         for addon in s.get("addons", []):
             if addon == "proton-ge" and not self._proton_ge():
-                self._log("Hinweis: Proton-GE spaeter ueber 'Alles aktualisieren' nachholen")
+                self._log("Hinweis: Proton-GE kommt mit dem naechsten Update (Einstellungen → Updates)")
         return True
 
     def _proton_ge(self):
@@ -1503,6 +1515,7 @@ class Jobs:
         self._log(f"Lade {a['source']['url']}")
         req = urllib.request.Request(a["source"]["url"], headers=UA)
         with urllib.request.urlopen(req, timeout=60) as r, open(img, "wb") as f:
+            stamp = asset_stamp(r.headers)
             total = int(r.headers.get("Content-Length") or 0)
             done, last = 0, 0
             while True:
@@ -1531,6 +1544,10 @@ class Jobs:
         shutil.move(str(root), str(dest))
         shutil.rmtree(work, ignore_errors=True)
         img.unlink(missing_ok=True)
+        try:
+            appimage_stampfile(a).write_text(stamp)    # Vergleichswert fuer die Update-Pruefung
+        except OSError:
+            pass
         self._log("installiert nach " + str(dest))
         return True
 
@@ -1640,17 +1657,181 @@ def vs_state():
             "channel": ch, "channel_label": CHANNELS[ch], "checked": _VCACHE["t"] or None}
 
 
-def vs_background_check():
-    """Prueft kurz nach dem Start und dann alle 6 Stunden auf Updates."""
+# ---------------------------------------------------------------------------
+#  Alle uebrigen Updates: Void-Pakete (inkl. Kernel), Flatpaks, AppImages, Proton-GE.
+#  Ausgeloest wird alles nur ueber Einstellungen → Updates (ein Auftrag, siehe Jobs._update_all).
+#  Updates im Terminal (sudo xbps-install -Su) werden am Paketstand erkannt.
+# ---------------------------------------------------------------------------
+SYS_LOCK = threading.Lock()                 # Pruefung und Auftraege nie gleichzeitig (xbps-Sperre)
+XBPS_DB = Path("/var/db/xbps")
+PKG_LINE = re.compile(r"^(\S+)-([^-\s]+_\d+)\s+(install|update|remove|reinstall|configure|download|hold)\b")
+KERNEL_PKG = re.compile(r"^linux(\d+\.\d+)?$")
+_SCACHE = {"t": 0.0, "pkgs": [], "flatpak": [], "appimage": [], "proton": None, "error": None,
+           "db": None, "retry": 0.0}
+BOOT_BUILD = None                           # VoidStation-Stand beim Start der Oberflaeche (main)
+
+
+def xbps_busy():
+    """Laeuft xbps gerade (z. B. im Terminal)?"""
+    r = run(["pgrep", "-x", "xbps-install|xbps-remove|xbps-reconfigure"])
+    return bool(r and r.returncode == 0 and r.stdout.strip())
+
+
+def pkgdb_stamp():
+    try:
+        return max((p.stat().st_mtime for p in XBPS_DB.glob("pkgdb-*.plist")), default=None)
+    except OSError:
+        return None
+
+
+def vkey(v):
+    return [int(x) for x in re.findall(r"\d+", v)]
+
+
+def reboot_needed():
+    """kernel: neuerer Kernel installiert als der laufende; voidstation: Oberflaeche seit dem Start aktualisiert."""
+    if LIVE:
+        return {"kernel": False, "voidstation": False}
+    try:
+        ks = sorted((d.name for d in Path("/usr/lib/modules").iterdir() if d.is_dir()), key=vkey)
+    except OSError:
+        ks = []
+    kernel = bool(ks) and ks[-1] != os.uname().release
+    build = vs_version().get("build")
+    return {"kernel": kernel, "voidstation": bool(BOOT_BUILD and build and build != BOOT_BUILD)}
+
+
+def asset_stamp(headers):
+    return headers.get("ETag") or f'{headers.get("Last-Modified", "")}|{headers.get("Content-Length", "")}'
+
+
+def appimage_stampfile(a):
+    return APPDIR / f".{a['id']}.stamp"
+
+
+def appimage_outdated(a):
+    try:
+        req = urllib.request.Request(a["source"]["url"], headers=UA, method="HEAD")
+        with urllib.request.urlopen(req, timeout=20) as r:
+            remote = asset_stamp(r.headers)
+    except Exception:  # noqa: BLE001
+        return False
+    try:
+        local = appimage_stampfile(a).read_text().strip()
+    except OSError:
+        local = None                                   # vor 0.9.0 installiert: einmal neu laden
+    return remote != local
+
+
+def _sys_check(sync, logf=None):
+    """Sucht nach Updates ausser VoidStation selbst. Nur mit SYS_LOCK aufrufen!
+    sync=False: nur Void-Pakete gegen die vorhandenen Paketlisten (schnell, ohne Netz)."""
+    if LIVE:
+        return
+    res = {"pkgs": [], "error": None}
+    r = run(["sudo", "-n", PKG_HELPER, "check"] + ([] if sync else ["--nosync"]), timeout=300)
+    if r is None:
+        res["error"] = "xbps antwortet nicht"
+    else:
+        for line in r.stdout.splitlines():
+            m = PKG_LINE.match(line.strip())
+            if m:
+                res["pkgs"].append({"name": m[1], "version": m[2], "action": m[3]})
+        if r.returncode != 0 and not res["pkgs"]:
+            res["error"] = ((r.stdout + r.stderr).strip().splitlines() or [f"Fehler {r.returncode}"])[-1][:200]
+    if logf:
+        logf(f"Void-Pakete: {len(res['pkgs'])}" + (f" ({res['error']})" if res["error"] else ""))
+    if sync:
+        res.update(flatpak=[], appimage=[], proton=None)
+        if shutil_which("flatpak"):
+            f = run(["flatpak", "remote-ls", "--user", "--updates", "--columns=application"], timeout=120)
+            if f and f.returncode == 0:
+                res["flatpak"] = [x.strip() for x in f.stdout.splitlines() if x.strip()]
+        apps = catalog()["apps"]
+        for a in apps:
+            if a["source"]["type"] == "appimage" and app_installed(a) and appimage_outdated(a):
+                res["appimage"].append(a["id"])
+        if any("proton-ge" in a["source"].get("addons", []) and app_installed(a) for a in apps):
+            try:
+                tag = proton_latest()["tag_name"]
+                if tag not in proton_installed():
+                    res["proton"] = tag
+            except Exception as e:  # noqa: BLE001
+                if logf:
+                    logf(f"Proton-GE: {e}")
+        if logf:
+            logf(f"Flatpak: {len(res['flatpak'])}, AppImages: {len(res['appimage'])}, Proton-GE: {res['proton'] or 'aktuell'}")
+        res["t"] = time.time()
+    res["db"] = pkgdb_stamp()
+    _SCACHE.update(res)
+
+
+def sys_check(sync):
+    """Pruefung von aussen (Hintergrund, Einstellungen); False = gerade nicht moeglich."""
+    if LIVE or JOBS.busy() or xbps_busy() or not SYS_LOCK.acquire(blocking=False):
+        return False
+    try:
+        _sys_check(sync)
+        return True
+    finally:
+        SYS_LOCK.release()
+
+
+def _sys_recheck():
+    if not sys_check(sync=False):
+        _SCACHE["retry"] = time.time()             # xbps laeuft noch: spaeter erneut
+
+
+def sys_state():
+    """Stand aus dem Zwischenspeicher. Hat sich der Paketstand geaendert (Update/Installation im
+    Terminal), wird kurz ohne Netz neu geprueft – so verschwinden erledigte Updates von selbst."""
+    if (not LIVE and _SCACHE["t"] and pkgdb_stamp() != _SCACHE["db"]
+            and time.time() - _SCACHE["retry"] > 10 and not JOBS.busy()):
+        _SCACHE["retry"] = time.time()
+        threading.Thread(target=_sys_recheck, daemon=True).start()
+    pkgs = _SCACHE["pkgs"]
+    kernel = next((p["version"] for p in pkgs if KERNEL_PKG.match(p["name"])), None)
+    names = {a["id"]: a["name"] for a in catalog()["apps"]} if _SCACHE["appimage"] else {}
+    count = len(pkgs) + len(_SCACHE["flatpak"]) + len(_SCACHE["appimage"]) + (1 if _SCACHE["proton"] else 0)
+    return {"pkgs": [p["name"] for p in pkgs], "kernel": kernel, "flatpak": len(_SCACHE["flatpak"]),
+            "appimage": [names.get(i, i) for i in _SCACHE["appimage"]], "proton": _SCACHE["proton"],
+            "count": count, "error": _SCACHE["error"], "checked": _SCACHE["t"] or None}
+
+
+def updates_state(force=False):
+    """Gesamtstand fuer Einstellungen → Updates: VoidStation + System + Neustart."""
+    vs = vs_update_status(force) if force else vs_state()
+    busy = False
+    if force and not sys_check(sync=True):
+        busy = JOBS.busy() or xbps_busy()
+    sysst = sys_state()
+    return {**vs, "system": sysst, "reboot": reboot_needed(), "busy": busy,
+            "any": bool(vs["available"] or sysst["count"])}
+
+
+def updates_badge():
+    """Kurzfassung fuer /api/status (Hinweis unten rechts)."""
+    vs, sysst, rb = vs_state(), sys_state(), reboot_needed()
+    return {"available": bool(vs["available"] or sysst["count"]), "version": vs["remote"] if vs["available"] else None,
+            "system": sysst["count"], "reboot": rb["kernel"] or rb["voidstation"]}
+
+
+def updates_background_check():
+    """Prueft kurz nach dem Start und dann alle 6 Stunden auf Updates (alle Arten)."""
     time.sleep(90)
     while True:
+        wait = 6 * 3600
         try:
             st = vs_update_status(force=True)
-            log("Update-Pruefung:", "verfuegbar " + str(st["remote"]) if st["available"] else "aktuell",
-                f"(Kanal {st['channel']})", st["error"] or "")
+            ok = sys_check(sync=True)
+            if not ok:
+                wait = 600                             # Auftrag oder xbps im Terminal: in 10 min nochmal
+            log("Update-Pruefung: VoidStation", "verfuegbar " + str(st["remote"]) if st["available"] else "aktuell",
+                f"(Kanal {st['channel']})", st["error"] or "",
+                "| System:", sys_state()["count"] if ok else "uebersprungen (xbps/Auftrag laeuft)")
         except Exception as e:  # noqa: BLE001
             log("Update-Pruefung fehlgeschlagen:", e)
-        time.sleep(6 * 3600)
+        time.sleep(wait)
 
 
 def shutil_which(name):
@@ -2227,9 +2408,8 @@ class Handler(BaseHTTPRequestHandler):
         path = url.path
         if path == "/api/status":
             running = APPS.running()
-            vs = vs_state()
             return self._json(200, {"running": running, "starting": APPS.starting(), "radio": RADIO.status(),
-                                    "update": {"available": vs["available"] and not LIVE, "version": vs["remote"]},
+                                    "update": updates_badge() if not LIVE else {"available": False},
                                     "tv": TV.now if "tv" in running else None, "live": LIVE,
                                     "install": INSTALL.state.get("state") if INSTALL.state else None})
         if path == "/api/tv/status":
@@ -2248,9 +2428,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, EPG.get_program(ch_id, ch_name) or {})
         if path == "/api/apps":
             return self._json(200, apps_payload())
-        if path == "/api/selfupdate":
+        if path in ("/api/updates", "/api/selfupdate"):
             force = urllib.parse.parse_qs(url.query).get("force", [""])[0] == "1"
-            return self._json(200, vs_update_status(force))
+            return self._json(200, updates_state(force))
         if path == "/api/apps/job":
             return self._json(200, JOBS.current() or {})
         if path == "/api/radio/favs":
@@ -2416,7 +2596,8 @@ class Handler(BaseHTTPRequestHandler):
                 r = subprocess.run(["sudo", "-n", PKG_HELPER, "channel", ch], capture_output=True, text=True, timeout=20)
                 if r.returncode != 0:
                     return self._json(500, {"error": (r.stdout + r.stderr).strip() or "fehlgeschlagen"})
-                return self._json(200, vs_update_status(force=True))
+                vs_update_status(force=True)
+                return self._json(200, updates_state())
             if parts == ["api", "apps", "localtile"]:
                 b = self._body()
                 try:
@@ -2432,7 +2613,9 @@ class Handler(BaseHTTPRequestHandler):
                         if not a:
                             return self._json(404, {"error": "unbekannte App"})
                         JOBS.start(act, a)
-                    elif act in ("update", "check", "selfupdate"):
+                    elif act == "update":               # alle Updates (Einstellungen → Updates, vsctl update)
+                        if LIVE:
+                            return self._json(409, {"error": "im Live-System gibt es keine Updates"})
                         JOBS.start(act)
                     else:
                         return self._send(404)
@@ -2620,13 +2803,15 @@ def app_prefs():
 
 
 def main():
+    global BOOT_BUILD
+    BOOT_BUILD = vs_version().get("build")
     app_prefs()
     s = settings_load()
     apply_appearance(s)
     apply_resolution(s.get("resolution"))
     threading.Thread(target=gamepad_watcher, daemon=True).start()
     if not LIVE:                                    # im Live-System gibt es keine Updates
-        threading.Thread(target=vs_background_check, daemon=True).start()
+        threading.Thread(target=updates_background_check, daemon=True).start()
     httpd = ThreadingHTTPServer((HOST, PORT), Handler)
     log(f"laeuft auf http://{HOST}:{PORT}/")
     try:

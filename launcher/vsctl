@@ -2,11 +2,45 @@
 # vsctl home            -> laufendes Programm schliessen, zurueck zur Startseite
 # vsctl launch <id>     -> Kachel starten (id aus tiles.json)
 # vsctl status          -> was laeuft gerade?
+# vsctl update          -> alle Updates wie Einstellungen → Updates: Void-Pakete (inkl. Kernel),
+#                          Flatpak, AppImages, Proton-GE und VoidStation selbst; Protokoll laeuft mit
 URL=http://127.0.0.1:8765/api
+
+update() {
+  if ! curl -fsS -o /dev/null "$URL/status" 2>/dev/null; then
+    # Oberflaeche laeuft nicht (z. B. per SSH bei kaputter Sitzung): direkt ueber den Root-Helfer
+    echo "Oberfläche nicht erreichbar – aktualisiere direkt (ohne Flatpak/AppImages/Proton-GE)."
+    sudo -n /usr/local/sbin/voidstation-pkg update && sudo -n /usr/local/sbin/voidstation-pkg selfupdate
+    return $?
+  fi
+  curl -fsS -X POST -H 'X-TV: 1' "$URL/apps/update" >/dev/null || { echo "Es läuft schon ein Auftrag." >&2; return 1; }
+  python3 - "$URL" <<'PYEOF'
+import json, sys, time, urllib.request
+url, seen = sys.argv[1], 0
+while True:
+    time.sleep(1)
+    try:
+        with urllib.request.urlopen(url + "/apps/job", timeout=10) as r:
+            j = json.load(r)
+    except OSError:
+        continue
+    n, lines = j.get("n", 0), j.get("log", [])
+    for line in lines[max(0, len(lines) - (n - seen)):]:
+        print(line, flush=True)
+    seen = n
+    if j.get("state") != "running":
+        print("\nFertig." if j.get("state") == "done" else "\nNicht alles hat geklappt (siehe oben).")
+        if j.get("reboot"):
+            print("Neustart nötig:  sudo reboot")
+        sys.exit(0 if j.get("state") == "done" else 1)
+PYEOF
+}
+
 case "$1" in
   home)   curl -fsS -X POST -H 'X-TV: 1' "$URL/home" ;;
   launch) curl -fsS -X POST -H 'X-TV: 1' "$URL/launch/$2" ;;
   status) curl -fsS "$URL/status" ;;
-  *) echo "Benutzung: vsctl home | launch <id> | status" >&2; exit 1 ;;
+  update) update; exit $? ;;
+  *) echo "Benutzung: vsctl home | launch <id> | status | update" >&2; exit 1 ;;
 esac
 echo

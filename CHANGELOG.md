@@ -4,6 +4,14 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.9.0 – 2026-10-01
+- Updates an einer Stelle: Einstellungen → Updates → „Aktualisieren“ prüft und installiert alles in einem Durchgang – Void-Pakete (inkl. Kernel), Flatpaks, AppImages, Proton-GE und VoidStation selbst; was aktuell ist, wird übersprungen
+- Das AppCenter hat keine Update-Knöpfe mehr, es ist nur noch fürs Installieren und Entfernen da
+- Die Geräte prüfen jetzt auch Systemupdates (alle 6 Stunden); der Hinweis unten rechts zeigt sie an, die Bestätigung listet alle Pakete
+- Updates im Terminal (`sudo xbps-install -Su`) werden erkannt: erledigte Updates verschwinden aus der Anzeige, nach einem neuen Kernel erscheint „Neustart nötig“
+- Neustart wird nur noch verlangt, wenn er wirklich nötig ist (neuer Kernel oder neue VoidStation-Version)
+- Neu im Terminal: `vsctl update` macht dasselbe wie der Knopf in den Einstellungen, mit mitlaufendem Protokoll
+
 ## 0.8.3 – 2026-10-01
 - Einstellungen passen sich jeder Auflösung und Skalierung an: lange Listen (WLAN, Bluetooth) scrollen mit, statt unter der Hinweiszeile zu verschwinden; lange Namen brechen um
 - Seitentitel werden bei wenig Platz kleiner, statt sich mit den Blätter-Pfeilen zu überlappen

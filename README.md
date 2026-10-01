@@ -48,10 +48,17 @@ sudo bash update.sh               # Aktualisieren, eigene Kacheln/Favoriten blei
 
 ## Updates
 
-**Am Fernseher:** Einstellungen → Updates → *VoidStation aktualisieren* (oder im AppCenter *Alles aktualisieren*).
-Die Geräte prüfen kurz nach dem Start und dann alle 6 Stunden selbst und zeigen oben rechts einen Hinweis,
-wenn eine neue Version bereitsteht. Der Update-Dialog zeigt, was neu ist. Eigene Kacheln, Favoriten und
-Einstellungen bleiben erhalten.
+**Am Fernseher:** Einstellungen → Updates → *Aktualisieren* – der einzige Update-Knopf. Er prüft und installiert
+alles in einem Durchgang: Void-Pakete (inkl. Kernel), Flatpaks, AppImages, Proton-GE und VoidStation selbst
+(in dieser Reihenfolge; was aktuell ist, wird übersprungen). Die Geräte prüfen kurz nach dem Start und dann alle
+6 Stunden selbst und zeigen unten rechts einen Hinweis. Der Update-Dialog zeigt, was neu ist und welche Pakete
+kommen. Eigene Kacheln, Favoriten und Einstellungen bleiben erhalten. Ein Neustart wird nur verlangt, wenn ein
+neuer Kernel oder eine neue VoidStation-Version installiert wurde.
+
+**Im Terminal:** `vsctl update` macht dasselbe wie der Knopf (Protokoll läuft mit). `sudo xbps-install -Su`
+aktualisiert nur die Void-Pakete – das geht weiterhin, VoidStation erkennt es (erledigte Updates verschwinden aus
+der Anzeige, nach einem neuen Kernel steht „Neustart nötig“ unten rechts). VoidStation selbst ist kein
+xbps-Paket und kommt nur über den Knopf bzw. `vsctl update`.
 
 **Kanäle:** *Stable* (Zweig `stable`, Standard) oder *Testing* (Zweig `main`, neue Versionen zuerst) –
 umschaltbar unter Einstellungen → Updates → Update-Kanal.
@@ -119,7 +126,7 @@ Auf einen Ventoy-Stick kopieren oder mit Rufus/balenaEtcher schreiben.
 | Zurück zur Startseite (aus jedem Programm) | Guide / Home | Win | |
 
 Die Pfeile oben rechts erscheinen, sobald eine Seite breiter als der Bildschirm ist; der helle Punkt zeigt die aktuelle Gruppe.
-Ist ein VoidStation-Update verfügbar, steht unten rechts ein gelber Hinweis.
+Warten Updates (oder ist nach einem neuen Kernel ein Neustart nötig), steht unten rechts ein gelber Hinweis.
 
 ## Sprachen
 

@@ -190,9 +190,14 @@ main() {
       xbps-install -Syu xbps || true        # xbps muss sich ggf. zuerst selbst aktualisieren
       xbps-install -Syu
       ;;
-    check)
-      xbps-install -S >/dev/null 2>&1
-      xbps-install -un
+    check)                                  # ausstehende Paket-Updates auflisten (--nosync: ohne Paketlisten zu laden)
+      [ "$1" = "--nosync" ] || xbps-install -S >/dev/null 2>&1
+      out="$(xbps-install -un 2>&1)"; rc=$?
+      case "$out" in
+        *"must be updated"*) xbps-install -un xbps 2>/dev/null; return 0 ;;   # erst xbps selbst, danach der Rest
+      esac
+      [ -n "$out" ] && printf '%s\n' "$out"
+      return $rc
       ;;
     selfupdate)
       selfupdate
@@ -217,7 +222,7 @@ main() {
         *) echo "Kanal muss stable oder main sein"; return 2 ;; esac
       ;;
     *)
-      echo "Benutzung: voidstation-pkg install|remove|markauto <paket>... | sync | update | check | selfupdate | channel stable|main | xserver ensure|repair|status | ssh on|off|status | bluetooth on|off|status"
+      echo "Benutzung: voidstation-pkg install|remove|markauto <paket>... | sync | update | check [--nosync] | selfupdate | channel stable|main | xserver ensure|repair|status | ssh on|off|status | bluetooth on|off|status"
       return 2
       ;;
   esac
