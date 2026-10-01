@@ -3,6 +3,9 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.10.1 – 2026-10-01
+- AppCenter: visible scrollbars next to the categories and the apps, so you can tell there is more; the category list fades out at the bottom when more follows
+
 ## 0.10.0 – 2026-10-01
 - AppCenter rebuilt: “Installed” and the categories on the left, the apps as tiles on the right – the list scrolls down instead of sideways, and the number of columns adapts to resolution and scaling
 - “Installed” shows everything on the device at a glance, grouped by category – including programs installed outside the AppCenter

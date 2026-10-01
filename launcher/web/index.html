@@ -262,8 +262,13 @@
   /* AppCenter: links Kategorien, rechts die Apps – senkrecht scrollend, Spaltenzahl passt sich der Breite an */
   .astage { display: flex; gap: calc(var(--u) * .22); padding-left: calc(var(--pad-x) - 10px * var(--f)); }
   .acats { flex: none; width: min(calc(235px * var(--f)), 32vw); min-height: 0; overflow-y: auto; overflow-x: hidden;
-    scrollbar-width: none; display: flex; flex-direction: column; gap: calc(4px * var(--f)); padding: calc(10px * var(--f)); }
-  .acats::-webkit-scrollbar, .apane::-webkit-scrollbar { display: none; }
+    display: flex; flex-direction: column; gap: calc(4px * var(--f)); padding: calc(10px * var(--f)); }
+  /* Sichtbare, schmale Scrollbalken: zeigen, dass links/rechts noch mehr kommt (erscheinen nur, wenn es etwas zu scrollen gibt) */
+  .acats, .apane { --sbw: calc(7px * var(--f)); }
+  .acats::-webkit-scrollbar, .apane::-webkit-scrollbar { width: var(--sbw); }
+  .acats::-webkit-scrollbar-track, .apane::-webkit-scrollbar-track { background: var(--surface-card); border-radius: var(--sbw); }
+  .acats::-webkit-scrollbar-thumb, .apane::-webkit-scrollbar-thumb { background: var(--text-faint); border-radius: var(--sbw); min-height: calc(40px * var(--f)); }
+  .acats::-webkit-scrollbar-thumb:hover, .apane::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
   .acat { flex: none; display: flex; align-items: center; gap: calc(10px * var(--f)); min-height: calc(44px * var(--f)); padding: calc(6px * var(--f)) calc(12px * var(--f));
     background: transparent; color: var(--text-dim); border: 2px solid transparent; outline: none; cursor: pointer; text-align: left; font-size: calc(16px * var(--f)); }
   .acat svg { flex: none; width: calc(22px * var(--f)); height: calc(22px * var(--f)); }
@@ -273,13 +278,15 @@
   .acat.on .ac { color: var(--text-dim); }
   .acat.focus { border-color: var(--focus); color: var(--text); }
   .acat.first { margin-bottom: calc(10px * var(--f)); }              /* "Installiert" etwas abgesetzt */
-  .apane { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none;
-    padding: calc(10px * var(--f) + var(--u) * .03) var(--pad-x) calc(18px * var(--f)) calc(14px * var(--f)); }
-  /* weich ausblenden, wo noch mehr kommt (oben / unten) */
-  .apane { --mt: 0px; --mb: 0px; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--mt), #000 calc(100% - var(--mb)), transparent 100%);
-    mask-image: linear-gradient(to bottom, transparent 0, #000 var(--mt), #000 calc(100% - var(--mb)), transparent 100%); }
-  .apane.less { --mt: calc(30px * var(--f)); }
-  .apane.more { --mb: calc(40px * var(--f)); }
+  /* Scrollbalken rechts neben den Kacheln statt am Bildschirmrand: Abstand zum Rand als margin, nicht als padding */
+  .apane { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; overflow-x: hidden; margin-right: max(0px, calc(var(--pad-x) - 22px * var(--f)));
+    padding: calc(10px * var(--f) + var(--u) * .03) calc(22px * var(--f)) calc(18px * var(--f)) calc(14px * var(--f)); }
+  /* weich ausblenden, wo noch mehr kommt (oben / unten) – der Scrollbalken selbst bleibt voll sichtbar (zweite Maskenebene) */
+  .acats, .apane { --mt: 0px; --mb: 0px;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--mt), #000 calc(100% - var(--mb)), transparent 100%), linear-gradient(to left, #000 var(--sbw), transparent var(--sbw));
+    mask-image: linear-gradient(to bottom, transparent 0, #000 var(--mt), #000 calc(100% - var(--mb)), transparent 100%), linear-gradient(to left, #000 var(--sbw), transparent var(--sbw)); }
+  .acats.less, .apane.less { --mt: calc(30px * var(--f)); }
+  .acats.more, .apane.more { --mb: calc(40px * var(--f)); }
   .ahead { display: flex; align-items: baseline; gap: calc(14px * var(--f)); margin: 0 0 calc(14px * var(--f)); min-width: 0; }
   .ahead h2 { margin: 0; font-weight: 300; font-size: calc(26px * var(--f)); white-space: nowrap; }
   .ahead span { color: var(--text-faint); font-size: calc(15px * var(--f)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -2064,8 +2071,15 @@ function renderAppGrid(top) {
   pane.scrollTop = top ? 0 : keep;
   aMore();
 }
-function aMore() { const p = $('#aPane'); p.classList.toggle('more', p.scrollTop + p.clientHeight < p.scrollHeight - 2); p.classList.toggle('less', p.scrollTop > 2); }
+function aMore() {
+  for (const p of [$('#aPane'), $('#aCats')]) {
+    p.classList.toggle('more', p.scrollTop + p.clientHeight < p.scrollHeight - 2);
+    p.classList.toggle('less', p.scrollTop > 2);
+  }
+}
 $('#aPane').addEventListener('scroll', aMore, { passive: true });
+$('#aCats').addEventListener('scroll', aMore, { passive: true });
+addEventListener('resize', () => { if (layer() === 'apps') aMore(); });
 function aSelect(c) {
   if (!appsData || c === aCat) return;
   aCat = c;

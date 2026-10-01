@@ -4,6 +4,9 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.10.1 – 2026-10-01
+- AppCenter: sichtbare Scrollbalken neben Kategorien und Apps – so sieht man, dass es weitergeht; die Kategorienliste blendet unten weich aus, wenn noch mehr kommt
+
 ## 0.10.0 – 2026-10-01
 - AppCenter neu aufgebaut: links „Installiert“ und die Kategorien, rechts die Apps als Kacheln – die Liste scrollt nach unten statt zur Seite, die Spaltenzahl passt sich Auflösung und Skalierung an
 - „Installiert“ zeigt alles auf dem Gerät auf einen Blick, nach Kategorien gegliedert – auch Programme, die außerhalb des AppCenters installiert wurden
