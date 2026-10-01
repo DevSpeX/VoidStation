@@ -32,3 +32,5 @@ user_pref("browser.backup.scheduled.enabled", false);
 user_pref("layout.css.prefers-color-scheme.content-override", 0);
 user_pref("browser.theme.toolbar-theme", 0);
 user_pref("browser.theme.content-theme", 0);
+// Erweiterungen (z. B. OSK) direkt aktivieren
+user_pref("extensions.autoDisableScopes", 0);

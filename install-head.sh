@@ -152,15 +152,30 @@ for g in input audio video render bluetooth; do
   getent group "$g" >/dev/null && usermod -aG "$g" "$VSUSER" || true
 done
 
+# Bluetooth & Controller: DualSense / DualShock drahtlos (ClassicBondedOnly=false, UserspaceHID=true)
+if [ -f /etc/bluetooth/input.conf ]; then
+  grep -q '^UserspaceHID=true' /etc/bluetooth/input.conf || sed -i 's/^#*UserspaceHID=.*/UserspaceHID=true/' /etc/bluetooth/input.conf
+  grep -q '^ClassicBondedOnly=false' /etc/bluetooth/input.conf || sed -i 's/^#*ClassicBondedOnly=.*/ClassicBondedOnly=false/' /etc/bluetooth/input.conf
+fi
+mkdir -p /etc/udev/rules.d
+cat > /etc/udev/rules.d/70-gamepad.rules <<'EOF'
+# PlayStation DualSense & DualShock (USB & Bluetooth)
+KERNEL=="hidraw*", ATTRS{idVendor}=="054c", MODE="0660", TAG+="uaccess"
+SUBSYSTEM=="input", ATTRS{idVendor}=="054c", MODE="0660", TAG+="uaccess"
+KERNEL=="uinput", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
+EOF
+
 # ---------------------------------------------------------------------
 say "5/8  Firefox-Profile (Startseite + YouTube)"
 for p in home youtube; do
-  install -d "$TV/profiles/$p"
+  install -d "$TV/profiles/$p/extensions"
   cp "$TV/firefox/user-common.js" "$TV/profiles/$p/user.js"
+  [ -f "$TV/firefox/fx_osk.xpi" ] && cp "$TV/firefox/fx_osk.xpi" "$TV/profiles/$p/extensions/{87ce8680-7931-493f-9125-19c2c7ca092a}.xpi"
 done
 cat "$TV/firefox/user-youtube.js" >> "$TV/profiles/youtube/user.js"
-install -d /etc/firefox/policies
+install -d /etc/firefox/policies /usr/lib/firefox/browser/extensions
 cp "$TV/firefox/policies.json" /etc/firefox/policies/policies.json
+[ -f "$TV/firefox/fx_osk.xpi" ] && cp "$TV/firefox/fx_osk.xpi" "/usr/lib/firefox/browser/extensions/{87ce8680-7931-493f-9125-19c2c7ca092a}.xpi"
 
 # ---------------------------------------------------------------------
 say "6/8  Ton (PipeWire) einrichten"

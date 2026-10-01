@@ -35,6 +35,10 @@
       "{9a41dee2-b924-4161-a971-7fb35c053a4a}": {
         "installation_mode": "normal_installed",
         "install_url": "https://addons.mozilla.org/firefox/downloads/latest/enhanced-h264ify/latest.xpi"
+      },
+      "{87ce8680-7931-493f-9125-19c2c7ca092a}": {
+        "installation_mode": "force_installed",
+        "install_url": "https://addons.mozilla.org/firefox/downloads/file/3759917/fx_osk-1.12.0.xpi"
       }
     }
   }

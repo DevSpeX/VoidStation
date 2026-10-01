@@ -1416,6 +1416,11 @@ class Jobs:
                        'user_pref("media.gmp-widevinecdm.enabled", true);\n'
                        'user_pref("media.gmp-manager.updateEnabled", true);\n')
             (prof / "user.js").write_text(js)
+            fx_osk = BASE / "firefox" / "fx_osk.xpi"
+            if fx_osk.exists():
+                ext_dir = prof / "extensions"
+                ext_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(fx_osk, ext_dir / "{87ce8680-7931-493f-9125-19c2c7ca092a}.xpi")
             self._log(f"Profil angelegt: {prof}")
             return True
         return False
