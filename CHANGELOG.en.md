@@ -3,6 +3,9 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.8.2 – 2026-10-01
+- Settings: the top row of tiles is no longer cut off, and the focus frame on the bottom row no longer covers the hint line
+
 ## 0.8.1 – 2026-10-01
 - Tidier settings: one tile per area (Language, Display, Appearance, Sound, Network, Bluetooth, Shared folder, Updates, System) – each tile shows the current state, Esc / B returns to the overview
 - A pending update shows up on the “Updates” tile; U / Select jumps straight there

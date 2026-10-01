@@ -4,6 +4,9 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.8.2 – 2026-10-01
+- Einstellungen: die obere Kachelreihe wird nicht mehr abgeschnitten, der Fokusrahmen der unteren Reihe überdeckt nicht mehr die Hinweiszeile
+
 ## 0.8.1 – 2026-10-01
 - Einstellungen übersichtlicher: eine Kachel je Bereich (Sprache, Anzeige, Design, Ton, Netzwerk, Bluetooth, Freigabe, Updates, System) – jede Kachel zeigt den aktuellen Stand, Esc / B führt zurück zur Übersicht
 - Wartet ein Update, ist das auf der Kachel „Updates“ zu sehen; U / Select springt direkt dorthin

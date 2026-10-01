@@ -229,6 +229,8 @@
   .info b { color: var(--text); font-weight: 400; }
   .wifi .sig { color: var(--text-faint); font-size: .85em; }
   /* Einstellungen: Uebersicht mit Bereichs-Kacheln */
+  /* ohne Ueberschrift darueber: Platz lassen, sonst schneidet die Buehne Fokusrahmen und Vergroesserung der oberen Reihe ab */
+  #sTrack > .group.sethome { padding-top: calc(12px * var(--f) + var(--u) * .03); }
   .setgrid { display: grid; grid-template-rows: repeat(var(--srows, 3), calc(var(--u) * .74)); grid-auto-columns: calc(var(--u) * 1.6); grid-auto-flow: column; gap: var(--gap); }
   .tile.setcat .sicon { position: absolute; left: 7%; top: 12%; width: calc(var(--u) * .26); height: calc(var(--u) * .26); opacity: .95; }
   .tile.setcat .sicon svg { width: 100%; height: 100%; display: block; }
@@ -706,7 +708,7 @@ function layout() {
   updScroll();
 }
 // Zeilenzahl der Raster in Radio/TV/AppCenter an den Platz ueber der Hinweiszeile anpassen
-function fitGrid(track, sel, max) {
+function fitGrid(track, sel, max, pad = 0) {             // pad: Platz unten frei lassen (px), z. B. fuer den Fokusrahmen
   const g = track && track.querySelector(sel);
   if (!g) return;
   track.style.removeProperty('--u');                 // erst mit normaler Kachelgroesse messen
@@ -718,7 +720,7 @@ function fitGrid(track, sel, max) {
   const cell = parseFloat(cs.gridTemplateRows.split(' ')[0]);
   const gap = parseFloat(cs.rowGap) || 0;
   if (!cell) return;
-  const avail = limit - gt - 4;
+  const avail = limit - gt - 4 - pad;
   let n = Math.min(max, Math.floor((avail + gap) / (cell + gap))), k = 1;
   if (n < max) {                                     // eine Reihe mehr, wenn die Kacheln dafuer hoechstens 15 % kleiner werden
     const k2 = (avail - n * gap) / ((n + 1) * cell);
@@ -734,7 +736,7 @@ function fitGrids() {
   fitGrid($('#aTrack'), '.agrid', 3);
   fitGrid($('#tTrack'), '.sgrid', 3);
   fitGrid($('#rTrack'), '.sgrid', 3);
-  fitGrid($('#sTrack'), '.setgrid', 3);
+  fitGrid($('#sTrack'), '.setgrid', 3, setRing());
 }
 
 /* ============================================================ Ebenen */
@@ -1295,8 +1297,13 @@ function settingsCat(id) {
   renderSettings(id ? null : 'cat' + prev);               // zurueck: Fokus wieder auf die Kachel, von der man kam
   updateHint();
 }
+// Fokusrahmen + Vergroesserung der Kacheln ragen ueber die Kachel hinaus: oben (padding) und unten (fitGrid) frei lassen
+function setRing() {
+  const cs = getComputedStyle(document.documentElement);
+  return 12 * (parseFloat(cs.getPropertyValue('--f')) || 1) + 0.03 * (parseFloat(cs.getPropertyValue('--u')) || 0);
+}
 function renderSettingsHome(tr) {
-  const sec = document.createElement('section'); sec.className = 'group';
+  const sec = document.createElement('section'); sec.className = 'group sethome';
   const g = document.createElement('div'); g.className = 'setgrid';
   let i = 0;
   for (const c of SET_CATS) {
@@ -1311,7 +1318,7 @@ function renderSettingsHome(tr) {
     g.appendChild(el);
   }
   sec.appendChild(g); tr.appendChild(sec);
-  fitGrid(tr, '.setgrid', 3);
+  fitGrid(tr, '.setgrid', 3, setRing());
 }
 const SET_PAGES = {
   lang(tr) {
