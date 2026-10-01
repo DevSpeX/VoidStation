@@ -4,6 +4,10 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.8.1 – 2026-10-01
+- Einstellungen übersichtlicher: eine Kachel je Bereich (Sprache, Anzeige, Design, Ton, Netzwerk, Bluetooth, Freigabe, Updates, System) – jede Kachel zeigt den aktuellen Stand, Esc / B führt zurück zur Übersicht
+- Wartet ein Update, ist das auf der Kachel „Updates“ zu sehen; U / Select springt direkt dorthin
+
 ## 0.8.0 – 2026-09-30
 - Designs: Dunkel, Hell, Hoher Kontrast und Nord – unter Einstellungen → Anzeige
 - Bildschirmtastatur für Suchfelder und WLAN-Passwort – bedienbar mit Controller, Fernbedienung oder Tastatur

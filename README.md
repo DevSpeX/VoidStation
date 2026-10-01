@@ -48,13 +48,13 @@ sudo bash update.sh               # Aktualisieren, eigene Kacheln/Favoriten blei
 
 ## Updates
 
-**Am Fernseher:** Einstellungen → *VoidStation aktualisieren* (oder im AppCenter *Alles aktualisieren*).
+**Am Fernseher:** Einstellungen → Updates → *VoidStation aktualisieren* (oder im AppCenter *Alles aktualisieren*).
 Die Geräte prüfen kurz nach dem Start und dann alle 6 Stunden selbst und zeigen oben rechts einen Hinweis,
 wenn eine neue Version bereitsteht. Der Update-Dialog zeigt, was neu ist. Eigene Kacheln, Favoriten und
 Einstellungen bleiben erhalten.
 
 **Kanäle:** *Stable* (Zweig `stable`, Standard) oder *Testing* (Zweig `main`, neue Versionen zuerst) –
-umschaltbar unter Einstellungen → System → Update-Kanal.
+umschaltbar unter Einstellungen → Updates → Update-Kanal.
 
 **Signaturen:** Updates laufen als root, deshalb installieren Geräte nur Updates, die mit dem Schlüssel des
 Herausgebers signiert sind (`ssh-keygen -Y`, Namensraum `voidstation`). Der öffentliche Schlüssel liegt in
@@ -138,7 +138,7 @@ Neue Texte gehören immer in **beide** Dateien – `build.sh` bricht ab, wenn in
 
 ## Themes & Designs
 
-Unter **Einstellungen → Anzeige → Design · Theme** stehen verschiedene Themes zur Auswahl (z. B. `Dunkel`, `Hell`, `Hoher Kontrast`, `Nord`). Das gewählte Theme wird in `settings.json` gespeichert und bleibt bei Updates erhalten.
+Unter **Einstellungen → Design → Farbschema** stehen verschiedene Themes zur Auswahl (z. B. `Dunkel`, `Hell`, `Hoher Kontrast`, `Nord`). Das gewählte Theme wird in `settings.json` gespeichert und bleibt bei Updates erhalten.
 
 ### Eigene Themes hinzufügen (Drop-in)
 Neue Themes können als CSS-Datei direkt in `launcher/web/themes/<theme-name>.css` abgelegt werden:

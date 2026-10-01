@@ -228,6 +228,14 @@
   .info { font-size: calc(16px * var(--f)); color: var(--text-dim); line-height: 1.5; }
   .info b { color: var(--text); font-weight: 400; }
   .wifi .sig { color: var(--text-faint); font-size: .85em; }
+  /* Einstellungen: Uebersicht mit Bereichs-Kacheln */
+  .setgrid { display: grid; grid-template-rows: repeat(var(--srows, 3), calc(var(--u) * .74)); grid-auto-columns: calc(var(--u) * 1.6); grid-auto-flow: column; gap: var(--gap); }
+  .tile.setcat .sicon { position: absolute; left: 7%; top: 12%; width: calc(var(--u) * .26); height: calc(var(--u) * .26); opacity: .95; }
+  .tile.setcat .sicon svg { width: 100%; height: 100%; display: block; }
+  .tile.setcat .label { bottom: calc(8% + var(--u) * .12); font-size: calc(var(--u) * .115); }
+  .tile.setcat .ssub { position: absolute; left: 7%; right: 7%; bottom: 8%; font-size: calc(var(--u) * .085); line-height: 1.25; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile.setcat .ssub svg { width: 1.05em; height: 1.05em; vertical-align: -.15em; margin-right: .35em; }
+  .tile.setcat .ssub b { color: var(--text); font-weight: 600; }
 
   /* TV */
   .chan { --c: var(--surface-card); }
@@ -593,6 +601,13 @@ const ICONS = {
   store:    '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><rect x="7" y="7" width="14" height="14" rx="2"/><rect x="27" y="7" width="14" height="14" rx="2"/><rect x="7" y="27" width="14" height="14" rx="2"/><path d="M34 27v14M27 34h14"/></svg>',
   image:    '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><rect x="6" y="9" width="36" height="30" rx="3"/><circle cx="17" cy="19" r="3.5"/><path d="M6 33l11-9 8 7 6-5 11 8"/></svg>',
   chart:    '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M6 40h36M10 34l8-10 7 6 12-15"/></svg>',
+  monitor:  '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><rect x="5" y="8" width="38" height="25" rx="3"/><path d="M17 41h14M24 33v8"/></svg>',
+  palette:  '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M24 6C13 6 5 14 5 23.5S12 41 21 41c3 0 4-2 3-4.5s0-4.5 3-4.5h5c6 0 11-4 11-10C43 13 34.5 6 24 6z"/><circle cx="14.5" cy="22" r="2.6" fill="currentColor"/><circle cx="20.5" cy="14" r="2.6" fill="currentColor"/><circle cx="30.5" cy="14" r="2.6" fill="currentColor"/><circle cx="36" cy="21.5" r="2.6" fill="currentColor"/></svg>',
+  speaker:  '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M7 18h7l10-8v28l-10-8H7z"/><path d="M30.5 18c2 1.8 3 3.8 3 6s-1 4.2-3 6M35.5 12.5c3.6 3 5.5 7 5.5 11.5s-1.9 8.5-5.5 11.5"/></svg>',
+  wifi:     '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 18c11-10 27-10 38 0M11 24.5c7.5-6.5 18.5-6.5 26 0M17 31c4-3.3 10-3.3 14 0"/><circle cx="24" cy="37.5" r="2.4" fill="currentColor"/></svg>',
+  bluetooth:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M14 15l20 18-10 8V7l10 8-20 18"/></svg>',
+  update:   '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"><path d="M39 20A15.5 15.5 0 0 0 10.5 15M9 28a15.5 15.5 0 0 0 28.5 5"/><path d="M10 7v8.5h8.5M38 41v-8.5h-8.5"/></svg>',
+  power:    '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M24 6v17"/><path d="M14.5 11.5a15 15 0 1 0 19 0"/></svg>',
   gear:     '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><circle cx="24" cy="24" r="6"/><path d="M24 5l3 5 6-2 1 6 6 1-2 6 5 3-5 3 2 6-6 1-1 6-6-2-3 5-3-5-6 2-1-6-6-1 2-6-5-3 5-3-2-6 6-1 1-6 6 2z"/></svg>'
 };
 
@@ -719,6 +734,7 @@ function fitGrids() {
   fitGrid($('#aTrack'), '.agrid', 3);
   fitGrid($('#tTrack'), '.sgrid', 3);
   fitGrid($('#rTrack'), '.sgrid', 3);
+  fitGrid($('#sTrack'), '.setgrid', 3);
 }
 
 /* ============================================================ Ebenen */
@@ -740,7 +756,7 @@ function updateHint() {
   const h = {
     home:     [T('hint.open'), T('hint.close'), T('hint.home')],
     radio:    [T('hint.play'), T('hint.fav'), T('hint.volume'), T('hint.back')],
-    settings: [T('hint.select'), T('hint.back')],
+    settings: [sCat ? T('hint.select') : T('hint.open'), T('hint.back')],
     roms:     [T('hint.romLaunch'), T('hint.back')],
     tv:       [T('hint.tvOn'), T('hint.fav'), T('hint.homeShort'), T('hint.back')],
     apps:     [T('hint.appInstall'), T('hint.back')],
@@ -923,7 +939,7 @@ function activate(el = focusEl) {
   if (el.id === 'power') return openDialog();
   if (el.dataset.close !== undefined) return closeDialog();
   if (el.dataset.power) return power(el.dataset.power);
-  if (act === 'back') return layer() === 'inst' ? instBack() : closeLayer();
+  if (act === 'back') return layer() === 'inst' ? instBack() : layer() === 'settings' && sCat ? settingsCat(null) : closeLayer();
   if (act === 'stop') return radioStop();
   if (act === 'fav') return toggleFav();
   if (act === 'volup') return volume('up');
@@ -968,6 +984,7 @@ function back() {
   else if (l === 'tv' && tvQuery) { tvQuery = ''; $('#tSearch').value = ''; tvSearch(); }
   else if (l === 'radio' && results) { results = null; $('#rSearch').value = ''; renderStations(); }
   else if (l === 'settings' && wifiPick) { wifiPick = null; renderSettings(); }
+  else if (l === 'settings' && sCat) settingsCat(null);
   else if (l === 'inst') instBack();
   else if (l !== 'home') closeLayer();
 }
@@ -1066,6 +1083,8 @@ function showUpdBadge(u) {
 function openUpdate() {
   if (!updInfo || !TRACKS[layer()] || splashTile) return;
   if (layer() !== 'settings') { $$('.layer.open').forEach(e => e.classList.remove('open', 'shown')); openLayer('settings'); }
+  sCat = 'updates'; wifiPick = null;                       // direkt in den Bereich "Updates"
+  if (sett) { renderSettings(); updateHint(); }
   setTimeout(selfUpdate, 400);
 }
 setInterval(poll, 1500);
@@ -1076,7 +1095,7 @@ function openLayer(id) {
   el.classList.add('open');
   requestAnimationFrame(() => el.classList.add('shown'));
   if (id === 'radio') { renderStations(); refreshVolume(); }
-  if (id === 'settings') loadSettings();
+  if (id === 'settings') { sCat = null; wifiPick = null; $('#sTrack').innerHTML = ''; loadSettings(); }   // immer mit der Uebersicht beginnen
   if (id === 'tv') { tvOpen(); refreshVolume(); }
   if (id === 'apps') loadApps();
   if (id === 'roms') renderRoms();
@@ -1217,188 +1236,268 @@ function row(parent, label) {
   if (label) { const l = document.createElement('div'); l.className = 'lbl'; l.textContent = label; parent.appendChild(l); }
   const r = document.createElement('div'); r.className = 'row'; parent.appendChild(r); return r;
 }
-function renderSettings() {
-  if (!sett) return;
-  const tr = $('#sTrack');
-  const keepKey = focusEl?.dataset.key;
-  tr.innerHTML = ''; tr.dataset.x = 0; tr.style.transform = 'none';
-
-  // Sprache
-  const lc = col(tr, T('settings.language'));
-  const lr = row(lc);
-  for (const l of sett.langs || [{ id: 'de', label: 'Deutsch' }, { id: 'en', label: 'English' }]) {
-    const b = pill(esc(l.label), () => setLang(l.id), l.id === LANG); b.dataset.key = 'lang' + l.id; lr.appendChild(b);
-  }
-  const li = document.createElement('div'); li.className = 'info'; li.textContent = T('settings.langApps'); lc.appendChild(li);
-
-  // Anzeige
-  const a = col(tr, T('settings.scale'));
-  const rs = row(a);
-  for (const s of sett.scales) {
-    const b = pill(num(s) + '×', () => setScale(s), Math.abs(s - scale) < 0.01);
-    b.dataset.key = 'scale' + s; rs.appendChild(b);
-  }
-  const thList = sett.themes || ['default-dark', 'default-light', 'high-contrast', 'nord'];
-  const rth = row(a, T('settings.theme'));
-  for (const th of thList) {
-    const label = T('theme.' + th, null, th);
-    const b = pill(esc(label), () => setTheme(th), th === currentTheme);
-    b.dataset.key = 'th' + th; rth.appendChild(b);
-  }
-  if (sett.cursor) {
-    const mc = col(tr, T('settings.cursor'));
-    const rt = row(mc, T('settings.cursorStyle'));
-    for (const t of sett.cursor.themes) { const b = pill(esc(L(t.label)), () => setCursor({ theme: t.id }), t.id === sett.cursor.theme); b.dataset.key = 'ct' + t.id; rt.appendChild(b); }
-    const rz = row(mc, T('settings.cursorSize'));
-    for (const z of sett.cursor.sizes) { const b = pill(String(z), () => setCursor({ size: z }), z === sett.cursor.size); b.dataset.key = 'cs' + z; rz.appendChild(b); }
-  }
-  for (const d of sett.displays || []) {
-    const rr = row(col(tr, T('settings.resolution', { name: d.name })));
-    const modes = d.modes.filter(m => { const [w, h] = m.split('x').map(v => parseInt(v, 10)); return w >= 1024 && h >= 576; }).slice(0, 6);
-    for (const m of modes) {
-      const label = m.replace('x', '×').replace(/i$/, ' ' + T('settings.interlaced')) + (m === d.current && d.rate ? ` · ${Math.round(d.rate)} Hz` : '');
-      const b = pill(label, () => setResolution(m), m === d.current); b.dataset.key = 'res' + m; rr.appendChild(b);
+/* Einstellungen in Bereichen: Uebersicht (Kacheln) → Bereich → Esc / B zurueck zur Uebersicht.
+   Neuer Bereich: Eintrag in SET_CATS (Kachel) + Funktion in SET_PAGES (Inhalt) + catSub (Zustand auf der Kachel). */
+let sCat = null;
+const SET_CATS = [
+  { id: 'lang',    icon: 'globe',     color: '#2d4a6b', title: () => T('settings.language') },
+  { id: 'display', icon: 'monitor',   color: '#2b5b66', title: () => T('settings.catDisplay') },
+  { id: 'design',  icon: 'palette',   color: '#553a6e', title: () => T('settings.catDesign') },
+  { id: 'audio',   icon: 'speaker',   color: '#74461f', title: () => T('settings.catAudio') },
+  { id: 'net',     icon: 'wifi',      color: '#2b5a45', title: () => T('settings.network') },
+  { id: 'bt',      icon: 'bluetooth', color: '#24477a', title: () => T('bt.title') },
+  { id: 'share',   icon: 'folder',    color: '#284843', title: () => T('settings.share'), show: () => !!sett.share },
+  { id: 'updates', icon: 'update',    color: '#6e2b3c', title: () => T('settings.catUpdates') },
+  { id: 'system',  icon: 'power',     color: '#3a3f46', title: () => T('settings.system') },
+];
+const UPD_MARK = '<svg viewBox="0 0 24 24"><path d="M12 2.5L1.5 21h21z" fill="#f2c14e"/><path d="M12 9v5.5M12 17.7v.1" stroke="#1a1d21" stroke-width="2.3" stroke-linecap="round"/></svg>';
+function vsVersion() { const sv = sett && sett.version; return (vsState && vsState.local) || (sv && (sv.version || sv.build)) || '–'; }
+// Kurzer Zustand unten auf der Kachel (HTML, schon escaped)
+function catSub(id) {
+  switch (id) {
+    case 'lang': return esc((sett.langs || []).find(l => l.id === LANG)?.label || (LANG === 'de' ? 'Deutsch' : 'English'));
+    case 'display': {
+      const d = (sett.displays || [])[0];
+      return (d && d.current ? esc(d.current.replace('x', '×')) + ' · ' : '') + esc(num(scale)) + '×';
     }
+    case 'design': return esc(T('theme.' + currentTheme, null, currentTheme));
+    case 'audio': {
+      const o = sett.audio?.ok && sett.audio.outputs.find(x => x.active);
+      return (o ? esc(o.label) + ' · ' : '') + '<span class="voltxt"></span>';
+    }
+    case 'net': return esc(sett.net.addresses.length ? sett.net.addresses[0].ip : T('settings.offline'));
+    case 'bt': {
+      if (!btState || !btState.available) return esc(T('settings.btNone'));
+      if (!btState.service || !btState.powered) return esc(T('common.off'));
+      const c = (btState.devices || []).filter(d => d.connected);
+      return esc(c.length ? c.map(d => d.name || d.mac).join(', ') : T('common.on'));
+    }
+    case 'share': return esc(sett.share.samba ? `\\\\${sett.net.hostname}\\share` : T('common.off'));
+    case 'updates':
+      if (sett.live) return esc(T('settings.liveShort'));
+      if (vsState && vsState.available) return UPD_MARK + '<b>' + esc(T('upd.note', { version: vsState.remote })) + '</b>';
+      return esc(vsVersion()) + (vsState ? ' · ' + esc(vsState.remote ? T('upd.current') : T('upd.unreachable')) : '');
+    case 'system': return sett.ssh === undefined ? esc(sett.net.hostname) : esc(T('settings.ssh') + ': ' + T(sett.ssh ? 'common.on' : 'common.off'));
   }
-
-  // Ton
-  const t = col(tr, T('settings.audioOut'));
-  const ro = row(t);
-  if (!sett.audio?.ok) {
-    const e = document.createElement('div'); e.className = 'info'; e.textContent = T('settings.noAudio'); ro.appendChild(e);
-  } else for (const o of sett.audio.outputs) {
-    const b = pill(esc(o.label), () => setOutput(o), o.active); b.dataset.key = 'out' + o.profile; ro.appendChild(b);
+  return '';
+}
+function updCatSubs() {                                    // Kachel-Zustand auffrischen, ohne die Uebersicht neu aufzubauen
+  if (!sett) return;
+  for (const c of SET_CATS) {
+    if (c.id === 'audio') continue;                        // Lautstaerke aktualisiert showVol() selbst
+    const e = $(`#sTrack [data-key="cat${c.id}"] .ssub`);
+    if (e) e.innerHTML = catSub(c.id);
   }
-  const rv = row(col(tr, T('settings.volume')));
-  const v = document.createElement('div'); v.className = 'vol';
-  const dn = pill('−', () => volume('down')); dn.dataset.key = 'vd';
-  const up = pill('+', () => volume('up')); up.dataset.key = 'vu';
-  const mu = pill(esc(T('settings.mute')), () => volume('mute')); mu.dataset.key = 'vm';
-  const meter = document.createElement('div'); meter.className = 'meter'; meter.innerHTML = '<b class="volbar"></b>';
-  const txt = document.createElement('span'); txt.className = 'voltxt';
-  v.append(dn, meter, up, txt); rv.append(v, mu);
-
-  // Netzwerk
-  const n = col(tr, T('settings.network'));
-  const info = document.createElement('div'); info.className = 'info';
-  info.innerHTML = `${esc(T('settings.hostname'))}: <b>${esc(sett.net.hostname)}</b><br>` + (sett.net.addresses.length ? sett.net.addresses.map(x => `${esc(x.iface)}: <b>${esc(x.ip)}</b>`).join('<br>') : esc(T('settings.noConn')));
-  n.appendChild(info);
-  const wc = col(tr, T('settings.wifi'));
-  const rw = row(wc);
-  if (wifiPick) {
-    const inp = document.createElement('input');
-    inp.className = 'field snav'; inp.type = 'password'; inp.placeholder = T('settings.wifiPw', { ssid: wifiPick.ssid }); inp.id = 'wifiPw'; inp.dataset.key = 'pw';
-    rw.appendChild(inp);
-    const go = pill(esc(T('settings.connect')), () => wifiConnect(wifiPick.ssid, $('#wifiPw').value)); go.dataset.key = 'go';
-    const cancel = pill(esc(T('common.cancel')), () => { wifiPick = null; renderSettings(); }); cancel.dataset.key = 'cancel';
-    rw.append(go, cancel);
-  } else {
-    const scan = pill(esc(wifiList ? T('settings.rescan') : T('settings.scan')), wifiScan); scan.dataset.key = 'scan'; rw.appendChild(scan);
-    if (wifiList) {
-      const rl = row(wc);
-      rl.classList.add('wifi');
-      for (const w of wifiList.slice(0, 8)) {
-        const b = pill(`${w.secure ? '🔒 ' : ''}${esc(w.ssid)} <span class="sig">${w.signal}%</span>`, () => w.secure && !w.active ? (wifiPick = w, renderSettings(), setFocus($('#wifiPw'))) : wifiConnect(w.ssid, ''), w.active);
-        b.dataset.key = 'w' + w.ssid; rl.appendChild(b);
+}
+function settingsCat(id) {
+  const prev = sCat;
+  sCat = id; wifiPick = null;
+  renderSettings(id ? null : 'cat' + prev);               // zurueck: Fokus wieder auf die Kachel, von der man kam
+  updateHint();
+}
+function renderSettingsHome(tr) {
+  const sec = document.createElement('section'); sec.className = 'group';
+  const g = document.createElement('div'); g.className = 'setgrid';
+  let i = 0;
+  for (const c of SET_CATS) {
+    if (c.show && !c.show()) continue;
+    const el = document.createElement('div');
+    el.className = 'tile setcat snav';
+    el.style.setProperty('--c', c.color);
+    el.style.animationDelay = (i++ * 35) + 'ms';
+    el.dataset.key = 'cat' + c.id;
+    el._set = () => settingsCat(c.id);
+    el.innerHTML = `<div class="sicon">${ICONS[c.icon] || ICONS.gear}</div><div class="label">${esc(c.title())}</div><div class="ssub">${catSub(c.id)}</div>`;
+    g.appendChild(el);
+  }
+  sec.appendChild(g); tr.appendChild(sec);
+  fitGrid(tr, '.setgrid', 3);
+}
+const SET_PAGES = {
+  lang(tr) {
+    const lc = col(tr, T('settings.langUi'));
+    const lr = row(lc);
+    for (const l of sett.langs || [{ id: 'de', label: 'Deutsch' }, { id: 'en', label: 'English' }]) {
+      const b = pill(esc(l.label), () => setLang(l.id), l.id === LANG); b.dataset.key = 'lang' + l.id; lr.appendChild(b);
+    }
+    const li = document.createElement('div'); li.className = 'info'; li.textContent = T('settings.langApps'); lc.appendChild(li);
+  },
+  display(tr) {
+    const a = col(tr, T('settings.scale'));
+    const rs = row(a);
+    for (const s of sett.scales) {
+      const b = pill(num(s) + '×', () => setScale(s), Math.abs(s - scale) < 0.01);
+      b.dataset.key = 'scale' + s; rs.appendChild(b);
+    }
+    for (const d of sett.displays || []) {
+      const rr = row(col(tr, T('settings.resolution', { name: d.name })));
+      const modes = d.modes.filter(m => { const [w, h] = m.split('x').map(v => parseInt(v, 10)); return w >= 1024 && h >= 576; }).slice(0, 6);
+      for (const m of modes) {
+        const label = m.replace('x', '×').replace(/i$/, ' ' + T('settings.interlaced')) + (m === d.current && d.rate ? ` · ${Math.round(d.rate)} Hz` : '');
+        const b = pill(label, () => setResolution(m), m === d.current); b.dataset.key = 'res' + m; rr.appendChild(b);
       }
     }
-  }
-  $('#sNet').innerHTML = sett.net.addresses.length ? `<strong>${esc(sett.net.addresses[0].ip)}</strong><span>${esc(sett.net.hostname)}</span>` : `<strong>${esc(T('settings.offline'))}</strong>`;
-
-  // Freigabe
-  if (sett.share) {
-    const fc = col(tr, T('settings.share'));
+  },
+  design(tr) {
+    const thList = sett.themes || ['default-dark', 'default-light', 'high-contrast', 'nord'];
+    const rth = row(col(tr, T('settings.colors')));
+    for (const th of thList) {
+      const b = pill(esc(T('theme.' + th, null, th)), () => setTheme(th), th === currentTheme);
+      b.dataset.key = 'th' + th; rth.appendChild(b);
+    }
+    if (sett.cursor) {
+      const mc = col(tr, T('settings.cursor'));
+      const rt = row(mc, T('settings.cursorStyle'));
+      for (const t of sett.cursor.themes) { const b = pill(esc(L(t.label)), () => setCursor({ theme: t.id }), t.id === sett.cursor.theme); b.dataset.key = 'ct' + t.id; rt.appendChild(b); }
+      const rz = row(mc, T('settings.cursorSize'));
+      for (const z of sett.cursor.sizes) { const b = pill(String(z), () => setCursor({ size: z }), z === sett.cursor.size); b.dataset.key = 'cs' + z; rz.appendChild(b); }
+    }
+  },
+  audio(tr) {
+    const ro = row(col(tr, T('settings.audioOut')));
+    if (!sett.audio?.ok) {
+      const e = document.createElement('div'); e.className = 'info'; e.textContent = T('settings.noAudio'); ro.appendChild(e);
+    } else for (const o of sett.audio.outputs) {
+      const b = pill(esc(o.label), () => setOutput(o), o.active); b.dataset.key = 'out' + o.profile; ro.appendChild(b);
+    }
+    const rv = row(col(tr, T('settings.volume')));
+    const v = document.createElement('div'); v.className = 'vol';
+    const dn = pill('−', () => volume('down')); dn.dataset.key = 'vd';
+    const up = pill('+', () => volume('up')); up.dataset.key = 'vu';
+    const mu = pill(esc(T('settings.mute')), () => volume('mute')); mu.dataset.key = 'vm';
+    const meter = document.createElement('div'); meter.className = 'meter'; meter.innerHTML = '<b class="volbar"></b>';
+    const txt = document.createElement('span'); txt.className = 'voltxt';
+    v.append(dn, meter, up, txt); rv.append(v, mu);
+  },
+  net(tr) {
+    const n = col(tr, T('settings.connection'));
+    const info = document.createElement('div'); info.className = 'info';
+    info.innerHTML = `${esc(T('settings.hostname'))}: <b>${esc(sett.net.hostname)}</b><br>` + (sett.net.addresses.length ? sett.net.addresses.map(x => `${esc(x.iface)}: <b>${esc(x.ip)}</b>`).join('<br>') : esc(T('settings.noConn')));
+    n.appendChild(info);
+    const wc = col(tr, T('settings.wifi'));
+    const rw = row(wc);
+    if (wifiPick) {
+      const inp = document.createElement('input');
+      inp.className = 'field snav'; inp.type = 'password'; inp.placeholder = T('settings.wifiPw', { ssid: wifiPick.ssid }); inp.id = 'wifiPw'; inp.dataset.key = 'pw';
+      rw.appendChild(inp);
+      const go = pill(esc(T('settings.connect')), () => wifiConnect(wifiPick.ssid, $('#wifiPw').value)); go.dataset.key = 'go';
+      const cancel = pill(esc(T('common.cancel')), () => { wifiPick = null; renderSettings(); }); cancel.dataset.key = 'cancel';
+      rw.append(go, cancel);
+    } else {
+      const scan = pill(esc(wifiList ? T('settings.rescan') : T('settings.scan')), wifiScan); scan.dataset.key = 'scan'; rw.appendChild(scan);
+      if (wifiList) {
+        const rl = row(wc);
+        rl.classList.add('wifi');
+        for (const w of wifiList.slice(0, 8)) {
+          const b = pill(`${w.secure ? '🔒 ' : ''}${esc(w.ssid)} <span class="sig">${w.signal}%</span>`, () => w.secure && !w.active ? (wifiPick = w, renderSettings(), setFocus($('#wifiPw'))) : wifiConnect(w.ssid, ''), w.active);
+          b.dataset.key = 'w' + w.ssid; rl.appendChild(b);
+        }
+      }
+    }
+  },
+  share(tr) {
+    const fc = col(tr, T('settings.shareWin'));
     const fi = document.createElement('div'); fi.className = 'info';
     const ip = sett.net.addresses[0]?.ip;
     fi.innerHTML = sett.share.samba
       ? `${esc(T('settings.shareHow'))}<br><b>\\\\${esc(sett.net.hostname)}\\share</b>` + (ip ? `<br>${esc(T('settings.shareOr'))} <b>\\\\${esc(ip)}\\share</b>` : '') + `<br>${T('settings.shareLogin', { user: `<b>${esc(sett.share.user || '')}</b>` })}`
       : esc(T('settings.shareOff'));
     fc.appendChild(fi);
-  }
-
-  // Bluetooth
-  const bc = col(tr, T('bt.title'));
-  if (!btState || !btState.available) {
-    const bi = document.createElement('div'); bi.className = 'info';
-    bi.textContent = T('bt.unsupported');
-    bc.appendChild(bi);
-  } else if (!btState.service) {
-    const bi = document.createElement('div'); bi.className = 'info';
-    bi.textContent = T('bt.serviceOff');
-    bc.appendChild(bi);
-    const rb = row(bc);
-    const srv = pill(esc(T('bt.startService')), btStartService); srv.dataset.key = 'btsrv'; rb.appendChild(srv);
-  } else {
-    const rbt = row(bc);
-    const pwr = pill(esc(T(btState.powered ? 'bt.powerOff' : 'bt.powerOn')), btTogglePower, btState.powered); pwr.dataset.key = 'btpwr'; rbt.appendChild(pwr);
-    if (btState.powered) {
-      const scn = pill(esc(btScanning ? T('bt.scanning') : T('bt.scan')), btScan); scn.dataset.key = 'btscan'; rbt.appendChild(scn);
-      const devs = btState.devices || [];
-      if (devs.length) {
-        const rd = row(bc, T('bt.available'));
-        rd.classList.add('btlist');
-        for (const d of devs.slice(0, 10)) {
-          const isConn = !!d.connected, isPaired = !!d.paired;
-          const statusTxt = isConn ? ` · ${T('bt.connected')}` : isPaired ? ` · ${T('bt.paired')}` : '';
-          const b = pill(`${esc(d.name || d.mac)}<span class="sig">${statusTxt}</span>`, () => {
-            if (isConn) btDisconnect(d.mac);
-            else if (isPaired) btConnect(d.mac);
-            else btPair(d.mac);
-          }, isConn);
-          b.dataset.key = 'bt' + d.mac.replace(/[^A-Za-z0-9]/g, '');
-          if (isPaired) {
-            const dr = document.createElement('div');
-            dr.className = 'row';
-            dr.appendChild(b);
-            const rm = pill(esc(T('bt.remove')), () => btRemove(d.mac));
-            rm.dataset.key = 'btrm' + d.mac.replace(/[^A-Za-z0-9]/g, '');
-            dr.appendChild(rm);
-            rd.appendChild(dr);
-          } else {
-            rd.appendChild(b);
+  },
+  bt(tr) {
+    const bc = col(tr, T('bt.desc'));
+    if (!btState || !btState.available) {
+      const bi = document.createElement('div'); bi.className = 'info';
+      bi.textContent = T('bt.unsupported');
+      bc.appendChild(bi);
+    } else if (!btState.service) {
+      const bi = document.createElement('div'); bi.className = 'info';
+      bi.textContent = T('bt.serviceOff');
+      bc.appendChild(bi);
+      const rb = row(bc);
+      const srv = pill(esc(T('bt.startService')), btStartService); srv.dataset.key = 'btsrv'; rb.appendChild(srv);
+    } else {
+      const rbt = row(bc);
+      const pwr = pill(esc(T(btState.powered ? 'bt.powerOff' : 'bt.powerOn')), btTogglePower, btState.powered); pwr.dataset.key = 'btpwr'; rbt.appendChild(pwr);
+      if (btState.powered) {
+        const scn = pill(esc(btScanning ? T('bt.scanning') : T('bt.scan')), btScan); scn.dataset.key = 'btscan'; rbt.appendChild(scn);
+        const devs = btState.devices || [];
+        if (devs.length) {
+          const rd = row(bc, T('bt.available'));
+          rd.classList.add('btlist');
+          for (const d of devs.slice(0, 10)) {
+            const isConn = !!d.connected, isPaired = !!d.paired;
+            const statusTxt = isConn ? ` · ${T('bt.connected')}` : isPaired ? ` · ${T('bt.paired')}` : '';
+            const b = pill(`${esc(d.name || d.mac)}<span class="sig">${statusTxt}</span>`, () => {
+              if (isConn) btDisconnect(d.mac);
+              else if (isPaired) btConnect(d.mac);
+              else btPair(d.mac);
+            }, isConn);
+            b.dataset.key = 'bt' + d.mac.replace(/[^A-Za-z0-9]/g, '');
+            if (isPaired) {
+              const dr = document.createElement('div');
+              dr.className = 'row';
+              dr.appendChild(b);
+              const rm = pill(esc(T('bt.remove')), () => btRemove(d.mac));
+              rm.dataset.key = 'btrm' + d.mac.replace(/[^A-Za-z0-9]/g, '');
+              dr.appendChild(rm);
+              rd.appendChild(dr);
+            } else {
+              rd.appendChild(b);
+            }
           }
+        } else {
+          const bi = document.createElement('div'); bi.className = 'info';
+          bi.textContent = btScanning ? T('bt.scanning') : T('bt.noDevices');
+          bc.appendChild(bi);
         }
-      } else {
-        const bi = document.createElement('div'); bi.className = 'info';
-        bi.textContent = btScanning ? T('bt.scanning') : T('bt.noDevices');
-        bc.appendChild(bi);
       }
     }
-  }
-
-  // System
-  const s = col(tr, T('settings.system'));
-  const rsys = row(s);
-  const rl = pill(esc(T('settings.reload')), () => location.reload()); rl.dataset.key = 'reload';
-  const rb = pill(esc(T('settings.reboot')), () => power('reboot')); rb.dataset.key = 'reboot';
-  const po = pill(esc(T('settings.poweroff')), () => power('poweroff')); po.dataset.key = 'off';
-  rsys.append(rl, rb, po);
-  const vi = document.createElement('div'); vi.className = 'info'; vi.id = 'vsInfo';
-  s.appendChild(vi);
-  if (!sett.live) {                                        // im Live-System gibt es keine Updates
+  },
+  updates(tr) {
+    const s = col(tr, 'VoidStation');
+    const vi = document.createElement('div'); vi.className = 'info'; vi.id = 'vsInfo';
+    s.appendChild(vi);
+    if (sett.live) return;                                 // im Live-System gibt es keine Updates
     const rvs = row(s);
     const vu = pill(esc(T('settings.selfupdate')), selfUpdate); vu.dataset.key = 'selfupd';
     rvs.appendChild(vu);
-  }
-  if (sett.ssh !== undefined) {
-    const rs2 = row(s, T('settings.ssh'));
-    for (const on of [true, false]) {
-      const b = pill(esc(T(on ? 'common.on' : 'common.off')), () => setSsh(on), !!sett.ssh === on); b.dataset.key = 'ssh' + on; rs2.appendChild(b);
-    }
-  }
-  if (!sett.live) {
-    const rch = row(s, T('settings.channel'));
+    const rch = row(col(tr, T('settings.channel')));
     const cur = (vsState && vsState.channel) || 'stable';
     for (const [id, lab] of [['stable', T('channel.stable')], ['main', T('channel.main')]]) {
       const b = pill(lab, () => setChannel(id), cur === id); b.dataset.key = 'ch' + id; rch.appendChild(b);
     }
-  }
+  },
+  system(tr) {
+    const rsys = row(col(tr, T('settings.power')));
+    const rl = pill(esc(T('settings.reload')), () => location.reload()); rl.dataset.key = 'reload';
+    const rb = pill(esc(T('settings.reboot')), () => power('reboot')); rb.dataset.key = 'reboot';
+    const po = pill(esc(T('settings.poweroff')), () => power('poweroff')); po.dataset.key = 'off';
+    rsys.append(rl, rb, po);
+    if (sett.ssh !== undefined) {
+      const rs2 = row(col(tr, T('settings.ssh')));
+      for (const on of [true, false]) {
+        const b = pill(esc(T(on ? 'common.on' : 'common.off')), () => setSsh(on), !!sett.ssh === on); b.dataset.key = 'ssh' + on; rs2.appendChild(b);
+      }
+    }
+  },
+};
+function renderSettings(want) {
+  if (!sett) return;
+  const tr = $('#sTrack');
+  const keepKey = want || focusEl?.dataset.key;
+  tr.innerHTML = ''; tr.dataset.x = 0; tr.style.transform = 'none';
+  let cat = sCat && SET_CATS.find(c => c.id === sCat && (!c.show || c.show()));
+  if (!cat) sCat = null;
+  $('#settings h1').textContent = cat ? cat.title() : T('settings.title');
+  $('#sNet').innerHTML = sett.net.addresses.length ? `<strong>${esc(sett.net.addresses[0].ip)}</strong><span>${esc(sett.net.hostname)}</span>` : `<strong>${esc(T('settings.offline'))}</strong>`;
+  if (cat) SET_PAGES[cat.id](tr); else renderSettingsHome(tr);
   showVs();
-
   showVol(sett.volume);
   if (layer() === 'settings') {
     const again = keepKey && $(`#sTrack [data-key="${CSS.escape(keepKey)}"]`);
-    setFocus(again || $('#sTrack .snav.on') || $('#sTrack .snav'), true);
+    const upd = cat?.id === 'updates' && vsState?.available && $('#sTrack [data-key="selfupd"]');   // Update wartet: gleich auf "aktualisieren"
+    setFocus(again || upd || $('#sTrack .snav.on') || $('#sTrack .snav'), true);
   }
 }
 /* ---- VoidStation selbst aktualisieren */
@@ -1406,8 +1505,7 @@ let vsState = null;
 const chLabel = v => T('channel.' + v.channel, null, v.channel_label);
 function showVs() {
   const el = $('#vsInfo'); if (!el) return;
-  const sv = sett && sett.version;
-  const ver = (vsState && vsState.local) || (sv && (sv.version || sv.build)) || '–';
+  const ver = vsVersion();
   if (sett?.live) { el.innerHTML = `VoidStation ${esc(ver)}<br>${esc(T('settings.liveInfo'))}`; return; }
   let st = esc(T('upd.searching'));
   if (vsState) st = vsState.available ? `<b>${esc(T('upd.available', { version: vsState.remote }))}</b>`
@@ -1431,7 +1529,7 @@ async function setChannel(ch) {
 async function refreshVs(force) {
   if (offline) return;
   try { vsState = await getJSON('/api/selfupdate' + (force ? '?force=1' : '')); } catch { vsState = { local: null, remote: null, available: false }; }
-  if (layer() === 'settings' && $('#vsInfo')) renderSettings(); else showVs();
+  if (layer() === 'settings' && $('#vsInfo')) renderSettings(); else { showVs(); updCatSubs(); }
 }
 async function selfUpdate() {
   if (JOBS_BUSY()) return toast(T('common.busy'));

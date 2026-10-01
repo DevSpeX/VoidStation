@@ -64,6 +64,19 @@
   background: rgba(255, 255, 255, 0.9);
 }
 
+/* Einstellungs-Kacheln haben ebenfalls kräftige Farben: weiße Schrift */
+:root[data-theme="default-light"] #sTrack .tile.setcat {
+  color: #ffffff;
+}
+
+:root[data-theme="default-light"] #sTrack .tile.setcat .ssub {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+:root[data-theme="default-light"] #sTrack .tile.setcat .ssub b {
+  color: #ffffff;
+}
+
 /* Sender-, Radio- und App-Karten sind hell: dunkle Schrift – außer der gerade laufende Sender (dunkler Akzent) */
 :root[data-theme="default-light"] .station,
 :root[data-theme="default-light"] .appcard {
