@@ -6,7 +6,7 @@ VoidStation-Installer (root) – nur im Live-System vorhanden.
 Die Oberflaeche (launcher.py) ruft dieses Skript per sudo auf; die ganze Logik steckt hier,
 damit Kachel-Oberflaeche und Terminal (voidstation-installer text) dasselbe tun.
 
-  probe                     Geraet pruefen: UEFI, RAM, Platten, Partitionen, fremde Systeme, moegliche Wege (JSON)
+  probe                     Geraet pruefen: UEFI/BIOS, RAM, Platten, Partitionen, fremde Systeme, moegliche Wege (JSON)
   run                       installieren; Einstellungen als JSON auf stdin, Fortschritt als JSON-Zeilen auf stdout
   run --resume [--alt]      nach einem Fehler ab dem fehlgeschlagenen Schritt weitermachen (--alt: Ausweichweg)
   gparted DISPLAY XAUTH     GParted als root auf dem Bildschirm oeffnen
@@ -17,6 +17,10 @@ damit Kachel-Oberflaeche und Terminal (voidstation-installer text) dasselbe tun.
 
 Schritte von "run":  check → shrink → partition → format → copy → configure → boot → cleanup
 Jeder Schritt ist wiederholbar; der Stand liegt in /run/voidstation-installer/state.json (nur root).
+
+Startmodus: UEFI kann alle Wege (EFISTUB bzw. GRUB). Im BIOS-Modus (Legacy/CSM) gibt es nur "ganze SSD":
+GPT mit BIOS-Boot-Partition (1 MiB), EFI-Partition und Root; GRUB fuer BIOS in den MBR und zusaetzlich
+GRUB fuer UEFI auf den Standardpfad – dieselbe SSD startet also auch, wenn die Firmware spaeter auf UEFI steht.
 """
 import fcntl
 import filecmp
@@ -54,6 +58,7 @@ GUID = {
     "fbsd_ufs": "516e7cb6-6ecf-11d6-8ff8-00022d09712b", "fbsd_zfs": "516e7cba-6ecf-11d6-8ff8-00022d09712b",
     "fbsd_boot": "83bd6b9d-7f41-11dc-be0b-001560b84f0f", "fbsd_swap": "516e7cb5-6ecf-11d6-8ff8-00022d09712b",
     "openbsd": "824cc7a0-36a8-11e3-890a-952519ad3f61", "netbsd": "49f48d5a-b10e-11dc-b99b-0019d1879648",
+    "bios_boot": "21686148-6449-6e6f-744e-656564454649",
 }
 SHRINKABLE = {"ntfs", "ext4", "ext3", "ext2", "btrfs"}
 TEST = os.environ.get("VS_INSTALLER_TEST") == "1"     # nur fuer Tests mit Abbild-Dateien: Loop-Geraete zulassen
@@ -233,6 +238,13 @@ def gpu_names():
             except OSError:
                 pass
     return names
+
+
+def firmware():
+    """"uefi" oder "bios": wie das Live-System gestartet wurde (Tests: VS_INSTALLER_FW=uefi|bios)."""
+    if TEST and os.environ.get("VS_INSTALLER_FW") in ("uefi", "bios"):
+        return os.environ["VS_INSTALLER_FW"]
+    return "uefi" if Path("/sys/firmware/efi").is_dir() else "bios"
 
 
 def secure_boot():
@@ -430,7 +442,8 @@ def probe():
     ld = sorted(lds)[0] if lds else None
     lsb = json.loads(sh(["lsblk", "-J", "-b", "-o", "NAME,PATH,TYPE,SIZE,MODEL,TRAN,RM,RO,FSTYPE,PARTTYPE,LABEL,UUID"],
                         quiet=True).stdout)
-    res = {"uefi": Path("/sys/firmware/efi").is_dir(), "secureboot": secure_boot(), "arch": os.uname().machine,
+    uefi = firmware() == "uefi"
+    res = {"uefi": uefi, "secureboot": uefi and secure_boot(), "arch": os.uname().machine,
            "ram": 0, "cpu": cpu_name(), "gpu": gpu_names(), "net": net_state(), "live_disk": ld,
            "disks": [], "windows": False, "hibernated": False, "bitlocker": False, "min_root": MIN_ROOT, "esp_size": ESP_SIZE,
            "users": sorted({l.split(":", 1)[0] for l in open("/etc/passwd", encoding="utf-8") if ":" in l})}
@@ -473,7 +486,7 @@ def probe():
                 for l in part["loaders"]:
                     if l["vendor"] == "microsoft":
                         res["windows"] = True
-            elif ptype == GUID["msres"]:
+            elif ptype in (GUID["msres"], GUID["bios_boot"]):
                 part["role"] = "reserved"
             elif ptype == GUID["winre"]:
                 part["role"] = "recovery"; part["os"] = "Windows"
@@ -539,7 +552,7 @@ def probe():
         if disk["size"] >= MIN_ROOT + ESP_SIZE + GiB:
             disk["options"]["whole"] = True
         beside = []
-        if disk["label"] == "gpt":
+        if disk["label"] == "gpt" and uefi:                # BIOS-Modus: nur ganze SSD
             for p in disk["parts"]:
                 if p["fstype"] == "ntfs" and p["role"] == "os" and (p.get("hibernated") or p.get("dirty")):
                     # Windows im Ruhezustand/Schnellstart oder mit Dateisystemfehlern: erst in Windows beheben
@@ -598,6 +611,8 @@ class Run:
         if pw and pw not in SECRETS:
             SECRETS.append(pw)
         self.pct_done = 0.0
+        self.bios = firmware() == "bios"
+        self.alt = False
 
     # --- Fortschritt
     def weights(self):
@@ -658,7 +673,7 @@ class Run:
 
     # --- Ablauf
     def run(self, alt=False):
-        self.alt = alt
+        self.alt = alt and not self.bios                  # Ausweichweg gibt es nur fuer UEFI
         done = set(self.st.get("done", []))
         for ph in PHASES:
             if ph in done:
@@ -699,7 +714,7 @@ class Run:
         save_state(self.st)
         emit(ev="error", phase=phase, code=code, msg=msg[-600:], done=self.st.get("done", []),
              foreign_untouched=self.st.get("foreign_untouched", True), log=tail,
-             alt=(phase == "boot"))
+             alt=(phase == "boot" and not self.bios))
         # Einhaengungen fuer einen neuen Versuch loesen
         self.umount_all()
 
@@ -728,8 +743,8 @@ class Run:
         c = self.cfg
         if not LIVE_MARK.exists() and not TEST:
             raise Fail("not_live", "Der Installer laeuft nur im Live-System.")
-        if not Path("/sys/firmware/efi").is_dir() and not TEST:
-            raise Fail("no_uefi")
+        if self.bios and c["mode"] != "whole":
+            raise Fail("bios_whole_only")               # Dual-Boot/eigene Partitionen nur im UEFI-Modus
         disk = c["disk"]
         if not Path(disk).exists():
             raise Fail("no_disk", disk)
@@ -891,11 +906,19 @@ class Run:
             self.free_disk(disk)
             sh(["wipefs", "-af", disk])
             self.st["foreign_untouched"] = False; save_state(self.st)
-            sh(["sfdisk", "-q", "--wipe", "always", "--wipe-partitions", "always", disk],
-               input="label: gpt\nsize=512MiB, type=uefi, name=EFI\ntype=linux, name=VoidStation\n")
+            if self.bios:
+                # BIOS: GRUB braucht auf GPT eine kleine BIOS-Boot-Partition (ohne Dateisystem).
+                # Die EFI-Partition kommt trotzdem dazu – dann startet die SSD auch im UEFI-Modus.
+                table = (f"label: gpt\nsize=1MiB, type={GUID['bios_boot']}, name=BIOS\n"
+                         "size=512MiB, type=uefi, name=EFI\ntype=linux, name=VoidStation\n")
+                esp_n, root_n = 2, 3
+            else:
+                table = "label: gpt\nsize=512MiB, type=uefi, name=EFI\ntype=linux, name=VoidStation\n"
+                esp_n, root_n = 1, 2
+            sh(["sfdisk", "-q", "--wipe", "always", "--wipe-partitions", "always", disk], input=table)
             sh(["partx", "-u", disk], check=False)
             settle()
-            self.st["esp_dev"], self.st["root_dev"], self.st["esp_new"] = part_path(disk, 1), part_path(disk, 2), True
+            self.st["esp_dev"], self.st["root_dev"], self.st["esp_new"] = part_path(disk, esp_n), part_path(disk, root_n), True
         elif self.st.get("appended") and self.st.get("root_pu"):
             self.dev("root"); self.dev("esp")               # neuer Versuch: Partitionen gibt es schon (Namen neu aufloesen)
         else:
@@ -1213,11 +1236,13 @@ class Run:
                        key=lambda v: [int(x) if x.isdigit() else 0 for x in re.split(r"[._-]", v)])
         if not kvers:
             raise Fail("no_kernel")
-        others = [o for o in self.foreign_loaders() if o.get("uuid")]
+        # BIOS-GRUB kann keine EFI-Lader anderer Systeme starten (im BIOS-Modus gibt es ohnehin nur "ganze SSD")
+        others = [] if self.bios else [o for o in self.foreign_loaders() if o.get("uuid")]
         dual = bool(others) or c["mode"] != "whole"
         esp_free = shutil.disk_usage(T / "boot/efi").free
-        use_stub = not dual and esp_free > 150 * MiB and not self.alt
-        self.st["boot"] = {"dual": dual, "efistub": use_stub, "others": [o["name"] for o in others]}
+        use_stub = not self.bios and not dual and esp_free > 150 * MiB and not self.alt
+        self.st["boot"] = {"firmware": "bios" if self.bios else "uefi", "dual": dual, "efistub": use_stub,
+                           "others": [o["name"] for o in others]}
         save_state(self.st)
         grubdef = T / "etc/default/grub"
         txt = grubdef.read_text() if grubdef.exists() else ""
@@ -1277,7 +1302,15 @@ class Run:
         if bootx and ours.exists() and filecmp.cmp(bootx, ours, shallow=False):
             bootx = None                                   # der Standard-Starter ist schon unser GRUB (frueherer Versuch)
         base = ["grub-install", "--target=x86_64-efi", "--efi-directory=/boot/efi", "--bootloader-id=VoidStation"]
-        if self.alt:
+        if self.bios:
+            # GRUB in den Startbereich der SSD (Kern landet in der BIOS-Boot-Partition)
+            r = chroot(["grub-install", "--target=i386-pc", disk], check=False)
+            if r.returncode != 0:
+                raise Fail("grub", (r.stdout + r.stderr)[-400:])
+            # Dazu GRUB fuer UEFI auf den Standardpfad, ohne NVRAM-Eintrag (im BIOS-Modus gibt es keinen):
+            # steht die Firmware spaeter auf UEFI, startet dieselbe SSD trotzdem
+            chroot(base + ["--removable", "--no-nvram"], check=False)
+        elif self.alt:
             # Ausweichweg: kein NVRAM-Eintrag, nur der Standard-Starter (wenn er frei ist oder schon uns gehoert)
             if bootx and dual:
                 raise Fail("efi_fallback_taken")
@@ -1491,8 +1524,9 @@ def cmd_text(_args):
     if not take_lock():
         print("Es laeuft schon eine Installation."); return 1
     p = probe()
-    if not p["uefi"]:
-        print("Nicht im UEFI-Modus gestartet – im Firmware-Setup UEFI einschalten (CSM/Legacy aus)."); return 1
+    if p["secureboot"]:
+        print("Secure Boot ist an – im Firmware-Setup ausschalten und neu starten."); return 1
+    print("Startmodus:", "UEFI" if p["uefi"] else "BIOS (Legacy)")
     disks = [d for d in p["disks"] if d["options"].get("whole")]
     if not disks:
         print("Keine passende interne SSD gefunden (mind. 17 GB)."); return 1

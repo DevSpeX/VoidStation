@@ -20,7 +20,7 @@ Fernzugriff per SSH lässt sich unter Einstellungen → System ein- und ausschal
 
 ## Neuinstallation (ganze SSD, von der offiziellen Void-ISO)
 
-1. Offizielle Void-Base-ISO (x86_64, glibc) auf einen Stick oder Ventoy-Stick kopieren. Im BIOS Secure Boot ausschalten und im UEFI-Modus vom Stick booten.
+1. Offizielle Void-Base-ISO (x86_64, glibc) auf einen Stick oder Ventoy-Stick kopieren. Im BIOS Secure Boot ausschalten und vom Stick booten (UEFI oder BIOS/Legacy).
 2. Als `root` mit Passwort `voidlinux` anmelden, dann:
 
 ```sh
@@ -98,7 +98,10 @@ das Live-System auf die SSD – dafür braucht er kein Internet.
 - **Wege:** ganze SSD · neben Windows oder Linux (NTFS, ext4 oder btrfs wird verkleinert) · in freien Platz
   (z. B. neben FreeBSD) · selbst einteilen mit GParted. Bei mehreren Systemen gibt es ein kurzes GRUB-Startmenü;
   neben Windows läuft die Hardware-Uhr auf Ortszeit.
-- **Mindestens:** 64-Bit-PC, UEFI (Secure Boot aus), 4 GB RAM, 16 GB auf der SSD. Fehlt etwas, sagt der Installer, was zu tun ist.
+- **Mindestens:** 64-Bit-PC, 4 GB RAM, 16 GB auf der SSD, Secure Boot aus. Fehlt etwas, sagt der Installer, was zu tun ist.
+- **Startmodus:** UEFI kann alle Wege. Im BIOS-Modus (Legacy/CSM, z. B. ältere PCs oder VirtualBox/QEMU mit
+  Standardeinstellungen) gibt es nur „ganze SSD“: GPT mit BIOS-Boot-Partition, GRUB für BIOS und zusätzlich
+  für UEFI – die SSD startet danach in beiden Modi.
 - **Startmenü des Sticks:** VoidStation · VoidStation installieren · dasselbe auf Englisch.
 - **Fehler:** Jeder Schritt lässt sich wiederholen, der Startmanager auch „anders“ (Standard-Starter statt NVRAM-Eintrag).
   Protokoll: `/run/voidstation-installer/install.log`, lässt sich auf einen USB-Stick speichern.

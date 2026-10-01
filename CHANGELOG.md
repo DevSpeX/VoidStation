@@ -4,6 +4,12 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.11.0 – 2026-10-01
+- Installation auch im BIOS-Modus (Legacy/CSM): ältere PCs und virtuelle Maschinen mit Standardeinstellungen (VirtualBox, QEMU) brauchen kein UEFI mehr. Im BIOS-Modus gibt es den Weg „Ganze SSD“; neben anderen Systemen und „Selbst einteilen“ bleiben dem UEFI-Modus vorbehalten
+- Eine im BIOS-Modus installierte SSD startet auch, wenn die Firmware später auf UEFI umgestellt wird (GRUB für beide Modi)
+- Startmenü des Sticks auch im BIOS-Modus mit „VoidStation installieren“ und den englischen Einträgen
+- Der Installer verlangt nur noch, dass Secure Boot aus ist; die Anleitung dazu ist kürzer
+
 ## 0.10.1 – 2026-10-01
 - AppCenter: sichtbare Scrollbalken neben Kategorien und Apps – so sieht man, dass es weitergeht; die Kategorienliste blendet unten weich aus, wenn noch mehr kommt
 

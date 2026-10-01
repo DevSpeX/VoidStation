@@ -6,6 +6,9 @@
 #  Mit der offiziellen Void-ISO:  bash voidstation-install.sh   (Datei vorher laden)
 #  Ablauf: Platte waehlen -> Name/Passwort -> Void-Grundsystem ->
 #          VoidStation (Kacheln, Ton, Samba, Theme, EFISTUB) -> fertig
+#  UEFI: EFI-Partition + Root, EFISTUB (GRUB als Rueckfall).
+#  BIOS (Legacy/CSM): zusaetzlich BIOS-Boot-Partition, GRUB im MBR und GRUB fuer UEFI auf dem
+#  Standardpfad – die SSD startet danach in beiden Modi.
 # =====================================================================
 set -euo pipefail
 
@@ -32,7 +35,7 @@ if [ -f "$SELF" ] && grep -q '^__INSTALLER_BELOW__$' "$SELF"; then
   sed -n '/^__INSTALLER_BELOW__$/,$p' "$SELF" | tail -n +2 | base64 -d > "$PAYLOAD"
 fi
 [ -s "$PAYLOAD" ] || die "VoidStation-Teil fehlt. Datei erst herunterladen, dann starten:  bash voidstation-install.sh"
-[ -d /sys/firmware/efi ] || die "Nicht im UEFI-Modus gestartet. Im BIOS UEFI-Boot waehlen (Ventoy: GRUB2-Modus), Secure Boot aus."
+if [ -d /sys/firmware/efi ]; then FW=uefi; else FW=bios; fi
 
 # ---------------------------------------------------------------------
 say "Internetverbindung pruefen"
@@ -103,16 +106,26 @@ exec > >(tee -a "$LOG") 2>&1
 START=$(date +%s)
 
 # ---------------------------------------------------------------------
-say "1/6  Partitionieren: 512 MB EFI + Rest fuer Void"
+if [ "$FW" = uefi ]; then say "1/6  Partitionieren: 512 MB EFI + Rest fuer Void"
+else say "1/6  Partitionieren (BIOS-Modus): 1 MB BIOS-Boot + 512 MB EFI + Rest fuer Void"; fi
 cleanup
 swapoff -a 2>/dev/null || true
 for p in $(lsblk -lnpo NAME "$DISK" | tail -n +2); do umount "$p" 2>/dev/null || true; done
 wipefs -af "$DISK" >/dev/null
-printf '%s\n' 'label: gpt' 'size=512MiB, type=uefi, name=EFI' 'type=linux, name=void' \
-  | sfdisk -q --wipe always --wipe-partitions always "$DISK"
+case "$DISK" in *[0-9]) PP="${DISK}p" ;; *) PP="$DISK" ;; esac
+if [ "$FW" = uefi ]; then
+  printf '%s\n' 'label: gpt' 'size=512MiB, type=uefi, name=EFI' 'type=linux, name=void' \
+    | sfdisk -q --wipe always --wipe-partitions always "$DISK"
+  P1="${PP}1"; P2="${PP}2"
+else
+  # GRUB braucht auf GPT im BIOS-Modus eine kleine Partition ohne Dateisystem
+  printf '%s\n' 'label: gpt' 'size=1MiB, type=21686148-6449-6E6F-744E-656564454649, name=BIOS' \
+    'size=512MiB, type=uefi, name=EFI' 'type=linux, name=void' \
+    | sfdisk -q --wipe always --wipe-partitions always "$DISK"
+  P1="${PP}2"; P2="${PP}3"
+fi
 partx -u "$DISK" 2>/dev/null || true
 udevadm settle 2>/dev/null || sleep 1
-case "$DISK" in *[0-9]) P1="${DISK}p1"; P2="${DISK}p2" ;; *) P1="${DISK}1"; P2="${DISK}2" ;; esac
 for _ in $(seq 1 20); do [ -b "$P1" ] && [ -b "$P2" ] && break; sleep 0.5; done
 [ -b "$P2" ] || die "Partitionen $P1/$P2 nicht gefunden."
 mkfs.vfat -F32 -n EFI "$P1" >/dev/null
@@ -161,7 +174,7 @@ fi
 
 # ---------------------------------------------------------------------
 say "4/6  Benutzer, Bootloader, Kernel"
-TVU="$TVU" VSNAME="$VSNAME" PW="$PW" chroot "$T" /bin/bash -euo pipefail <<'CHROOT'
+TVU="$TVU" VSNAME="$VSNAME" PW="$PW" DISK="$DISK" FW="$FW" chroot "$T" /bin/bash -euo pipefail <<'CHROOT'
 xbps-reconfigure -f glibc-locales
 useradd -m -U -s /bin/bash -G wheel -c "$VSNAME" "$TVU"
 # -c SHA512: sonst PAM-Weg, und Voids pam.d/chpasswd (pam_permit) schreibt nichts
@@ -171,16 +184,22 @@ for a in "$TVU" root; do
 done
 echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
 chmod 440 /etc/sudoers.d/wheel
-# GRUB als Rueckfall: eigener Eintrag + Standardpfad EFI/BOOT (falls die Firmware Eintraege vergisst)
-grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=void_grub
-grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable
+if [ "$FW" = uefi ]; then
+  # GRUB als Rueckfall: eigener Eintrag + Standardpfad EFI/BOOT (falls die Firmware Eintraege vergisst)
+  grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=void_grub
+  grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable
+else
+  # BIOS: GRUB in den MBR; dazu UEFI-Standardpfad ohne NVRAM-Eintrag (SSD startet auch spaeter im UEFI-Modus)
+  grub-install --target=i386-pc "$DISK"
+  grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable --no-nvram || true
+fi
 xbps-reconfigure -fa
 CHROOT
 
 # ---------------------------------------------------------------------
 say "5/6  VoidStation einrichten (Kacheln, Ton, Freigabe, Theme, EFISTUB)"
 cp "$PAYLOAD" "$T/root/voidstation-setup.sh"
-chroot "$T" /usr/bin/env VSUSER="$TVU" VSNAME="$VSNAME" EFISTUB=1 SMBPASS="$PW" ROOTUUID="$U_ROOT" \
+chroot "$T" /usr/bin/env VSUSER="$TVU" VSNAME="$VSNAME" EFISTUB="$([ "$FW" = uefi ] && echo 1 || echo 0)" SMBPASS="$PW" ROOTUUID="$U_ROOT" \
   SVDIR=/etc/runit/runsvdir/default VOIDSTATION_CHROOT=1 \
   bash /root/voidstation-setup.sh
 unset PW
@@ -202,7 +221,7 @@ fi
 
 # ---------------------------------------------------------------------
 say "6/6  Abschluss"
-chroot "$T" efibootmgr 2>/dev/null | sed -n '1,3p;/Void Linux\|void_grub/p' || true
+[ "$FW" = uefi ] && { chroot "$T" efibootmgr 2>/dev/null | sed -n '1,3p;/Void Linux\|void_grub/p' || true; }
 cp "$LOG" "$T/var/log/voidstation-install.log" 2>/dev/null || true
 sync
 cleanup

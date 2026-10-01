@@ -82,7 +82,8 @@ grep -q '<plist' "$MK/keys/$XLIBRE_KEYFP.plist" || die "XLibre-Schluessel nicht 
 GPU_PKGS="mesa-dri mesa-intel-dri intel-video-accel mesa-vulkan-intel mesa-ati-dri mesa-vaapi mesa-vulkan-radeon mesa-nouveau-dri"
 eval "$(sed -n '/^PKGS="/,/"$/p' "$SRC/install.sh" | head -20)"
 [ -n "${PKGS:-}" ] || die "Paketliste aus install.sh nicht lesbar."
-LIVE_PKGS="$PKGS void-repo-nonfree intel-ucode xlibre-minimal linux-firmware grub-x86_64-efi efibootmgr dracut sudo \
+# grub = GRUB fuer BIOS (i386-pc), grub-x86_64-efi = fuer UEFI – der Installer richtet je nach Startmodus ein
+LIVE_PKGS="$PKGS void-repo-nonfree intel-ucode xlibre-minimal linux-firmware grub grub-x86_64-efi efibootmgr dracut sudo \
   gparted ntfs-3g btrfs-progs dosfstools e2fsprogs xfsprogs gptfdisk pciutils util-linux tar curl"
 LIVE_PKGS="$(echo $LIVE_PKGS | tr ' ' '\n' | awk 'NF && !seen[$0]++' | tr '\n' ' ')"
 # Pakete, die es in den Quellen nicht (mehr) gibt, weglassen statt den ganzen Bau abzubrechen
@@ -92,7 +93,7 @@ for p in $LIVE_PKGS; do
   if xbps-query -R "$p" >/dev/null 2>&1; then OK_PKGS="$OK_PKGS $p"; else SKIPPED="$SKIPPED $p"; fi
 done
 [ -n "$SKIPPED" ] && warn "nicht in den Paketquellen, weggelassen:$SKIPPED"
-for p in xlibre-minimal firefox python3 NetworkManager grub-x86_64-efi; do
+for p in xlibre-minimal firefox python3 NetworkManager grub grub-x86_64-efi; do
   case " $OK_PKGS " in *" $p "*) ;; *) die "Pflichtpaket fehlt in den Paketquellen: $p" ;; esac
 done
 LIVE_PKGS="${OK_PKGS# }"
@@ -112,7 +113,7 @@ cd "$MK"
   -I "$INC" -x "$SRC/postsetup.sh" -o "$WORK/$ISO.raw"
 
 # ---------------------------------------------------------------------
-say "5/5  Startmenue (Deutsch/English, Installieren) und LIESMICH"
+say "5/5  Startmenue fuer UEFI und BIOS (Deutsch/English, Installieren) und LIESMICH"
 python3 "$SRC/grub-entries.py" "$WORK/$ISO.raw" "$WORK/$ISO" "$SRC/LIESMICH.txt" "$SRC/README.txt" \
   || { warn "Startmenue nicht angepasst – ISO bleibt beim Standardmenue"; mv -f "$WORK/$ISO.raw" "$WORK/$ISO"; }
 rm -f "$WORK/$ISO.raw"

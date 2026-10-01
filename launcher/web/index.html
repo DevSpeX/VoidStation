@@ -2382,7 +2382,7 @@ function instBack() {
 function instBlockers(p) {
   const b = [];
   if (p.arch !== 'x86_64') b.push('arch');
-  if (!p.uefi || p.secureboot) b.push('fw');
+  if (p.uefi && p.secureboot) b.push('fw');                     // BIOS-Modus geht auch (dann nur ganze SSD)
   if (p.ram && p.ram < 3.5 * GiB) b.push('ram');
   if (!p.disks.some(d => d.size >= MIN_ROOT + 1.5 * GiB)) b.push('disk');
   return b;
@@ -2398,8 +2398,9 @@ function rWelcome() {
     infoTile('gpu', T('inst.gpu'), (p.gpu || [])[0]),
     bl.includes('ram') ? infoTile('ram', T('inst.ram'), `${ramTxt} · ${T('inst.ramLow')}`, 'bad')
       : infoTile('ram', T('inst.ram'), p.ram < 7.8 * GiB ? T('inst.ramSwap', { ram: ramTxt }) : ramTxt),
-    p.uefi && !p.secureboot ? infoTile(null, T('inst.bootMode'), T('inst.sbOff'), 'ok', 'UEFI')
-      : infoTile(null, T('inst.bootMode'), p.uefi ? T('inst.sbOn') : T('inst.uefiNeeded'), 'bad', p.uefi ? 'UEFI' : 'BIOS'),
+    !p.uefi ? infoTile(null, T('inst.bootMode'), T('inst.biosMode'), 'ok', 'BIOS')
+      : p.secureboot ? infoTile(null, T('inst.bootMode'), T('inst.sbOn'), 'bad', 'UEFI')
+      : infoTile(null, T('inst.bootMode'), T('inst.sbOff'), 'ok', 'UEFI'),
     bl.length ? infoTile(null, T('inst.ssd'), T('inst.ssdMin'), bl.includes('disk') ? 'bad' : 'ok', maxDisk ? gb(maxDisk) : '–')
       : infoTile(p.net === 'wifi' ? 'wifi' : 'lan', T('inst.network'), T({ lan: 'inst.netLan', wifi: 'inst.netWifi' }[p.net] || 'inst.netNone'), p.net !== 'none' ? 'ok' : null),
     bl.length ? infoTile(null, T('inst.arch'), '64 Bit', bl.includes('arch') ? 'bad' : 'ok', p.arch)
@@ -2415,7 +2416,7 @@ function rWelcome() {
   section(tr, T('inst.letsGo'), grid('', go));
   if (bl.length) {
     const rows = [];
-    if (bl.includes('fw')) rows.push(`<ol>${['inst.fw1', 'inst.fw2', 'inst.fw3', 'inst.fw4'].map((k, i) => `<li><span class="n">${i + 1}</span><span>${T(k)}</span></li>`).join('')}</ol><div class="foot">${esc(T('inst.fwStick'))}</div>`);
+    if (bl.includes('fw')) rows.push(`<ol>${['inst.fw1', 'inst.fw2', 'inst.fw3'].map((k, i) => `<li><span class="n">${i + 1}</span><span>${T(k)}</span></li>`).join('')}</ol><div class="foot">${esc(T('inst.fwStick'))}</div>`);
     for (const k of ['ram', 'disk', 'arch']) if (bl.includes(k)) rows.push({ v: T({ ram: 'inst.needRam', disk: 'inst.needDisk', arch: 'inst.needArch' }[k]) });
     section(tr, T('inst.howTo'), panel(rows));
   } else {
@@ -2464,6 +2465,14 @@ function rDisk() {
     section(tr, T('inst.whole'), w);
   }
   const ways = [];
+  if (!p.uefi) {
+    // BIOS-Modus (Legacy/CSM): nur ganze SSD – Dual-Boot und eigene Partitionen brauchen UEFI
+    ways.push(itile({ size: 'wide', color: '#2f3238', icon: 'beside', cls: 'off', key: 'bios', label: T('inst.biosWays'), sub: T('inst.biosOnly'),
+      fn: () => adlg(T('inst.biosWays'), T('inst.biosWaysText'), [[T('common.ok')]]) }));
+    section(tr, T('inst.otherWays'), grid('', ways));
+    instFocus(I.disk && `#iTrack [data-key="disk${CSS.escape(I.disk.path)}"]`);
+    return;
+  }
   for (const d of p.disks) {
     for (const o of d.options.beside || []) {
       const sub = o.blocked ? T(o.blocked === 'hibernated' ? 'inst.blockedHib' : 'inst.blockedDirty')

@@ -3,6 +3,12 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.11.0 – 2026-10-01
+- Installation also works in BIOS mode (Legacy/CSM): older PCs and virtual machines with default settings (VirtualBox, QEMU) no longer need UEFI. BIOS mode offers “Use the whole SSD”; installing next to other systems and manual partitioning remain UEFI-only
+- An SSD installed in BIOS mode also boots when the firmware is later switched to UEFI (GRUB for both modes)
+- The stick's boot menu now offers “Install VoidStation” and the English entries in BIOS mode too
+- The installer only requires Secure Boot to be off; the instructions for that are shorter
+
 ## 0.10.1 – 2026-10-01
 - AppCenter: visible scrollbars next to the categories and the apps, so you can tell there is more; the category list fades out at the bottom when more follows
 
