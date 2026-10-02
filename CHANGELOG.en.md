@@ -3,6 +3,11 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.13.0 – 2026-10-03
+- New start page as a program of its own (Python + Qt 6) instead of a web page in WebKit: draws directly on the graphics card – also with the NVIDIA driver and in 4K – and needs less memory
+- Everything as before: tiles, radio, TV with programme info, games, AppCenter, settings, on-screen keyboard and themes, controlled by gamepad, keyboard and mouse
+- Settings → System → Interface: switch between “New (Qt)” and “Classic (web)”. If the new interface fails to start three times, the classic one takes over automatically
+- The live system and the installer keep the web interface for now
 ## 0.12.1 – 2026-10-02
 - No more dark screen while starting: until the home screen is ready it shows the logo with loading dots – seamlessly following the boot splash
 - The home screen starts earlier (no longer waits for audio and the launcher), and the background is dark grey from the start instead of black

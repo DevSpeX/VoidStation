@@ -1608,6 +1608,14 @@ const SET_PAGES = {
     const rb = pill(esc(T('settings.reboot')), () => power('reboot')); rb.dataset.key = 'reboot';
     const po = pill(esc(T('settings.poweroff')), () => power('poweroff')); po.dataset.key = 'off';
     rsys.append(rl, rb, po);
+    if ((sett.frontends || []).length > 1) {                 // Oberflaeche: neu (Qt) oder klassisch (Web)
+      const fc = col(tr, T('settings.frontend'));
+      const rf = row(fc);
+      for (const fe of sett.frontends) {
+        const b = pill(esc(T('frontend.' + fe, null, fe)), () => setFrontend(fe), sett.frontend === fe); b.dataset.key = 'fe' + fe; rf.appendChild(b);
+      }
+      const fi = document.createElement('div'); fi.className = 'info'; fi.textContent = T('settings.frontendHint'); fc.appendChild(fi);
+    }
     if (sett.ssh !== undefined) {
       const rs2 = row(col(tr, T('settings.ssh')));
       for (const on of [true, false]) {
@@ -1674,6 +1682,12 @@ async function setSsh(on) {
   catch (e) { return toast(T('common.failedMsg', { msg: e.message }), true); }
   renderSettings();
   toast(sett.ssh ? T('settings.sshOn', { host: sett.net.addresses[0]?.ip || sett.net.hostname }) : T('settings.sshOff'));
+}
+async function setFrontend(fe) {
+  if (sett.frontend === fe) return;
+  try { sett = await api('/api/settings/frontend', { frontend: fe }); toast(T('settings.frontendToast')); }
+  catch (e) { return toast(T('common.failedMsg', { msg: e.message }), true); }
+  renderSettings();
 }
 async function setChannel(ch) {
   if (ch === 'main' && !(vsState && vsState.channel === 'main')) toast(T('channel.testWarn'));

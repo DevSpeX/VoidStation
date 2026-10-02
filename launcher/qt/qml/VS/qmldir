@@ -1,0 +1,24 @@
+module VS
+singleton Ui 1.0 Ui.qml
+singleton Nav 1.0 Nav.qml
+singleton Api 1.0 Api.qml
+Glyph 1.0 Glyph.qml
+Txt 1.0 Txt.qml
+Focusable 1.0 Focusable.qml
+Tile 1.0 Tile.qml
+HomeTile 1.0 HomeTile.qml
+Pill 1.0 Pill.qml
+Btn 1.0 Btn.qml
+RoundBtn 1.0 RoundBtn.qml
+Field 1.0 Field.qml
+Track 1.0 Track.qml
+Group 1.0 Group.qml
+TileGrid 1.0 TileGrid.qml
+Layer 1.0 Layer.qml
+ScrollInd 1.0 ScrollInd.qml
+NowLine 1.0 NowLine.qml
+VolBar 1.0 VolBar.qml
+Spinner 1.0 Spinner.qml
+Eq 1.0 Eq.qml
+Col 1.0 Col.qml
+Background 1.0 Background.qml

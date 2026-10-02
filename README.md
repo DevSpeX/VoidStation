@@ -1,7 +1,8 @@
 # VoidStation
 
 Void Linux als TV-Station: Kacheloberfläche im Stil von Windows 8, dunkel, bedienbar mit Maus, Tastatur und Gamepad.
-Läuft auf Openbox mit einer schlanken WebKitGTK-Startseite (etwa 250 MB RAM).
+Läuft auf Openbox; die Startseite ist ein eigenes Programm in Python + Qt 6, das direkt auf der Grafikkarte zeichnet.
+Die bisherige Web-Oberfläche (WebKitGTK) bleibt umschaltbar (Einstellungen → System → Oberfläche) und läuft im Live-System mit dem Installer.
 
 **Funktionen:** YouTube (Firefox im Kiosk-Modus), Radio mit Suche und Favoriten, TV-Sender aus aller Welt (iptv-org),
 Emulatoren, AppCenter für optionale Apps (xbps, Flatpak, AppImage, Web), Einstellungen (Sprache, Skalierung, Auflösung,
@@ -216,10 +217,12 @@ VoidStation erkennt neue CSS-Dateien im Theme-Ordner automatisch und bietet sie 
 | Pfad | Inhalt |
 |---|---|
 | `launcher/launcher.py` | Backend: HTTP-API auf 127.0.0.1:8765, Apps starten/umschalten, Radio, TV, AppCenter, Einstellungen |
-| `launcher/web/index.html` | Oberfläche (Kacheln, Radio, TV, AppCenter, Einstellungen) |
-| `launcher/web/themes/` | Themes als modulare CSS-Dateien (`default-dark`, `default-light`, `high-contrast`, `nord`) |
-| `launcher/web/i18n/` | Texte der Oberfläche: `de.json`, `en.json` |
-| `launcher/voidstation-shell.py` | Vollbild-Fenster (WebKitGTK) für die Startseite; Firefox als Rückfall |
+| `launcher/qt/` | Startseite (Python + Qt 6): `voidstation-home.py` (Fenster, Gamepad, Texte, Farben), `qml/` (Oberfläche), `icons.py` |
+| `launcher/web/index.html` | Web-Oberfläche (Kacheln, Radio, TV, AppCenter, Einstellungen) und Installer im Live-System |
+| `launcher/web/themes/` | Themes als modulare CSS-Dateien (`default-dark`, `default-light`, `high-contrast`, `nord`) – gelten für beide Oberflächen |
+| `launcher/web/i18n/` | Texte beider Oberflächen: `de.json`, `en.json` |
+| `launcher/voidstation-shell.py` | Vollbild-Fenster (WebKitGTK) für die Web-Oberfläche; Firefox als Rückfall |
+| `launcher/home.sh` | wählt die Oberfläche (Datei `frontend`: `qt` oder `web`) und hält sie am Leben |
 | `launcher/tiles.json` | Standard-Kacheln |
 | `launcher/catalog.json` | App-Katalog für das AppCenter |
 | `launcher/voidstation-pkg` | root-Helfer, installiert nur freigegebene Pakete |
@@ -228,7 +231,7 @@ VoidStation erkennt neue CSS-Dateien im Theme-Ordner automatisch und bietet sie 
 | `docs/` | Screenshots und der Starter `vs` (GitHub Pages) |
 | `launcher/voidstation-installer` | Installer (root, nur im Live-System): prüft das Gerät, partitioniert, kopiert, richtet ein |
 | `iso/` | ISO-Bau (`build-iso-head.sh`, `postsetup.sh`, Startmenü) und Neuinstallation von der offiziellen Void-ISO (`voidstation-install`) |
-| `tools/` | `publish.sh` (Bundle einspielen und pushen), `screenshots.py` (README-Bilder), `boot-art.py` (Grafiken für Startmenü und Startbild → `iso/art/`) |
+| `tools/` | `publish.sh` (Bundle einspielen und pushen), `qt-preview.py` (Qt-Startseite mit Beispieldaten ausprobieren), `screenshots.py` (README-Bilder), `boot-art.py` (Grafiken für Startmenü und Startbild → `iso/art/`) |
 | `site/`, `tools/build-site.py` | Webseite voidstation.de (Quellen und Bau), veröffentlicht von `.github/workflows/pages.yml` |
 | `update-url` | Update-Quelle der Geräte (`{channel}` = stable/main) |
 | `CHANGELOG.md`, `CHANGELOG.en.md` | Versionsnummer und Änderungen, deutsch und englisch (erscheinen im Update-Dialog) |
@@ -236,6 +239,7 @@ VoidStation erkennt neue CSS-Dateien im Theme-Ordner automatisch und bietet sie 
 | `dist/` | **fertige Skripte**, erzeugt mit `./build.sh` |
 
 Zum Ausprobieren ohne Veröffentlichung: `OUT=/tmp/vs ./build.sh`.
+Qt-Startseite ohne Void ausprobieren: `python3 tools/qt-preview.py` (braucht `pip install PySide6-Essentials`).
 Screenshots neu erzeugen (mit Beispieldaten, ohne Void): `python3 tools/screenshots.py`
 (braucht `pip install playwright pillow` und `playwright install chromium`).
 
@@ -243,7 +247,8 @@ Screenshots neu erzeugen (mit Beispieldaten, ohne Void): `python3 tools/screensh
 
 - Kacheln anpassen: `~/.local/share/voidstation/tiles.json`
 - Logs: `~/.local/share/voidstation/logs/`
-- Startseite wieder über Firefox statt WebKit: `touch ~/.local/share/voidstation/use-firefox`
+- Oberfläche wechseln: Einstellungen → System → Oberfläche (oder per SSH: `echo web > ~/.local/share/voidstation/frontend; pkill -f voidstation-home.py`)
+- Web-Oberfläche über Firefox statt WebKit: `touch ~/.local/share/voidstation/use-firefox`
 
 ## Lizenz
 

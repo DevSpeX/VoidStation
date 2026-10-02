@@ -541,11 +541,36 @@ def apply_appearance(s):
 
 
 def restart_home_later(delay=0.8):
-    """Startseite neu starten, damit sie den neuen Mauszeiger uebernimmt (home.sh startet sie neu)."""
+    """Startseite neu starten, z. B. fuer den neuen Mauszeiger oder die andere Oberflaeche (home.sh startet sie neu)."""
     def _go():
         time.sleep(delay)
-        run(["pkill", "-f", "voidstation-shell.py|profiles/home"])
+        run(["pkill", "-f", "voidstation-shell.py|voidstation-home.py|profiles/home"])
     threading.Thread(target=_go, daemon=True).start()
+
+
+# Oberflaeche der Startseite: "qt" (Python + Qt 6, Standard) oder "web" (WebKit-Shell / Firefox).
+# home.sh liest die Datei "frontend"; das Live-System nimmt immer "web" (Installer).
+FRONTEND_FILE = BASE / "frontend"
+
+
+def qt_available():
+    try:
+        import importlib.util
+        return importlib.util.find_spec("PySide6") is not None and (BASE / "qt" / "voidstation-home.py").exists()
+    except (ImportError, ValueError):
+        return False
+
+
+def frontends():
+    return ["web"] if LIVE else (["qt", "web"] if qt_available() else ["web"])
+
+
+def frontend():
+    try:
+        f = FRONTEND_FILE.read_text(encoding="utf-8").strip()
+    except OSError:
+        f = "qt"
+    return f if f in frontends() else frontends()[0]
 
 
 def xrandr_info():
@@ -2049,7 +2074,8 @@ def settings_payload():
                        "themes": [{"id": t, "label": CURSOR_NAMES[t]} for t in cursor_themes()],
                        "sizes": CURSOR_SIZES}, "displays": xrandr_info(),
             "audio": audio_info(), "volume": volume_get(), "net": net_info(), "share": share_info(),
-            "sysupd_days": sysupd_days(s), "sysupd_choices": SYSUPD_DAYS}
+            "sysupd_days": sysupd_days(s), "sysupd_choices": SYSUPD_DAYS,
+            "frontend": frontend(), "frontends": frontends()}
 
 
 # ---------------------------------------------------------------------------
@@ -2727,6 +2753,14 @@ class Handler(BaseHTTPRequestHandler):
                 if th not in available_themes():
                     return self._json(400, {"error": "unbekanntes Theme"})
                 s = settings_load(); s["theme"] = th; settings_save(s)
+                return self._json(200, settings_payload())
+            if parts == ["api", "settings", "frontend"]:
+                fe = str(self._body().get("frontend", ""))
+                if fe not in frontends():
+                    return self._json(400, {"error": "unbekannte Oberflaeche"})
+                FRONTEND_FILE.write_text(fe + "\n", encoding="utf-8")
+                log("Oberflaeche:", fe)
+                restart_home_later(0.6)
                 return self._json(200, settings_payload())
             if parts == ["api", "settings", "cursor"]:
                 b = self._body()

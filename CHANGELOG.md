@@ -4,6 +4,11 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.13.0 – 2026-10-03
+- Neue Startseite als eigenes Programm (Python + Qt 6) statt Webseite in WebKit: zeichnet direkt auf der Grafikkarte – auch mit dem NVIDIA-Treiber und in 4K – und braucht weniger Arbeitsspeicher
+- Alles wie gewohnt: Kacheln, Radio, Fernsehen mit Programmanzeige, Spiele, AppCenter, Einstellungen, Bildschirmtastatur und Themes, bedienbar mit Gamepad, Tastatur und Maus
+- Einstellungen → System → Oberfläche: zwischen „Neu (Qt)“ und „Klassisch (Web)“ wechseln. Startet die neue Oberfläche dreimal nicht, geht es automatisch mit der klassischen weiter
+- Live-System und Installer bleiben vorerst bei der Web-Oberfläche
 ## 0.12.1 – 2026-10-02
 - Kein dunkler Bildschirm mehr beim Start: Bis die Startseite steht, zeigt sie das Logo mit Lade-Punkten – nahtlos nach dem Startbild beim Hochfahren
 - Die Startseite startet früher (wartet nicht mehr auf Ton und Launcher), der Hintergrund ist von Anfang an dunkelgrau statt schwarz
