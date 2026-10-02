@@ -10,7 +10,7 @@ The person named above is responsible for the content pursuant to Section 18 (2)
 
 ## Note {#note}
 
-voidstation.de is the website of a private, non-commercial hobby project. VoidStation is not an official Void Linux project. The [German version](/impressum/) of this legal notice is authoritative.
+voidstation.de is the website of the free software project VoidStation. VoidStation is not an official Void Linux project. The [German version](/impressum/) of this legal notice is authoritative.
 
 ## Links to other sites {#links}
 

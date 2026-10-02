@@ -67,4 +67,4 @@ In `~/.local/share/voidstation/logs/`. During installation, the installer's log 
 
 ### Is VoidStation an official Void Linux project?
 
-No. VoidStation is a private hobby project built on Void Linux. Please don't take questions about VoidStation to the Void team – ask [here](https://github.com/Panther92/VoidStation/issues) instead.
+No. VoidStation is an independent project built on Void Linux. Please don't take questions about VoidStation to the Void team – ask [here](https://github.com/Panther92/VoidStation/issues) instead.

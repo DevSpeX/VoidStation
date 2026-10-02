@@ -383,7 +383,7 @@ class Site:
 {body}
 </main>
 <footer class="foot">
-  <div class="fl"><img src="/assets/logo.svg" alt="" width="120" height="21"><span>{esc(self.t(lang, 'foot.by'))}</span></div>
+  <div class="fl"><img src="/assets/logo.svg" alt="" width="120" height="21"></div>
   <p>{foot_links}</p>
   <p class="dim">{esc(self.t(lang, 'foot.license'))} · {esc(self.t(lang, 'foot.ai'))}</p>
 </footer>

@@ -10,7 +10,7 @@ Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV ist die oben genannte Pers
 
 ## Hinweis {#hinweis}
 
-voidstation.de ist die Webseite eines privaten, nicht kommerziellen Hobbyprojekts. VoidStation ist kein offizielles Projekt von Void Linux.
+voidstation.de ist die Webseite des freien Software-Projekts VoidStation. VoidStation ist kein offizielles Projekt von Void Linux.
 
 ## Links auf andere Seiten {#links}
 
