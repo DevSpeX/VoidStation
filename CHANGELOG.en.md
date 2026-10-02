@@ -3,6 +3,11 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.12.1 – 2026-10-02
+- No more dark screen while starting: until the home screen is ready it shows the logo with loading dots – seamlessly following the boot splash
+- The home screen starts earlier (no longer waits for audio and the launcher), and the background is dark grey from the start instead of black
+- Live ISO: boot splash with logo in BIOS mode (Legacy/CSM) too, instead of text messages
+
 ## 0.12.0 – 2026-10-02
 - Home screen on NVIDIA cards: the interface picks a suitable rendering path by itself (no DMA-BUF on NVIDIA, no GPU at all if none is available) and steps down to a safer mode after repeated crashes – instead of a black screen with a mouse pointer
 - Live ISO: new boot menu with logo in the tile design, just “Start VoidStation Live”, “Start VoidStation Live (NVIDIA only)” and “Reboot” (UEFI and BIOS)

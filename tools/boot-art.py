@@ -3,7 +3,7 @@
 """
 Grafiken fuer Startmenue und Startbild der Live-ISO neu erzeugen (aus site/assets/logo.svg).
 Benoetigt: pip install playwright pillow && playwright install chromium
-Aufruf:    python3 tools/boot-art.py        -> iso/art/{grub,isolinux,plymouth}/*.png
+Aufruf:    python3 tools/boot-art.py        -> iso/art/{grub,isolinux,plymouth}/*.png, launcher/web/logo.png
 
   grub/      Theme fuer das UEFI-Startmenue: Hintergrund 1920x1080, Logo, Kachel-Rahmen der Eintraege
   isolinux/  Hintergrund 640x480 fuer das BIOS-Startmenue (Logo eingebrannt, vesamenu kann nur ein Bild)
@@ -82,6 +82,8 @@ def main():
         # Startbild (Plymouth): Logo gross, das Skript skaliert passend zum Bildschirm
         shot(pg, logo_html(960, 172), 960, 172, OUT / "plymouth/logo.png", transparent=True)
         opt(OUT / "plymouth/logo.png", "RGBA")
+        # dasselbe Logo fuer das Ladebild der Startseite (voidstation-shell.py)
+        (REPO / "launcher/web/logo.png").write_bytes((OUT / "plymouth/logo.png").read_bytes())
         b.close()
     box(OUT / "grub/item", CARD, CARD, 1)
     box(OUT / "grub/select", ACCENT, FOCUS, FOCUS_W)

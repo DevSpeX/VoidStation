@@ -4,6 +4,11 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.12.1 – 2026-10-02
+- Kein dunkler Bildschirm mehr beim Start: Bis die Startseite steht, zeigt sie das Logo mit Lade-Punkten – nahtlos nach dem Startbild beim Hochfahren
+- Die Startseite startet früher (wartet nicht mehr auf Ton und Launcher), der Hintergrund ist von Anfang an dunkelgrau statt schwarz
+- Live-ISO: Startbild mit Logo auch im BIOS-Modus (Legacy/CSM) statt Textmeldungen
+
 ## 0.12.0 – 2026-10-02
 - Startseite mit NVIDIA-Karten: die Oberfläche wählt die passende Darstellung selbst (ohne DMA-BUF bei NVIDIA, ganz ohne GPU, wenn keine da ist) und schaltet nach wiederholten Abstürzen eine Stufe robuster – statt schwarzem Bild mit Mauszeiger
 - Live-ISO: neues Startmenü mit Logo im Kacheldesign, nur noch „Start VoidStation Live“, „Start VoidStation Live (NVIDIA only)“ und „Reboot“ (UEFI und BIOS)

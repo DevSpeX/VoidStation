@@ -5,16 +5,16 @@ mkdir -p "$TV/logs"
 
 setxkbmap de
 xrdb -merge "$HOME/.Xresources" 2>/dev/null
-xsetroot -cursor_name left_ptr
+xsetroot -solid '#0e1012' -cursor_name left_ptr   # Hintergrund wie Startbild/Startseite statt Schwarz
 xset s off -dpms                      # Fernseher nicht abdunkeln
 unclutter --timeout 3 --jitter 10 --ignore-scrolling &
+
+# Startseite und Launcher zuerst: die Shell zeigt sofort Logo + Lade-Punkte und wartet selbst auf den Launcher
+python3 "$TV/launcher.py" >"$TV/launcher.log" 2>&1 &
+"$TV/home.sh" &
 
 # Ton: PipeWire + WirePlumber + Pulse-Ersatz, jeweils nur einmal
 pipewire >"$TV/logs/pipewire.log" 2>&1 &
 sleep 1
 pgrep -u "$(id -u)" -x wireplumber    >/dev/null || wireplumber    >"$TV/logs/wireplumber.log" 2>&1 &
 pgrep -u "$(id -u)" -x pipewire-pulse >/dev/null || pipewire-pulse >"$TV/logs/pipewire-pulse.log" 2>&1 &
-sleep 1
-
-python3 "$TV/launcher.py" >"$TV/launcher.log" 2>&1 &
-"$TV/home.sh" &

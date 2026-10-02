@@ -33,6 +33,10 @@ TIMEOUT = 10                                                # Sekunden bis zum S
 #  - NVIDIA: nouveau gesperrt; 99-voidstation-live.sh laedt nvidia_drm (modeset/fbdev aus modprobe.d)
 FREE = "splash nouveau.config=NvGspRm=1 modprobe.blacklist=nvidia,nvidia_drm,nvidia_modeset,nvidia_uvm"
 NVIDIA = "splash voidstation.gpu=nvidia modprobe.blacklist=nouveau,nova_core,nova_drm"
+# Nur BIOS: VESA-Standardmodus 1024x768 (16 bit) fuer den Kernel – der Void-Kernel hat vesafb fest eingebaut,
+# so gibt es auch ohne UEFI ein Startbild statt Textmeldungen. 791 (0x317) ist seit VBE 1.2 genormt; fehlt
+# der Modus trotzdem, fragt der Kernel 30 s nach und startet dann im Textmodus weiter.
+BIOS_EXTRA = "vga=791"
 ENTRIES = [  # (id, Titel, Zusatz-Parameter); None = Neustart
     ("vs-live", "Start VoidStation Live", FREE),
     ("vs-nvidia", "Start VoidStation Live (NVIDIA only)", NVIDIA),
@@ -207,7 +211,7 @@ MENU COLOR help        0 #ff8a8f94 #00000000 none
         if extra is None:
             out.append(f"LABEL {eid}\n  MENU LABEL {title}\n  COM32 reboot.c32\n")
             continue
-        out.append(f"LABEL {eid}\n  MENU LABEL {title}\n  KERNEL {kernel}\n  APPEND {merge_args(base, extra)}\n")
+        out.append(f"LABEL {eid}\n  MENU LABEL {title}\n  KERNEL {kernel}\n  APPEND {merge_args(base, extra + ' ' + BIOS_EXTRA)}\n")
     return "\n".join(out)
 
 

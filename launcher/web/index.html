@@ -3321,6 +3321,10 @@ document.fonts?.ready.then(() => layout());
   await loadLang(lang);
   document.documentElement.style.setProperty('--f', scale * innerHeight / 768);
   await loadFavs(); await load(); poll(); requestAnimationFrame(padLoop);
+  // WebKit-Shell: Kacheln stehen -> Ladebild (Logo) ausblenden; zwei Frames warten, damit sie wirklich gezeichnet sind
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    try { window.webkit?.messageHandlers?.vsReady?.postMessage('ready'); } catch {}
+  }));
   // Live-System: Installer gleich zeigen, wenn mit "voidstation.install" gestartet oder eine Installation laeuft/lief
   if (!offline) try {
     if ((await getJSON('/api/status')).live) {
