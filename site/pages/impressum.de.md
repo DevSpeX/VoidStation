@@ -6,7 +6,7 @@ Angaben gemäß § 5 DDG
 
 ## Verantwortlich für den Inhalt {#verantwortlich}
 
-Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV ist die oben genannte Person, Anschrift wie oben.
+Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV ist die oben genannte Person.
 
 ## Hinweis {#hinweis}
 

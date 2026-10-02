@@ -100,8 +100,8 @@ GitHub Actions (`.github/workflows/pages.yml`) baut und veröffentlicht sie bei 
 - **News:** jede Version aus `CHANGELOG.md`/`CHANGELOG.en.md` des Zweigs `stable` erscheint automatisch.
   Eigene Beiträge: `site/news/JJJJ-MM-TT-name.de.md` (+ `.en.md`), erste Zeile `# Titel`.
 - **ISO-Download:** Version, Adresse, Größe und SHA-256 in `site/config.json` unter `iso` eintragen.
-- **Impressum:** `site/impressum.json`. Solange Name, Anschrift und E-Mail fehlen, veröffentlicht der Workflow nur
-  eine Baustellenseite (plus `/vs` und die Update-Kanäle).
+- **Impressum:** `site/impressum.json`. Solange Name und E-Mail fehlen, veröffentlicht der Workflow nur eine
+  Baustellenseite (plus `/vs` und die Update-Kanäle). Die Anschrift (`street`, `city`) ist optional und erscheint, sobald sie eingetragen ist.
 - Unter der Domain liegen außerdem `/vs` (Install-Starter aus `stable`), `/stable/dist/` und `/main/dist/`.
 
 Ansehen ohne Veröffentlichen:

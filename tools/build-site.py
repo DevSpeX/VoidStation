@@ -271,7 +271,8 @@ class Site:
         if missing:
             die("site/i18n.json: auf Englisch fehlt " + ", ".join(missing))
         self.base = self.cfg["site_url"].rstrip("/")
-        self.legal_ok = all(str(self.imp.get(k, "")).strip() for k in ("name", "street", "city", "email"))
+        self.legal_ok = all(str(self.imp.get(k, "")).strip() for k in ("name", "email"))
+        self.has_address = all(str(self.imp.get(k, "")).strip() for k in ("street", "city"))
         self.changelog = {"de": parse_changelog(stable / "CHANGELOG.md"), "en": parse_changelog(stable / "CHANGELOG.en.md")}
         if not self.changelog["de"]:
             die(f"keine Versionen in {stable / 'CHANGELOG.md'}")
@@ -469,7 +470,7 @@ class Site:
         email = self.imp.get("email") or "‹E-Mail›"
         mail_html = "".join(f"&#{ord(c)};" for c in email)       # einfache Verschleierung gegen Adress-Sammler
         mail = f'<a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;{mail_html}">{mail_html}</a>' if self.imp.get("email") else esc(email)
-        lines = [name, street, city]
+        lines = [name, street, city] if (self.has_address or not self.legal_ok) else [name]
         if self.imp.get("country"):
             lines.append(esc(self.imp["country"]))
         contact = f'{esc(self.t(lang, "imp.email"))}: {mail}'
@@ -706,10 +707,12 @@ class Site:
         self.copy_static()
         self.copy_channels()
         if not self.legal_ok and not self.preview:
-            warn("site/impressum.json ist nicht ausgefuellt (name, street, city, email) – nur Baustellenseite gebaut.")
+            warn("site/impressum.json: name und email fehlen – nur Baustellenseite gebaut.")
             warn("Ansehen trotzdem moeglich mit:  python3 tools/build-site.py --preview")
             self.build_construction()
             return
+        if self.legal_ok and not self.has_address:
+            warn("site/impressum.json: ohne Anschrift (street, city) – Impressum zeigt nur Name und E-Mail.")
         items = self.collect_news()
         self.build_home(items)
         self.build_pages()

@@ -6,7 +6,7 @@ Information pursuant to Section 5 of the German Digital Services Act (DDG)
 
 ## Responsible for the content {#responsible}
 
-The person named above is responsible for the content pursuant to Section 18 (2) of the German State Media Treaty (MStV), address as above.
+The person named above is responsible for the content pursuant to Section 18 (2) of the German State Media Treaty (MStV).
 
 ## Note {#note}
 
