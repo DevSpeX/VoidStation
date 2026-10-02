@@ -1,0 +1,50 @@
+# Baut voidstation.de bei jedem Push nach main (Kanal Testing) oder stable (Kanal Stable)
+# und veroeffentlicht sie ueber GitHub Pages.
+#   Webseite, eigene News:  aus main (site/)
+#   Versions-News, /vs:     aus stable (CHANGELOG*.md, docs/vs)
+#   Update-Kanaele:         /main/dist und /stable/dist
+# Einmalig in den Repo-Einstellungen: Pages -> Source "GitHub Actions";
+# Environments -> github-pages -> Deployment branches: main UND stable erlauben.
+name: Webseite
+
+on:
+  push:
+    branches: [main, stable]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: src
+      - uses: actions/checkout@v4
+        with:
+          ref: stable
+          path: stable
+      - name: Webseite bauen
+        run: python3 src/tools/build-site.py --src src --stable stable --out _site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

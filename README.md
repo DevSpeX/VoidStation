@@ -89,6 +89,28 @@ und denselben Eintrag auf Englisch in `CHANGELOG.en.md` – fehlt er, bricht `bu
 Forks tragen ihre eigene Adresse in `update-url` ein und legen einen eigenen Schlüssel an.
 Ist ein Remote `codeberg` eingerichtet, pflegt `publish.sh` ihn als Spiegel mit (früherer Standort des Projekts).
 
+## Webseite (voidstation.de)
+
+Die Webseite liegt in `site/` und wird mit `tools/build-site.py` gebaut (nur Python 3, keine Fremdpakete).
+GitHub Actions (`.github/workflows/pages.yml`) baut und veröffentlicht sie bei jedem Push nach `main` oder `stable` –
+`vspub` reicht also, um sie zu aktualisieren.
+
+- **Seiten:** `site/pages/<seite>.de.md` und `.en.md` (Markdown, erste Zeile `# Titel`, erster Absatz = Vorspann).
+  Links auf andere Seiten als `seite:hilfe#bedienung`; Bausteine wie `{{iso}}` stehen allein in einer Zeile.
+- **News:** jede Version aus `CHANGELOG.md`/`CHANGELOG.en.md` des Zweigs `stable` erscheint automatisch.
+  Eigene Beiträge: `site/news/JJJJ-MM-TT-name.de.md` (+ `.en.md`), erste Zeile `# Titel`.
+- **ISO-Download:** Version, Adresse, Größe und SHA-256 in `site/config.json` unter `iso` eintragen.
+- **Impressum:** `site/impressum.json`. Solange Name, Anschrift und E-Mail fehlen, veröffentlicht der Workflow nur
+  eine Baustellenseite (plus `/vs` und die Update-Kanäle).
+- Unter der Domain liegen außerdem `/vs` (Install-Starter aus `stable`), `/stable/dist/` und `/main/dist/`.
+
+Ansehen ohne Veröffentlichen:
+
+```sh
+python3 tools/build-site.py --preview      # --preview zeigt alles, auch ohne Impressum
+python3 -m http.server -d _site 8000       # dann http://<rechner>:8000
+```
+
 ## Live-ISO mit Installer
 
 Die Live-ISO ist eine komplette VoidStation zum Ausprobieren (YouTube, Fernsehen, Radio, VLC) mit der Kachel
@@ -204,6 +226,7 @@ VoidStation erkennt neue CSS-Dateien im Theme-Ordner automatisch und bietet sie 
 | `launcher/voidstation-installer` | Installer (root, nur im Live-System): prüft das Gerät, partitioniert, kopiert, richtet ein |
 | `iso/` | ISO-Bau (`build-iso-head.sh`, `postsetup.sh`, Startmenü) und Neuinstallation von der offiziellen Void-ISO (`voidstation-install`) |
 | `tools/` | `publish.sh` (Bundle einspielen und pushen), `screenshots.py` (README-Bilder) |
+| `site/`, `tools/build-site.py` | Webseite voidstation.de (Quellen und Bau), veröffentlicht von `.github/workflows/pages.yml` |
 | `update-url` | Update-Quelle der Geräte (`{channel}` = stable/main) |
 | `CHANGELOG.md`, `CHANGELOG.en.md` | Versionsnummer und Änderungen, deutsch und englisch (erscheinen im Update-Dialog) |
 | `keys/` | öffentlicher Signaturschlüssel |
