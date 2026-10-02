@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# VoidStation – GRUB-Theme fuer das Startmenue der Live-ISO (UEFI)
+# Grafiken: tools/boot-art.py   Schriften: beim ISO-Bau mit grub-mkfont aus Noto Sans
+# (fehlen sie, nimmt GRUB die mitgelieferte unicode.pf2)
+
+title-text: ""
+desktop-image: "background.png"
+desktop-image-scale-method: "stretch"
+desktop-color: "#0e1012"
+terminal-font: "VoidStation Mono Regular 20"
+terminal-box: "term_*.png"
+terminal-left: "10%"
+terminal-top: "15%"
+terminal-width: "80%"
+terminal-height: "70%"
+
++ image {
+    left = 50%-360
+    top = 24%
+    width = 720
+    height = 129
+    file = "logo.png"
+}
+
++ boot_menu {
+    left = 50%-330
+    top = 50%
+    width = 660
+    height = 240
+    item_font = "VoidStation Regular 30"
+    selected_item_font = "VoidStation Regular 30"
+    item_color = "#c9c8c4"
+    selected_item_color = "#ffffff"
+    item_height = 64
+    item_spacing = 12
+    item_padding = 0
+    icon_width = 0
+    icon_height = 0
+    item_icon_space = 24
+    item_pixmap_style = "item_*.png"
+    selected_item_pixmap_style = "select_*.png"
+    scrollbar = false
+}
+
++ label {
+    id = "__timeout__"
+    text = "Start in %d s"
+    left = 0
+    top = 50%+260
+    width = 100%
+    height = 28
+    align = "center"
+    color = "#8a8f94"
+    font = "VoidStation Regular 20"
+}

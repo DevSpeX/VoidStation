@@ -1076,8 +1076,26 @@ class Run:
             pass
         if chroot(["id", "tv"], check=False).returncode == 0 and login != "tv":
             chroot(["userdel", "-r", "tv"], check=False)
-        if chroot(["xbps-query", "gparted"], check=False).returncode == 0:
-            chroot(["xbps-remove", "-Ry", "gparted"], check=False)
+        # Nur fuer den Stick: GParted, Startbild (Plymouth) – und der NVIDIA-Treiber, wenn der Stick nicht
+        # ueber "NVIDIA only" laeuft (mit ihm gehen dkms, gcc und die Kernel-Header, sonst je Kernel-Update ein Modulbau)
+        nv = nvidia_active()
+        drop = [p for p in ("gparted", "plymouth") + (() if nv else ("nvidia",))
+                if chroot(["xbps-query", p], check=False).returncode == 0]
+        if drop:
+            chroot(["xbps-remove", "-Ry"] + drop, check=False)
+        shutil.rmtree(T / "usr/share/plymouth/themes/voidstation", ignore_errors=True)
+        # Treiberwahl des Sticks aufloesen: mit NVIDIA gilt wieder die Sperre fuer nouveau aus dem Paket
+        # (/usr/lib/modprobe.d/nvidia.conf), nvidia_drm laedt beim Start mit Kernel-Modesetting
+        (T / "etc/modprobe.d/nvidia.conf").unlink(missing_ok=True)
+        if nv:
+            ml = T / "etc/modules-load.d"
+            ml.mkdir(parents=True, exist_ok=True)
+            (ml / "voidstation-nvidia.conf").write_text(
+                "# VoidStation: NVIDIA-Treiber mit Kernel-Modesetting (Optionen: /etc/modprobe.d/voidstation-nvidia.conf)\n"
+                "nvidia_drm\n")
+            log("NVIDIA-Treiber wird uebernommen")
+        else:
+            (T / "etc/modprobe.d/voidstation-nvidia.conf").unlink(missing_ok=True)
         # Grundeinstellungen
         (T / "etc/hostname").write_text(c["hostname"] + "\n")
         mid = uuid.uuid4().hex + "\n"                     # eigene Kennung je Installation (nicht die vom Stick)
@@ -1349,6 +1367,11 @@ class Run:
         except (OSError, Fail):
             pass
         self.umount_all()
+
+
+def nvidia_active():
+    """Laeuft das Live-System mit dem NVIDIA-Treiber (Startmenue "NVIDIA only" und Karte erkannt)?"""
+    return Path("/sys/module/nvidia_drm").is_dir()
 
 
 def disk_of(dev):

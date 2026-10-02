@@ -10,6 +10,9 @@
 #  VLC …) mit der Kachel "VoidStation installieren". Der Installer kopiert
 #  genau dieses System auf die SSD – dafuer braucht er kein Internet.
 #  Grafik-Server: XLibre (Paketquelle xlibre-void).
+#  Startmenue mit Logo (Start / Start NVIDIA only / Reboot), Startbild per Plymouth.
+#  NVIDIA-Treiber (offene Kernel-Module, DKMS) ist dabei, laedt aber nur ueber
+#  den Eintrag "NVIDIA only" – sonst laufen die freien Treiber.
 # =====================================================================
 set -euo pipefail
 
@@ -30,12 +33,14 @@ VSUSER="${VSUSER:-${SUDO_USER:-paul}}"
 HOMEDIR="$(getent passwd "$VSUSER" | cut -d: -f6)"
 mkdir -p "$WORK"
 FREE_GB=$(( $(df --output=avail -k "$WORK" | tail -1) / 1024 / 1024 ))
-[ "$FREE_GB" -ge 10 ] || die "Zu wenig Platz in $WORK: ${FREE_GB} GB frei, mind. 10 GB noetig."
+[ "$FREE_GB" -ge 12 ] || die "Zu wenig Platz in $WORK: ${FREE_GB} GB frei, mind. 12 GB noetig."
 
 # ---------------------------------------------------------------------
 say "1/5  Werkzeuge"
 NEED=""
-for p in git squashfs-tools xorriso mtools dosfstools liblz4 python3 grub-x86_64-efi grub-i386-efi; do
+# grub-utils: grub-mkfont fuer die Schriften im Startmenue; Noto/DejaVu als Vorlage
+for p in git squashfs-tools xorriso mtools dosfstools liblz4 python3 grub-x86_64-efi grub-i386-efi grub-utils \
+         noto-fonts-ttf dejavu-fonts-ttf; do
   xbps-query "$p" >/dev/null 2>&1 || NEED="$NEED $p"
 done
 [ -z "$NEED" ] && echo "alles da" || xbps-install -Sy $NEED
@@ -66,6 +71,21 @@ install -D -m 644 "$SRC/99-voidstation-live.sh"     "$INC/etc/runit/core-service
 install -D -m 440 "$SRC/sudoers-installer"          "$INC/etc/sudoers.d/zz-voidstation-installer"
 install -D -m 644 /dev/null                         "$INC/etc/voidstation-live"
 echo "$VS_VERSION" >                                "$INC/etc/voidstation-live"
+# Startbild beim Hochfahren (Plymouth-Theme; aktiviert in postsetup.sh, beendet in 99-voidstation-live.sh)
+PLY="$INC/usr/share/plymouth/themes/voidstation"
+install -d "$PLY"
+install -m 644 "$SRC/art/plymouth/"* "$PLY/"
+
+# Schriften fuer das Startmenue (UEFI) – fehlen sie, nimmt GRUB seine eigene (klein, aber lesbar)
+mkfont() {  # <ttf> <name> <groesse> <datei>
+  [ -f "$1" ] || { warn "Schrift fehlt: $1"; return 0; }
+  grub-mkfont -n "$2" -s "$3" -r 0x20-0x7E,0xA0-0x17F,0x2010-0x2027,0x2190-0x2193 -o "$SRC/art/grub/$4" "$1" \
+    || warn "grub-mkfont: $4 nicht erzeugt"
+}
+NOTO=/usr/share/fonts/noto/NotoSans-Regular.ttf
+mkfont "$NOTO" VoidStation 20 vs-20.pf2
+mkfont "$NOTO" VoidStation 30 vs-30.pf2
+mkfont /usr/share/fonts/TTF/DejaVuSansMono.ttf "VoidStation Mono" 20 vs-mono-20.pf2
 
 # Eigene Favoriten (Radio, TV) mitnehmen, falls vorhanden – im Live-System schon da
 PERS="$SRC/personal"; mkdir -p "$PERS"
@@ -83,7 +103,12 @@ GPU_PKGS="mesa-dri mesa-intel-dri intel-video-accel mesa-vulkan-intel mesa-ati-d
 eval "$(sed -n '/^PKGS="/,/"$/p' "$SRC/install.sh" | head -20)"
 [ -n "${PKGS:-}" ] || die "Paketliste aus install.sh nicht lesbar."
 # grub = GRUB fuer BIOS (i386-pc), grub-x86_64-efi = fuer UEFI – der Installer richtet je nach Startmodus ein
-LIVE_PKGS="$PKGS void-repo-nonfree intel-ucode xlibre-minimal linux-firmware grub grub-x86_64-efi efibootmgr dracut sudo \
+# nvidia = NVIDIA-Treiber (nonfree, offene Kernel-Module per DKMS, GeForce GTX 16xx / RTX 20xx und neuer);
+#          bringt dkms, gcc und die Kernel-Header mit. Der Installer entfernt das alles wieder, wenn der Stick
+#          nicht ueber "NVIDIA only" gestartet wurde.
+# plymouth = Startbild mit Logo (nur auf dem Stick, der Installer entfernt es)
+LIVE_PKGS="$PKGS void-repo-nonfree intel-ucode xlibre-minimal linux-firmware linux-firmware-nvidia nvidia plymouth \
+  grub grub-x86_64-efi efibootmgr dracut sudo \
   gparted ntfs-3g btrfs-progs dosfstools e2fsprogs xfsprogs gptfdisk pciutils util-linux tar curl"
 LIVE_PKGS="$(echo $LIVE_PKGS | tr ' ' '\n' | awk 'NF && !seen[$0]++' | tr '\n' ' ')"
 # Pakete, die es in den Quellen nicht (mehr) gibt, weglassen statt den ganzen Bau abzubrechen
@@ -93,14 +118,14 @@ for p in $LIVE_PKGS; do
   if xbps-query -R "$p" >/dev/null 2>&1; then OK_PKGS="$OK_PKGS $p"; else SKIPPED="$SKIPPED $p"; fi
 done
 [ -n "$SKIPPED" ] && warn "nicht in den Paketquellen, weggelassen:$SKIPPED"
-for p in xlibre-minimal firefox python3 NetworkManager grub grub-x86_64-efi; do
+for p in xlibre-minimal firefox python3 NetworkManager grub grub-x86_64-efi nvidia; do
   case " $OK_PKGS " in *" $p "*) ;; *) die "Pflichtpaket fehlt in den Paketquellen: $p" ;; esac
 done
 LIVE_PKGS="${OK_PKGS# }"
 echo "$(echo $LIVE_PKGS | wc -w) Pakete"
 
 # ---------------------------------------------------------------------
-say "4/5  ISO bauen (Download ca. 1,5 GB, danach Komprimieren – ca. 20–40 Minuten)"
+say "4/5  ISO bauen (Download ca. 2 GB, NVIDIA-Modul kompilieren, Komprimieren – ca. 25–50 Minuten)"
 STAMP="$(date +%Y%m%d)"
 ISO="voidstation-${VS_VERSION}-${STAMP}.iso"
 export VOIDSTATION_SRC="$SRC"
@@ -113,8 +138,8 @@ cd "$MK"
   -I "$INC" -x "$SRC/postsetup.sh" -o "$WORK/$ISO.raw"
 
 # ---------------------------------------------------------------------
-say "5/5  Startmenue fuer UEFI und BIOS (Deutsch/English, Installieren) und LIESMICH"
-python3 "$SRC/grub-entries.py" "$WORK/$ISO.raw" "$WORK/$ISO" "$SRC/LIESMICH.txt" "$SRC/README.txt" \
+say "5/5  Startmenue mit Logo fuer UEFI und BIOS und LIESMICH"
+python3 "$SRC/grub-entries.py" "$WORK/$ISO.raw" "$WORK/$ISO" "$SRC/LIESMICH.txt" "$SRC/README.txt" "$SRC/art" \
   || { warn "Startmenue nicht angepasst – ISO bleibt beim Standardmenue"; mv -f "$WORK/$ISO.raw" "$WORK/$ISO"; }
 rm -f "$WORK/$ISO.raw"
 

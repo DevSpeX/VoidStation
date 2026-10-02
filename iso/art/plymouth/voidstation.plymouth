@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=VoidStation
+Description=VoidStation – Logo beim Hochfahren
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/voidstation
+ScriptFile=/usr/share/plymouth/themes/voidstation/voidstation.script

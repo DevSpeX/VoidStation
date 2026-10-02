@@ -3,6 +3,7 @@
 # VoidStation Live-ISO: wird von void-mklive (-x) aufgerufen, bevor das Initramfs entsteht.
 # $1 = Wurzel des Live-Systems. Richtet dort VoidStation fuer den Live-Benutzer "tv" ein –
 # mit demselben install.sh wie jede Installation (VOIDSTATION_LIVE=1: ohne Swap, Freigabe und SSH).
+# Dazu: NVIDIA-Modul pruefen und Treiberwahl per Startmenue vorbereiten, Startbild (Plymouth) einschalten.
 set -euo pipefail
 R="$1"
 SRC="${VOIDSTATION_SRC:?}"
@@ -44,6 +45,39 @@ for f in radio.json tvfavs.json; do
   [ -f "$SRC/personal/$f" ] && install -m 644 "$SRC/personal/$f" "$TV/$f"
 done
 ch chown -R tv:tv /home/tv
+
+say "NVIDIA-Treiber (nur ueber den Eintrag \"NVIDIA only\")"
+KVER="$(ls "$R/usr/lib/modules" | sort -V | tail -1)"
+nvko() { [ -n "$(find "$R/usr/lib/modules/$KVER" -name 'nvidia-drm.ko*' -print -quit 2>/dev/null)" ]; }
+if ! nvko; then
+  echo "Modul fuer $KVER fehlt noch – baue es mit DKMS …"
+  ch dkms autoinstall -k "$KVER" || true
+  ch depmod -a "$KVER" || true
+fi
+nvko || { echo "[x] NVIDIA-Modul fuer Kernel $KVER fehlt (DKMS-Bau fehlgeschlagen, siehe /var/lib/dkms im Bauordner)"; exit 1; }
+echo "nvidia-drm fuer $KVER vorhanden"
+mkdir -p "$R/etc/modprobe.d"
+# Das Paket sperrt nouveau (/usr/lib/modprobe.d/nvidia.conf). Auf dem Stick entscheidet der Startmenue-Eintrag
+# (modprobe.blacklist=… auf der Kernel-Befehlszeile) – gleichnamige Datei in /etc ersetzt die Sperre.
+# Der Installer loescht sie, wenn er den NVIDIA-Treiber uebernimmt.
+cat > "$R/etc/modprobe.d/nvidia.conf" <<'EOF'
+# VoidStation Live: nouveau hier NICHT sperren – welcher Treiber laedt, bestimmt der Eintrag im Startmenue.
+# Ersetzt /usr/lib/modprobe.d/nvidia.conf (blacklist nouveau). Der Installer entfernt diese Datei,
+# wenn das installierte System den NVIDIA-Treiber bekommt.
+EOF
+cat > "$R/etc/modprobe.d/voidstation-nvidia.conf" <<'EOF'
+# VoidStation: NVIDIA mit Kernel-Modesetting (Konsole/Startbild in voller Aufloesung, X ueber nvidia-drm)
+options nvidia_drm modeset=1 fbdev=1
+EOF
+
+say "Startbild (Plymouth)"
+if [ -f "$R/usr/share/plymouth/themes/voidstation/voidstation.plymouth" ] && [ -x "$R/usr/bin/plymouthd" ]; then
+  mkdir -p "$R/etc/plymouth"
+  printf '[Daemon]\nTheme=voidstation\nShowDelay=0\nDeviceTimeout=8\n' > "$R/etc/plymouth/plymouthd.conf"
+  echo "Theme voidstation aktiv (landet mit dem Initramfs auf dem Stick)"
+else
+  echo "Plymouth oder Theme fehlt – Start ohne Startbild"
+fi
 
 say "Aufraeumen"
 rm -f "$R/etc/resolv.conf"

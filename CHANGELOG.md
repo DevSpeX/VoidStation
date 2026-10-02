@@ -4,6 +4,13 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.12.0 – 2026-10-02
+- Startseite mit NVIDIA-Karten: die Oberfläche wählt die passende Darstellung selbst (ohne DMA-BUF bei NVIDIA, ganz ohne GPU, wenn keine da ist) und schaltet nach wiederholten Abstürzen eine Stufe robuster – statt schwarzem Bild mit Mauszeiger
+- Live-ISO: neues Startmenü mit Logo im Kacheldesign, nur noch „Start VoidStation Live“, „Start VoidStation Live (NVIDIA only)“ und „Reboot“ (UEFI und BIOS)
+- Live-ISO: NVIDIA-Treiber an Bord (GeForce GTX 16xx, RTX 20xx und neuer) – lädt nur über „NVIDIA only“; der normale Eintrag nutzt nouveau mit GSP-Firmware
+- Live-ISO: Startbild mit Logo beim Hochfahren
+- Installer: wer über „NVIDIA only“ installiert, behält den NVIDIA-Treiber; sonst wird er samt DKMS und Compiler entfernt. Startbild und GParted bleiben auf dem Stick
+
 ## 0.11.1 – 2026-10-01
 - Bildschirmtastatur öffnet sich bei jedem Eingabefeld, auch per Mausklick – und jetzt auch in Firefox/YouTube (Erweiterung „FX OSK“, funktioniert offline)
 - PlayStation-Controller (DualSense/DualShock) per Bluetooth; Steuerkreuz funktioniert auch bei Controllern, die es als Achse melden

@@ -8,9 +8,12 @@ Booting
   works too, but then VoidStation can only be installed on a whole SSD.
 
 Boot menu
-  VoidStation (English)               live system in English (nothing gets installed)
-  Install VoidStation (English)       starts right away with the installer
-  The entries without "(English)" are German.
+  Start VoidStation Live                 live system (nothing gets installed), open graphics drivers
+  Start VoidStation Live (NVIDIA only)   with the NVIDIA driver – for GeForce GTX 16xx, RTX 20xx and newer
+  Reboot                                 restart
+  Language: in the live system under Settings; the installer sets language and keyboard for the system.
+  With an NVIDIA card, boot "NVIDIA only" and install from there – the installed system then
+  gets the NVIDIA driver too. If the interface doesn't come up that way, use the first entry.
 
 Installing
   Tile "Install VoidStation" – or in a terminal: sudo voidstation-installer text

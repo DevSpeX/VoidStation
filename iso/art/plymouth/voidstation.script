@@ -1,0 +1,67 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# VoidStation – Startbild (Plymouth, Skript-Theme)
+# Logo mittig auf dem dunklen Hintergrund der Startseite, darunter drei ruhig pulsierende Punkte.
+# Grafiken: tools/boot-art.py
+
+Window.SetBackgroundTopColor(0.055, 0.063, 0.071);       # #0e1012
+Window.SetBackgroundBottomColor(0.055, 0.063, 0.071);
+
+sw = Window.GetWidth();
+sh = Window.GetHeight();
+
+# Logo: 42 % der Bildschirmbreite, nie groesser als die Vorlage
+logo_src = Image("logo.png");
+lw = Math.Int(sw * 0.42);
+if (lw > logo_src.GetWidth())
+  lw = logo_src.GetWidth();
+lh = Math.Int(logo_src.GetHeight() * lw / logo_src.GetWidth());
+logo = Sprite(logo_src.Scale(lw, lh));
+logo.SetX(Window.GetX() + Math.Int((sw - lw) / 2));
+logo.SetY(Window.GetY() + Math.Int(sh * 0.45 - lh / 2));
+logo.SetZ(10);
+
+# Lade-Punkte
+dot_img = Image("dot.png");
+ds = Math.Int(sw / 120);
+if (ds < 8)
+  ds = 8;
+if (ds > 18)
+  ds = 18;
+dot_img = dot_img.Scale(ds, ds);
+gap = ds * 2;
+dots_y = Window.GetY() + Math.Int(sh * 0.45 + lh / 2 + sh * 0.08);
+dots_x = Window.GetX() + Math.Int((sw - (3 * ds + 2 * gap)) / 2);
+for (i = 0; i < 3; i++)
+  {
+    dot[i] = Sprite(dot_img);
+    dot[i].SetX(dots_x + i * (ds + gap));
+    dot[i].SetY(dots_y);
+    dot[i].SetZ(10);
+    dot[i].SetOpacity(0.2);
+  }
+
+tick = 0;
+fun refresh_callback ()
+  {
+    global.tick++;
+    for (i = 0; i < 3; i++)
+      {
+        a = Math.Sin(global.tick * 0.08 - i * 0.9);
+        if (a < 0)
+          a = 0;
+        dot[i].SetOpacity(0.2 + 0.8 * a);
+      }
+  }
+Plymouth.SetRefreshFunction(refresh_callback);
+
+# Meldungen (z. B. Dateisystempruefung) klein am unteren Rand
+msg_sprite = Sprite();
+msg_sprite.SetZ(20);
+fun message_callback (text)
+  {
+    img = Image.Text(text, 0.6, 0.6, 0.6);
+    msg_sprite.SetImage(img);
+    msg_sprite.SetX(Window.GetX() + Math.Int((Window.GetWidth() - img.GetWidth()) / 2));
+    msg_sprite.SetY(Window.GetY() + Window.GetHeight() - img.GetHeight() * 3);
+  }
+Plymouth.SetMessageFunction(message_callback);

@@ -11,4 +11,15 @@ _d=/etc/runit/runsvdir/default
 rm -f "$_d/dhcpcd" "$_d"/dhcpcd-* "$_d/wpa_supplicant"
 [ -e "$_d/NetworkManager" ] || ln -s /etc/sv/NetworkManager "$_d/"
 echo voidstation-live > /etc/hostname
+# Startbild (Plymouth) beenden, bevor X startet – sonst haelt es den Bildschirm fest.
+# --retain-splash: das Logo bleibt stehen, bis die Oberflaeche uebernimmt.
+if command -v plymouth >/dev/null 2>&1 && plymouth --ping 2>/dev/null; then
+  plymouth quit --retain-splash
+fi
+# Eintrag "NVIDIA only": nouveau ist per Befehlszeile gesperrt, hier kommt der NVIDIA-Treiber mit
+# Kernel-Modesetting dazu (Optionen in /etc/modprobe.d/voidstation-nvidia.conf). Ohne passende Karte
+# (vor GTX 16xx / RTX 20xx) schlaegt das fehl – dann laeuft die Oberflaeche ohne Beschleunigung weiter.
+if grep -qw 'voidstation.gpu=nvidia' /proc/cmdline; then
+  modprobe nvidia_drm 2>/dev/null || echo "VoidStation: NVIDIA-Treiber nicht geladen (keine unterstuetzte NVIDIA-Karte?)"
+fi
 unset _km _xk _d

@@ -3,6 +3,13 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.12.0 – 2026-10-02
+- Home screen on NVIDIA cards: the interface picks a suitable rendering path by itself (no DMA-BUF on NVIDIA, no GPU at all if none is available) and steps down to a safer mode after repeated crashes – instead of a black screen with a mouse pointer
+- Live ISO: new boot menu with logo in the tile design, just “Start VoidStation Live”, “Start VoidStation Live (NVIDIA only)” and “Reboot” (UEFI and BIOS)
+- Live ISO: NVIDIA driver included (GeForce GTX 16xx, RTX 20xx and newer) – only loaded via “NVIDIA only”; the regular entry uses nouveau with GSP firmware
+- Live ISO: boot splash with logo
+- Installer: installing from “NVIDIA only” keeps the NVIDIA driver; otherwise it is removed along with DKMS and the compiler. Boot splash and GParted stay on the stick
+
 ## 0.11.1 – 2026-10-01
 - The on-screen keyboard opens for every input field, also on mouse click – and now in Firefox/YouTube too (“FX OSK” extension, works offline)
 - PlayStation controllers (DualSense/DualShock) via Bluetooth; the D-pad also works on controllers that report it as an axis

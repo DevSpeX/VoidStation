@@ -8,9 +8,13 @@ Starten
   das geht auch, dann installiert VoidStation aber nur auf eine ganze SSD.
 
 Startmenü
-  VoidStation                 Live-System auf Deutsch (nichts wird installiert)
-  VoidStation installieren    startet gleich mit dem Installer
-  … (English)                 dasselbe auf Englisch
+  Start VoidStation Live                 Live-System (nichts wird installiert), freie Grafiktreiber
+  Start VoidStation Live (NVIDIA only)   mit NVIDIA-Treiber – für GeForce GTX 16xx, RTX 20xx und neuer
+  Reboot                                 Neustart
+  Sprache: im Live-System unter Einstellungen; Sprache und Tastatur fürs System wählt der Installer.
+  Mit NVIDIA-Karte über „NVIDIA only“ starten und von dort installieren – dann bekommt auch
+  das installierte System den NVIDIA-Treiber. Startet die Oberfläche damit nicht, den ersten
+  Eintrag nehmen.
 
 Installieren
   Kachel „VoidStation installieren“ – oder im Terminal: sudo voidstation-installer text

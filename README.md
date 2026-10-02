@@ -124,12 +124,15 @@ das Live-System auf die SSD – dafür braucht er kein Internet.
 - **Startmodus:** UEFI kann alle Wege. Im BIOS-Modus (Legacy/CSM, z. B. ältere PCs oder VirtualBox/QEMU mit
   Standardeinstellungen) gibt es nur „ganze SSD“: GPT mit BIOS-Boot-Partition, GRUB für BIOS und zusätzlich
   für UEFI – die SSD startet danach in beiden Modi.
-- **Startmenü des Sticks:** VoidStation · VoidStation installieren · dasselbe auf Englisch.
+- **Startmenü des Sticks:** mit Logo – *Start VoidStation Live* (freie Treiber) · *Start VoidStation Live (NVIDIA only)*
+  (NVIDIA-Treiber für GeForce GTX 16xx / RTX 20xx und neuer) · *Reboot*. Beim Hochfahren zeigt ein Startbild das Logo.
+  Wer über „NVIDIA only“ installiert, bekommt den NVIDIA-Treiber auch im installierten System – sonst entfernt der
+  Installer ihn wieder (samt DKMS und Compiler).
 - **Fehler:** Jeder Schritt lässt sich wiederholen, der Startmanager auch „anders“ (Standard-Starter statt NVRAM-Eintrag).
   Protokoll: `/run/voidstation-installer/install.log`, lässt sich auf einen USB-Stick speichern.
 - **Terminal:** `sudo voidstation-installer text` (nur ganze SSD) · `probe` zeigt, was der Installer erkennt.
 
-Bauen auf einem Void-System (z. B. einer VoidStation), dauert 20–40 Minuten:
+Bauen auf einem Void-System (z. B. einer VoidStation), dauert 25–50 Minuten:
 
 ```sh
 sudo bash dist/build-iso.sh
@@ -225,7 +228,7 @@ VoidStation erkennt neue CSS-Dateien im Theme-Ordner automatisch und bietet sie 
 | `docs/` | Screenshots und der Starter `vs` (GitHub Pages) |
 | `launcher/voidstation-installer` | Installer (root, nur im Live-System): prüft das Gerät, partitioniert, kopiert, richtet ein |
 | `iso/` | ISO-Bau (`build-iso-head.sh`, `postsetup.sh`, Startmenü) und Neuinstallation von der offiziellen Void-ISO (`voidstation-install`) |
-| `tools/` | `publish.sh` (Bundle einspielen und pushen), `screenshots.py` (README-Bilder) |
+| `tools/` | `publish.sh` (Bundle einspielen und pushen), `screenshots.py` (README-Bilder), `boot-art.py` (Grafiken für Startmenü und Startbild → `iso/art/`) |
 | `site/`, `tools/build-site.py` | Webseite voidstation.de (Quellen und Bau), veröffentlicht von `.github/workflows/pages.yml` |
 | `update-url` | Update-Quelle der Geräte (`{channel}` = stable/main) |
 | `CHANGELOG.md`, `CHANGELOG.en.md` | Versionsnummer und Änderungen, deutsch und englisch (erscheinen im Update-Dialog) |

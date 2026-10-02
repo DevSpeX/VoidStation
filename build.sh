@@ -105,6 +105,10 @@ echo "$BUILD" > "$OUT/version.txt"
 mkdir "$tmp/iso"
 cp iso/postsetup.sh iso/99-voidstation-live.sh iso/sudoers-installer iso/grub-entries.py iso/LIESMICH.txt iso/README.txt \
    launcher/voidstation-installer launcher/voidstation-pkg "$OUT/install.sh" "$tmp/iso/"
+cp -r iso/art "$tmp/iso/art"                      # Startmenue-Theme, BIOS-Hintergrund, Startbild (tools/boot-art.py)
+for f in grub/theme.txt grub/logo.png grub/background.png isolinux/splash.png plymouth/voidstation.plymouth plymouth/voidstation.script; do
+  [ -s "iso/art/$f" ] || { echo "iso/art/$f fehlt (tools/boot-art.py)" >&2; exit 1; }
+done
 python3 -m py_compile launcher/voidstation-installer iso/grub-entries.py
 (cd "$tmp/iso" && tar --owner=0 --group=0 --sort=name --mtime='2026-01-01' -czf "$tmp/iso.tgz" .)
 { sed "s|__VS_RELEASE__|$VERSION|g" iso/build-iso-head.sh; base64 -w 76 "$tmp/iso.tgz"; } > "$OUT/build-iso.sh"
