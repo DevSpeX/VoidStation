@@ -8,6 +8,7 @@ Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, foll
 - Everything as before: tiles, radio, TV with programme info, games, AppCenter, settings, on-screen keyboard and themes, controlled by gamepad, keyboard and mouse
 - Settings → System → Interface: switch between “New (Qt)” and “Classic (web)”. If the new interface fails to start three times, the classic one takes over automatically
 - The live system and the installer keep the web interface for now
+
 ## 0.12.1 – 2026-10-02
 - No more dark screen while starting: until the home screen is ready it shows the logo with loading dots – seamlessly following the boot splash
 - The home screen starts earlier (no longer waits for audio and the launcher), and the background is dark grey from the start instead of black

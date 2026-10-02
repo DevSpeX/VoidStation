@@ -410,6 +410,7 @@ def main():
     engine.rootContext().setContextProperty("vs", vs)
     engine.rootContext().setContextProperty("vsTitle", TITLE)
     engine.rootContext().setContextProperty("vsApi", API)
+    engine.rootContext().setContextProperty("vsLogo", QUrl.fromLocalFile(str(WEB / "logo.png")).toString())
     engine.rootContext().setContextProperty("vsDemo", os.environ.get("VS_DEMO") == "1")
     size = os.environ.get("VS_SIZE", "")                 # Tests: z. B. 1920x1080 (sonst ganzer Bildschirm)
     w, _, h = size.partition("x")

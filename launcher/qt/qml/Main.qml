@@ -48,6 +48,7 @@ Window {
         property string clockDate: ""
         property string hdrTime: ""
         property bool started: false
+        property bool shown: false                // Kacheln gezeichnet: Ladebild weg
 
         Component.onCompleted: {
             Ui.app = app
@@ -256,6 +257,7 @@ Window {
             Api.get("/tiles.json", function (c) {
                 var prevId = Nav.current && Nav.current.t ? Nav.current.t.id : (Nav.memory.home && Nav.memory.home.t ? Nav.memory.home.t.id : "")
                 cfg = c
+                if (!shown) showLater.start()
                 Qt.callLater(function () {
                     var items = Nav.collect(homeTrack), again = null
                     for (var i = 0; i < items.length; i++) if (items[i].t && items[i].t.id === prevId) again = items[i]
@@ -264,6 +266,7 @@ Window {
                 })
             })
         }
+        Timer { id: showLater; interval: 120; onTriggered: app.shown = true }  // ein paar Bilder Zeit fuer die Kacheln
         function loadFavs() { Api.get("/api/radio/favs", function (j) { favs = j || [] }) }
 
         // Uhr
@@ -507,5 +510,6 @@ Window {
         Osk { id: osk; anchors.fill: parent }
         Splash { id: splash; anchors.fill: parent; tile: app.splashTile }
         Toast { id: toastBox }
+        LoadSplash { id: loadSplash; anchors.fill: parent; done: !!app.cfg && app.shown }
     }
 }

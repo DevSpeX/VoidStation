@@ -9,6 +9,7 @@ Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.
 - Alles wie gewohnt: Kacheln, Radio, Fernsehen mit Programmanzeige, Spiele, AppCenter, Einstellungen, Bildschirmtastatur und Themes, bedienbar mit Gamepad, Tastatur und Maus
 - Einstellungen → System → Oberfläche: zwischen „Neu (Qt)“ und „Klassisch (Web)“ wechseln. Startet die neue Oberfläche dreimal nicht, geht es automatisch mit der klassischen weiter
 - Live-System und Installer bleiben vorerst bei der Web-Oberfläche
+
 ## 0.12.1 – 2026-10-02
 - Kein dunkler Bildschirm mehr beim Start: Bis die Startseite steht, zeigt sie das Logo mit Lade-Punkten – nahtlos nach dem Startbild beim Hochfahren
 - Die Startseite startet früher (wartet nicht mehr auf Ton und Launcher), der Hintergrund ist von Anfang an dunkelgrau statt schwarz
