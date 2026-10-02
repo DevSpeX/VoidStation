@@ -52,7 +52,7 @@ done
 say "1/8  Pakete"
 MISSING=""
 for p in curl elogind xrdb pulseaudio-utils mpv samba flatpak adwaita-qt adwaita-qt6 gnome-themes-extra xsetroot python3-gobject libwebkit2gtk41 \
-         bluez libspa-bluetooth htop nano fastfetch mousepad python3-pyside6-declarative qt6-svg qt6-imageformats; do
+         bluez libspa-bluetooth htop nano fastfetch mousepad python3-pyside6-declarative qt6-svg qt6-imageformats qt6-plugin-tls-openssl; do
   xbps-query "$p" >/dev/null 2>&1 || MISSING="$MISSING $p"
 done
 if [ -n "$MISSING" ]; then xbps-install -Sy $MISSING || warn "Paketinstallation fehlgeschlagen"; else echo "alles da"; fi

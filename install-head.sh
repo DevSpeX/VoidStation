@@ -54,7 +54,7 @@ done
 PKGS="xinit xauth xset xrandr setxkbmap $GPU_PKGS \
   openbox dbus elogind xrdb pulseaudio-utils curl python3 python3-evdev wmctrl unclutter-xfixes \
   firefox vlc mpv samba flatpak adwaita-qt adwaita-qt6 gnome-themes-extra xsetroot python3-gobject libwebkit2gtk41 pcmanfm gvfs xterm \
-  python3-pyside6-declarative qt6-svg qt6-imageformats \
+  python3-pyside6-declarative qt6-svg qt6-imageformats qt6-plugin-tls-openssl \
   pipewire wireplumber alsa-utils bluez libspa-bluetooth \
   noto-fonts-ttf noto-fonts-emoji noto-fonts-cjk dejavu-fonts-ttf \
   NetworkManager chrony htop nano fastfetch mousepad"
