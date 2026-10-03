@@ -17,8 +17,10 @@ Item {
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
-        onPositionChanged: if (!f.focused && f.navigable && Ui.app) Ui.app.mouseFocus(f)
-        onEntered: if (!f.focused && f.navigable && Ui.app) Ui.app.mouseFocus(f)
+        // Fokus nur, wenn die Maus selbst bewegt wurde – nicht, wenn sich die Kachel unter dem
+        // stillstehenden Zeiger bewegt (Blaettern, Vergroessern), sonst springt die Tastatur zurueck
+        onPositionChanged: function (m) { if (f.navigable && Ui.app) { var g = mapToGlobal(m.x, m.y); Ui.app.mouseFocus(f, g.x, g.y) } }
+        onEntered: if (f.navigable && Ui.app) { var g = mapToGlobal(mouseX, mouseY); Ui.app.mouseFocus(f, g.x, g.y) }
         onClicked: function (m) { if (Ui.app) Ui.app.mouseClick(f, m.button) }
         onPressed: function (m) { if (m.button === Qt.LeftButton && Ui.app) Ui.app.mousePress(f) }
         onReleased: if (Ui.app) Ui.app.mouseRelease(f)

@@ -181,7 +181,13 @@ Window {
             var first = Nav.collect(groups[i])
             if (first.length) setFocus(first[0])
         }
-        function mouseFocus(item) {
+        property real mouseGX: NaN
+        property real mouseGY: NaN
+        function mouseFocus(item, gx, gy) {
+            var first = isNaN(mouseGX)
+            var moved = !first && (Math.abs(gx - mouseGX) > 2 || Math.abs(gy - mouseGY) > 2)
+            if (first || moved) { mouseGX = gx; mouseGY = gy }
+            if (!moved) return                    // Zeiger steht still: Kachel ist nur darunter durchgewandert
             if (splashTile || !Nav.alive(item, layerRoot) || Nav.current === item) return
             if (item.noHoverFocus) return
             setFocus(item)

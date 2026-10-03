@@ -433,6 +433,12 @@ def main():
         from PySide6.QtGui import QKeyEvent
 
         def press(name):                                  # k:Return, k:Escape, k:Left …, t:Text, c:x:y (Mausklick)
+            if name.startswith("m:"):                     # m:x:y – Maus nur bewegen
+                from PySide6.QtCore import QPointF
+                from PySide6.QtGui import QMouseEvent
+                pos = QPointF(*(float(v) for v in name[2:].split(":")))
+                QGuiApplication.sendEvent(win, QMouseEvent(QEvent.MouseMove, pos, pos, Qt.NoButton, Qt.NoButton, Qt.NoModifier))
+                return
             if name.startswith("c:"):
                 from PySide6.QtCore import QPointF
                 from PySide6.QtGui import QMouseEvent
@@ -450,7 +456,7 @@ def main():
             for typ in (QEvent.KeyPress, QEvent.KeyRelease):
                 QGuiApplication.sendEvent(win, QKeyEvent(typ, key, Qt.NoModifier))
         for k in steps:
-            if k.startswith(("k:", "t:", "c:")):
+            if k.startswith(("k:", "t:", "c:", "m:")):
                 QTimer.singleShot(t, lambda k=k: press(k))
             elif k.startswith("shot:"):
                 QTimer.singleShot(t, lambda f=k[5:]: win.grabWindow().save(f))

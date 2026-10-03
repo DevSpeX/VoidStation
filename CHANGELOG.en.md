@@ -3,6 +3,9 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.13.2 – 2026-10-03
+- Keyboard and gamepad no longer jump back to the tile under the mouse pointer – the mouse only sets the focus when it is moved
+
 ## 0.13.1 – 2026-10-03
 - Wi-Fi: scanning gets enough time for USB adapters (instead of “nmcli not available”), connecting waits up to 90 s; country radio rules (wireless-regdb package, country from the time zone), no random MAC while scanning and no power saving – helps many USB adapters
 - Keyboard: the interface uses the layout chosen in the installer (it was always German before, e.g. wrong with a US keyboard)

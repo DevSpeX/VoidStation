@@ -4,6 +4,9 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.13.2 – 2026-10-03
+- Tastatur und Gamepad springen nicht mehr auf die Kachel unter dem Mauszeiger zurück – die Maus setzt den Fokus nur noch, wenn sie bewegt wird
+
 ## 0.13.1 – 2026-10-03
 - WLAN: Suche mit genug Zeit für USB-Sticks (statt „nmcli nicht verfügbar“), Verbinden mit bis zu 90 s; Funkregeln des Landes (Paket wireless-regdb, Land aus der Zeitzone), keine Zufalls-MAC beim Suchen und kein Stromsparmodus – hilft vielen USB-Sticks
 - Tastatur: Die Oberfläche übernimmt das Layout aus dem Installer (vorher immer Deutsch, z. B. falsch mit US-Tastatur)
