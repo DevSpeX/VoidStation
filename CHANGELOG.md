@@ -4,6 +4,10 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.13.3 – 2026-10-03
+- WLAN: Falsches Passwort meldet jetzt „Passwort falsch? Bitte nochmal eingeben.“ statt der nmcli-Rohmeldung, das Feld wird geleert und die Bildschirmtastatur geht wieder auf; auch „Netz nicht gefunden“, „antwortet nicht“ und „kein WLAN-Adapter“ im Klartext
+- WLAN: Ein altes, gespeichertes Profil für dasselbe Netz wird beim Verbinden mit Passwort ersetzt, ein fehlgeschlagener Versuch hinterlässt kein halbes Profil mehr (das blockierte bisher den nächsten Versuch)
+
 ## 0.13.2 – 2026-10-03
 - Tastatur und Gamepad springen nicht mehr auf die Kachel unter dem Mauszeiger zurück – die Maus setzt den Fokus nur noch, wenn sie bewegt wird
 

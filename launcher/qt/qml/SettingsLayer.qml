@@ -243,7 +243,14 @@ Layer {
             update(function () { sett = j })
             app.toast(Ui.t("wifi.connected", { ssid: ssid }))
             Qt.callLater(function () { refocus("scan") })
-        }, function (e) { app.toast(Ui.t("wifi.failed", { msg: e }), true) })
+        }, function (e) {
+            // Bekannte Fehler kommen als Schluessel "wifi.err.*", alles andere als Klartext
+            app.toast(e.indexOf("wifi.err.") === 0 ? Ui.t(e, { ssid: ssid }) : Ui.t("wifi.failed", { msg: e }), true)
+            if (e === "wifi.err.password" && wifiPick) {
+                wifiPw.value = ""
+                Qt.callLater(function () { app.setFocus(wifiPw, true); app.openOsk(wifiPw) })
+            }
+        })
     }
     function btCall(path, body, busy, ok, okErr) {
         if (busy) app.toast(busy)

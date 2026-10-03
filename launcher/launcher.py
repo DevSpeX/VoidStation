@@ -736,16 +736,73 @@ def wifi_scan():
     return sorted(nets.values(), key=lambda n: (-n["active"], -n["signal"]))
 
 
+def wifi_profiles(ssid):
+    """UUIDs aller gespeicherten WLAN-Profile fuer dieses Netz (Name und SSID koennen abweichen)."""
+    r = run(["sudo", "-n", "nmcli", "-t", "-f", "UUID,TYPE", "connection", "show"], timeout=10)
+    out = []
+    if not r or r.returncode != 0:
+        return out
+    for line in r.stdout.splitlines():
+        uuid, typ = (nm_split(line) + ["", ""])[:2]
+        if typ not in ("802-11-wireless", "wifi") or not uuid:
+            continue
+        g = run(["sudo", "-n", "nmcli", "-g", "802-11-wireless.ssid", "connection", "show", uuid], timeout=10)
+        if g and g.returncode == 0 and g.stdout.strip() == ssid:
+            out.append(uuid)
+    return out
+
+
+def wifi_forget(uuids):
+    for u in uuids:
+        run(["sudo", "-n", "nmcli", "connection", "delete", "uuid", u], timeout=15)
+
+
+# nmcli-Meldungen (deutsch oder englisch, je nach Locale) -> Schluessel aus web/i18n
+WIFI_ERRORS = [
+    ("wifi.err.password", ("secrets were required", "geheimdaten", "wireless-security.psk", "passwd-file",
+                           "4-way handshake", "invalid passphrase", "property 'psk' is invalid",
+                           "eigenschaft »psk« ist ungültig", "psk: ungültig", "psk: invalid")),
+    ("wifi.err.notFound", ("no network with ssid", "kein netzwerk mit ssid")),
+    ("wifi.err.noDevice", ("no wi-fi device", "kein wlan-gerät", "kein wi-fi-gerät")),
+    ("wifi.err.timeout", ("timeout", "zeitüberschreitung", "timed out")),
+]
+
+
+def wifi_error(text):
+    low = text.lower()
+    for key, needles in WIFI_ERRORS:
+        if any(n in low for n in needles):
+            return key
+    # sonst die eigentliche Fehlerzeile ohne Warnungen und "Error:"-Vorsatz
+    lines = [l.strip() for l in text.splitlines() if l.strip()
+             and not l.strip().lower().startswith(("warning:", "warnung:"))]
+    msg = lines[-1] if lines else "Verbindung fehlgeschlagen"
+    for pre in ("Error: ", "Fehler: "):
+        if msg.startswith(pre):
+            msg = msg[len(pre):]
+    return msg
+
+
 def wifi_connect(ssid, password):
+    """Verbinden. Mit Passwort wird ein altes Profil fuer dasselbe Netz vorher entfernt (sonst nimmt
+    NetworkManager dessen gespeichertes, evtl. falsches Passwort); scheitert der Versuch, wird das dabei
+    angelegte Profil wieder geloescht. Fehler kommen als Schluessel "wifi.err.*" oder als Klartext."""
+    before = wifi_profiles(ssid)
+    if password:
+        wifi_forget(before)
+        before = []
     args = ["sudo", "-n", "nmcli", "--wait", "90", "device", "wifi", "connect", ssid]
     if password:
         args += ["password", password]
     try:
         r = subprocess.run(args, capture_output=True, text=True, timeout=100)
+        err = None if r.returncode == 0 else wifi_error((r.stderr or "") + "\n" + (r.stdout or ""))
     except subprocess.TimeoutExpired:
-        raise RuntimeError("Zeitueberschreitung beim Verbinden")
-    if r.returncode != 0:
-        raise RuntimeError((r.stderr or r.stdout).strip() or "Verbindung fehlgeschlagen")
+        err = "wifi.err.timeout"
+    if err:
+        wifi_forget([u for u in wifi_profiles(ssid) if u not in before])
+        log("WLAN:", ssid, "->", err)
+        raise RuntimeError(err)
 
 
 def share_info():

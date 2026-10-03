@@ -1789,7 +1789,11 @@ async function wifiScan() {
 async function wifiConnect(ssid, pw) {
   toast(T('wifi.connecting', { ssid }));
   try { sett = await api('/api/wifi/connect', { ssid, password: pw }); wifiPick = null; toast(T('wifi.connected', { ssid })); renderSettings(); }
-  catch (e) { toast(T('wifi.failed', { msg: e.message }), true); }
+  catch (e) {
+    const m = String(e.message);                            // bekannte Fehler: Schluessel "wifi.err.*"
+    toast(m.startsWith('wifi.err.') ? T(m, { ssid }) : T('wifi.failed', { msg: m }), true);
+    if (m === 'wifi.err.password' && wifiPick && $('#wifiPw')) { $('#wifiPw').value = ''; setFocus($('#wifiPw')); }
+  }
 }
 async function btTogglePower() {
   if (!btState) return;
