@@ -52,7 +52,8 @@ done
 say "1/8  Pakete"
 MISSING=""
 for p in curl elogind xrdb pulseaudio-utils mpv samba flatpak adwaita-qt adwaita-qt6 gnome-themes-extra xsetroot python3-gobject libwebkit2gtk41 \
-         bluez libspa-bluetooth htop nano fastfetch mousepad python3-pyside6-declarative qt6-svg qt6-imageformats qt6-plugin-tls-openssl; do
+         bluez libspa-bluetooth htop nano fastfetch mousepad python3-pyside6-declarative qt6-svg qt6-imageformats qt6-plugin-tls-openssl \
+         wireless-regdb; do
   xbps-query "$p" >/dev/null 2>&1 || MISSING="$MISSING $p"
 done
 if [ -n "$MISSING" ]; then xbps-install -Sy $MISSING || warn "Paketinstallation fehlgeschlagen"; else echo "alles da"; fi
@@ -86,7 +87,7 @@ for f in tiles.json radio.json tvfavs.json settings.json; do [ -f "$TV/$f" ] && 
 sed -n '/^__PAYLOAD_BELOW__$/,$p' "$0" | tail -n +2 | base64 -d | tar -xz -C "$TV" || { warn "Entpacken fehlgeschlagen"; exit 1; }
 for f in tiles.json radio.json tvfavs.json settings.json; do [ -f "$KEEP/$f" ] && cp "$KEEP/$f" "$TV/$f"; done
 rm -rf "$KEEP"
-chmod +x "$TV/launcher.py" "$TV/home.sh" "$TV/vsctl" "$TV/voidstation-shell.py" "$TV/xstart" "$TV/qt/voidstation-home.py"
+chmod +x "$TV/launcher.py" "$TV/home.sh" "$TV/vsctl" "$TV/voidstation-shell.py" "$TV/xstart" "$TV/qt/voidstation-home.py" "$TV/sysfix.sh"
 echo "__VS_VERSION__" > "$TV/VERSION"
 echo '__VS_VERSION_B64__' | base64 -d > "$TV/version.json" 2>/dev/null || true
 cp "$TV/openbox/"{rc.xml,menu.xml,autostart} "$HOMEDIR/.config/openbox/"
@@ -138,6 +139,9 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="054c", MODE="0660", TAG+="uaccess"
 SUBSYSTEM=="input", ATTRS{idVendor}=="054c", MODE="0660", TAG+="uaccess"
 KERNEL=="uinput", MODE="0660", GROUP="input", OPTIONS+="static_node=uinput"
 EOF
+
+say "Systemkorrekturen (elogind, WLAN, GRUB)"
+sh "$TV/sysfix.sh" || warn "Systemkorrekturen unvollstaendig"
 
 say "3/8  AppCenter-Helfer (installiert nur freigegebene Pakete)"
 install -o root -g root -m 755 "$TV/voidstation-pkg" /usr/local/sbin/voidstation-pkg

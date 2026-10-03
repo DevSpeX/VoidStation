@@ -134,7 +134,7 @@ cd "$MK"
   -r "$REPO" -r "$REPO/nonfree" -r "$XLIBRE_REPO" \
   -k de -l de_DE.UTF-8 -T "VoidStation" \
   -C "live.user=tv live.shell=/bin/bash quiet loglevel=3" \
-  -p "$LIVE_PKGS" -S "dbus elogind NetworkManager chronyd" \
+  -p "$LIVE_PKGS" -S "dbus NetworkManager chronyd" \
   -I "$INC" -x "$SRC/postsetup.sh" -o "$WORK/$ISO.raw"
 
 # ---------------------------------------------------------------------

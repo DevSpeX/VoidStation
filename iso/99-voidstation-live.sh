@@ -21,5 +21,10 @@ fi
 # (vor GTX 16xx / RTX 20xx) schlaegt das fehl – dann laeuft die Oberflaeche ohne Beschleunigung weiter.
 if grep -qw 'voidstation.gpu=nvidia' /proc/cmdline; then
   modprobe nvidia_drm 2>/dev/null || echo "VoidStation: NVIDIA-Treiber nicht geladen (keine unterstuetzte NVIDIA-Karte?)"
+else
+  # Normaler Eintrag: modprobe.blacklist sperrt nur das automatische Laden. nvidia-modprobe (aus den
+  # NVIDIA-Bibliotheken, sobald ein Programm GPU-Beschleunigung anfragt) laedt sonst trotzdem nach.
+  mkdir -p /run/modprobe.d
+  printf 'install %s /bin/false\n' nvidia nvidia_drm nvidia_modeset nvidia_uvm > /run/modprobe.d/voidstation-no-nvidia.conf
 fi
 unset _km _xk _d

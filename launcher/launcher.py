@@ -712,10 +712,18 @@ def nm_split(line):
 
 
 def wifi_scan():
-    r = run(["sudo", "-n", "nmcli", "-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY",
-             "device", "wifi", "list", "--rescan", "yes"])
+    # USB-Sticks brauchen fuer einen vollen Suchlauf oft mehr als 10 s. Reicht die Zeit nicht,
+    # die zuletzt gefundenen Netze zeigen statt eines Fehlers.
+    base = ["sudo", "-n", "nmcli", "-t", "-f", "IN-USE,SSID,SIGNAL,SECURITY", "device", "wifi", "list"]
+    r = run(base + ["--rescan", "yes"], timeout=30)
     if not r or r.returncode != 0:
-        raise RuntimeError((r.stderr.strip() if r else "") or "nmcli nicht verfuegbar")
+        old = run(base + ["--rescan", "no"], timeout=10)
+        if old and old.returncode == 0 and old.stdout.strip():
+            r = old
+    if r is None:
+        raise RuntimeError("WLAN-Suche dauert zu lange – ist ein WLAN-Adapter angeschlossen?")
+    if r.returncode != 0:
+        raise RuntimeError(r.stderr.strip() or "WLAN-Suche fehlgeschlagen")
     nets = {}
     for line in r.stdout.splitlines():
         use, ssid, sig, sec = (nm_split(line) + ["", "", "", ""])[:4]
@@ -729,11 +737,11 @@ def wifi_scan():
 
 
 def wifi_connect(ssid, password):
-    args = ["sudo", "-n", "nmcli", "device", "wifi", "connect", ssid]
+    args = ["sudo", "-n", "nmcli", "--wait", "90", "device", "wifi", "connect", ssid]
     if password:
         args += ["password", password]
     try:
-        r = subprocess.run(args, capture_output=True, text=True, timeout=45)
+        r = subprocess.run(args, capture_output=True, text=True, timeout=100)
     except subprocess.TimeoutExpired:
         raise RuntimeError("Zeitueberschreitung beim Verbinden")
     if r.returncode != 0:

@@ -57,7 +57,7 @@ PKGS="xinit xauth xset xrandr setxkbmap $GPU_PKGS \
   python3-pyside6-declarative qt6-svg qt6-imageformats qt6-plugin-tls-openssl \
   pipewire wireplumber alsa-utils bluez libspa-bluetooth \
   noto-fonts-ttf noto-fonts-emoji noto-fonts-cjk dejavu-fonts-ttf \
-  NetworkManager chrony htop nano fastfetch mousepad"
+  NetworkManager wireless-regdb chrony htop nano fastfetch mousepad"
 MISSING=""
 for p in $PKGS; do
   xbps-query "$p" >/dev/null 2>&1 && continue
@@ -97,7 +97,7 @@ say "3/8  Dateien entpacken nach $TV"
 mkdir -p "$TV"
 [ -f "$TV/tiles.json" ] && cp "$TV/tiles.json" /tmp/tiles.json.keep
 sed -n '/^__PAYLOAD_BELOW__$/,$p' "$0" | tail -n +2 | base64 -d | tar -xz -C "$TV"
-chmod +x "$TV/launcher.py" "$TV/home.sh" "$TV/vsctl" "$TV/voidstation-shell.py" "$TV/xstart" "$TV/qt/voidstation-home.py"
+chmod +x "$TV/launcher.py" "$TV/home.sh" "$TV/vsctl" "$TV/voidstation-shell.py" "$TV/xstart" "$TV/qt/voidstation-home.py" "$TV/sysfix.sh"
 echo "__VS_VERSION__" > "$TV/VERSION"
 echo '__VS_VERSION_B64__' | base64 -d > "$TV/version.json" 2>/dev/null || true
 
@@ -191,7 +191,8 @@ for f in /usr/share/alsa/alsa.conf.d/50-pipewire.conf \
 done
 
 # ---------------------------------------------------------------------
-say "7/8  Ausschalten ohne Passwort, GRUB ohne Wartezeit"
+say "7/8  Systemkorrekturen (elogind, WLAN, GRUB), Ausschalten ohne Passwort, GRUB ohne Wartezeit"
+VOIDSTATION_CHROOT="$CHROOT" sh "$TV/sysfix.sh" || warn "Systemkorrekturen unvollstaendig"
 cat > /etc/sudoers.d/zz-voidstation <<EOF
 $VSUSER ALL=(root) NOPASSWD: /usr/bin/poweroff, /usr/bin/reboot, /usr/bin/nmcli, /usr/local/sbin/voidstation-pkg
 EOF
@@ -461,7 +462,8 @@ if [ "$LIVE" != 1 ] && [ "$MEM_MB" -lt 7800 ] && [ -z "$(swapon --noheadings --s
 fi
 
 say "8/8  Dienste"
-for s in dbus elogind sshd chronyd; do
+# elogind: ueber voidstation-elogind (sysfix.sh, wird beim Start eingeschaltet)
+for s in dbus sshd chronyd; do
   [ -d "/etc/sv/$s" ] || continue
   [ "$s" = sshd ] && [ "${VOIDSTATION_NOSSH:-0}" = 1 ] && continue
   [ -e "$SVDIR/$s" ] || ln -s "/etc/sv/$s" "$SVDIR/"

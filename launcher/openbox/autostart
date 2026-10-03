@@ -3,7 +3,9 @@ TV="$HOME/.local/share/voidstation"
 mkdir -p "$TV/logs"
 [ -f "$TV/env.sh" ] && . "$TV/env.sh"          # Mauszeiger, dunkles Theme (vom Launcher gepflegt)
 
-setxkbmap de
+# Tastatur: Layout aus /etc/X11/xorg.conf.d/00-keyboard.conf (Installer bzw. Startmenue des Sticks);
+# nur Geraete ohne diese Datei (eingerichtet per install.sh) bekommen wie bisher Deutsch
+[ -f /etc/X11/xorg.conf.d/00-keyboard.conf ] || setxkbmap de
 xrdb -merge "$HOME/.Xresources" 2>/dev/null
 xsetroot -solid '#0e1012' -cursor_name left_ptr   # Hintergrund wie Startbild/Startseite statt Schwarz
 xset s off -dpms                      # Fernseher nicht abdunkeln

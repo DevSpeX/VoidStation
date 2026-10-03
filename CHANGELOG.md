@@ -4,6 +4,13 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.13.1 – 2026-10-03
+- WLAN: Suche mit genug Zeit für USB-Sticks (statt „nmcli nicht verfügbar“), Verbinden mit bis zu 90 s; Funkregeln des Landes (Paket wireless-regdb, Land aus der Zeitzone), keine Zufalls-MAC beim Suchen und kein Stromsparmodus – hilft vielen USB-Sticks
+- Tastatur: Die Oberfläche übernimmt das Layout aus dem Installer (vorher immer Deutsch, z. B. falsch mit US-Tastatur)
+- Kein Dauer-Neustart von elogind mehr („elogind is already running“ jede Sekunde auf der Konsole); Start über GRUB ohne Meldungsflut
+- Web-Oberfläche (Live-System, Installer, „Klassisch“) mit NVIDIA-Treiber: läuft mit Firefox statt WebKit – flüssig auch in 4K
+- Live-ISO: Startmenü nie mehr in 4K (reagierte an manchen NVIDIA-Karten kaum auf Tasten), Countdown 15 s; der normale Eintrag sperrt den NVIDIA-Treiber zuverlässig, der Installer übernimmt ihn nur, wenn die Karte wirklich daran hängt
+
 ## 0.13.0 – 2026-10-03
 - Neue Startseite als eigenes Programm (Python + Qt 6) statt Webseite in WebKit: zeichnet direkt auf der Grafikkarte – auch mit dem NVIDIA-Treiber und in 4K – und braucht weniger Arbeitsspeicher
 - Alles wie gewohnt: Kacheln, Radio, Fernsehen mit Programmanzeige, Spiele, AppCenter, Einstellungen, Bildschirmtastatur und Themes, bedienbar mit Gamepad, Tastatur und Maus

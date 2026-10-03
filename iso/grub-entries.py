@@ -26,7 +26,7 @@ from pathlib import Path
 ISOLINUX = "/boot/isolinux/isolinux.cfg"
 THEME_DIR = "/boot/grub/themes/voidstation"
 SPLASH = "vs-splash.png"                                    # liegt neben isolinux.cfg
-TIMEOUT = 10                                                # Sekunden bis zum Start des ersten Eintrags
+TIMEOUT = 15                                                # Sekunden bis zum Start des ersten Eintrags (steht bei Tastendruck)
 
 # Treiberwahl ueber die Kernel-Befehlszeile (kmod beachtet modprobe.blacklist auch im Initramfs):
 #  - frei:   NVIDIA-Module gesperrt, nouveau mit GSP-Firmware (3D auf Turing/Ampere)
@@ -132,7 +132,9 @@ set vs_theme="(${{voidlive}}){THEME_DIR}"
 # eigene Schriften zuerst: GRUB nimmt fuer unbekannte Namen die zuletzt geladene (unicode.pf2)
 {fonts}
 if loadfont "(${{voidlive}})/boot/grub/fonts/unicode.pf2" ; then
-    set gfxmode="1920x1080,1280x720,auto"
+    # nie in 4K zeichnen: dort reagiert das Menue (ohne Grafiktreiber) kaum noch auf Tasten.
+    # NVIDIA-Firmware bietet an 4K-Fernsehern oft kein 1920x1080 an, 1024x768 aber praktisch immer
+    set gfxmode="1920x1080,1280x720,1024x768,auto"
     insmod gfxterm
     terminal_input console
     terminal_output gfxterm

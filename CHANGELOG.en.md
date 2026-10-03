@@ -3,6 +3,13 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.13.1 – 2026-10-03
+- Wi-Fi: scanning gets enough time for USB adapters (instead of “nmcli not available”), connecting waits up to 90 s; country radio rules (wireless-regdb package, country from the time zone), no random MAC while scanning and no power saving – helps many USB adapters
+- Keyboard: the interface uses the layout chosen in the installer (it was always German before, e.g. wrong with a US keyboard)
+- elogind no longer restarts every second (“elogind is already running” flooding the console); booting via GRUB without a flood of messages
+- Web interface (live system, installer, “Classic”) with the NVIDIA driver: runs in Firefox instead of WebKit – smooth even in 4K
+- Live ISO: the boot menu never runs in 4K (barely reacted to keys on some NVIDIA cards), 15 s countdown; the regular entry reliably blocks the NVIDIA driver, and the installer only keeps it when the card really uses it
+
 ## 0.13.0 – 2026-10-03
 - New start page as a program of its own (Python + Qt 6) instead of a web page in WebKit: draws directly on the graphics card – also with the NVIDIA driver and in 4K – and needs less memory
 - Everything as before: tiles, radio, TV with programme info, games, AppCenter, settings, on-screen keyboard and themes, controlled by gamepad, keyboard and mouse

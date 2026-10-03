@@ -25,7 +25,7 @@ tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 
 (cd launcher && tar --owner=0 --group=0 --sort=name --mtime='2026-01-01' \
    --exclude='*.pyc' --exclude=__pycache__ -czf "$tmp/payload.tgz" \
-   launcher.py voidstation-shell.py tiles.json catalog.json voidstation-pkg home.sh vsctl xstart web qt openbox firefox)
+   launcher.py voidstation-shell.py tiles.json catalog.json voidstation-pkg home.sh vsctl xstart sysfix.sh web qt openbox firefox)
 
 URL="$(head -n1 update-url)"
 case "$URL" in https://*) ;; *) echo "update-url muss mit https:// beginnen" >&2; exit 1 ;; esac

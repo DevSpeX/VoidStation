@@ -1370,8 +1370,15 @@ class Run:
 
 
 def nvidia_active():
-    """Laeuft das Live-System mit dem NVIDIA-Treiber (Startmenue "NVIDIA only" und Karte erkannt)?"""
-    return Path("/sys/module/nvidia_drm").is_dir()
+    """Haengt eine Grafikkarte am NVIDIA-Treiber (Startmenue "NVIDIA only")? Ein geladenes Modul allein
+    reicht nicht – das kann auch ohne gebundene Karte geladen sein."""
+    for d in Path("/sys/bus/pci/devices").glob("*"):
+        try:
+            if (d / "class").read_text().startswith("0x03") and os.path.basename(os.readlink(d / "driver")) == "nvidia":
+                return True
+        except OSError:
+            continue
+    return False
 
 
 def disk_of(dev):
