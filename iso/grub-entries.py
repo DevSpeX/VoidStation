@@ -8,11 +8,11 @@ VoidStation Live-ISO: eigenes Startmenue mit Logo, LIESMICH/README beilegen.
 void-mklive baut zwei Startmenues: GRUB fuer UEFI (boot/grub/grub_void.cfg) und isolinux fuer BIOS
 (boot/isolinux/isolinux.cfg). Beide werden komplett ersetzt – oben steht die Sprache, darunter je zwei Starteintraege:
 
-  Deutsch  ›  VoidStation Live starten                freie Treiber (Intel, AMD, nouveau fuer NVIDIA)
-              VoidStation Live starten (nur NVIDIA)   NVIDIA-Treiber statt nouveau (GTX 16xx / RTX 20xx und neuer)
-  English  ›  Start VoidStation Live
-              Start VoidStation Live (NVIDIA only)
-  Reboot
+  1. Seite   Deutsch / English / Reboot
+  2. Seite   VoidStation Live starten                freie Treiber (Intel, AMD, nouveau fuer NVIDIA)
+             VoidStation Live starten (nur NVIDIA)   NVIDIA-Treiber statt nouveau (GTX 16xx / RTX 20xx und neuer)
+             Zurueck
+             bzw. Start VoidStation Live / Start VoidStation Live (NVIDIA only) / Back
 
 Die Sprache stellt Oberflaeche, Installer und Tastatur ein (voidstation.lang, locale.LANG, vconsole.keymap).
 Ohne Tastendruck startet nach TIMEOUT Sekunden "Deutsch › VoidStation Live starten".
@@ -42,11 +42,10 @@ NVIDIA = "splash voidstation.gpu=nvidia modprobe.blacklist=nouveau,nova_core,nov
 # so gibt es auch ohne UEFI ein Startbild statt Textmeldungen. 791 (0x317) ist seit VBE 1.2 genormt; fehlt
 # der Modus trotzdem, fragt der Kernel 30 s nach und startet dann im Textmodus weiter.
 BIOS_EXTRA = "vga=791"
-# BIOS-Menue (isolinux) kennt nur Codepage 437 ohne UTF-8 – dort keine Umlaute
-LANGS = [  # (id, Menuepunkt, Zusatz-Parameter der Sprache, zurueck zur Sprachwahl (BIOS), [(id, Titel, Treiber-Parameter)])
-    ("de", "Deutsch", "voidstation.lang=de locale.LANG=de_DE.UTF-8 vconsole.keymap=de", "Andere Sprache",
+LANGS = [  # (id, Menuepunkt, Zusatz-Parameter der Sprache, Zurueck, [(id, Titel, Treiber-Parameter)])
+    ("de", "Deutsch", "voidstation.lang=de locale.LANG=de_DE.UTF-8 vconsole.keymap=de", "Zur\u00fcck",
      [("live", "VoidStation Live starten", FREE), ("nvidia", "VoidStation Live starten (nur NVIDIA)", NVIDIA)]),
-    ("en", "English", "voidstation.lang=en locale.LANG=en_US.UTF-8 vconsole.keymap=us", "Other language",
+    ("en", "English", "voidstation.lang=en locale.LANG=en_US.UTF-8 vconsole.keymap=us", "Back",
      [("live", "Start VoidStation Live", FREE), ("nvidia", "Start VoidStation Live (NVIDIA only)", NVIDIA)]),
 ]
 REBOOT = ("vs-reboot", "Reboot")
@@ -118,7 +117,7 @@ def grub_boot_lines(cfg):
     return lin.group(1), " ".join(lin.group(2).split()), ini.group(1)
 
 
-def build_grub(cfg, fonts):
+def build_grub(cfg, fonts, cfg_path="/boot/grub/grub_void.cfg"):
     kernel, base, initrd = grub_boot_lines(cfg)
     fonts = "\n".join(f'loadfont "${{vs_theme}}/{f}"' for f in fonts) or "# (keine eigenen Schriften)"
     out = [f"""# VoidStation Live – Startmenue (UEFI), erzeugt von grub-entries.py
@@ -154,18 +153,28 @@ if loadfont "(${{voidlive}})/boot/grub/fonts/unicode.pf2" ; then
     fi
 fi
 
-# Sprache waehlen, darunter die beiden Starteintraege (Esc fuehrt zurueck zur Sprachwahl)
+# 1. Seite: Sprache. Countdown nur beim ersten Anzeigen – "Zurueck" laedt diese Datei neu (vs_back=1),
+# dann wartet das Menue, bis jemand waehlt. Ohne Tastendruck: Deutsch › VoidStation Live starten
 set default="vs-{DEFAULT[0]}>vs-{DEFAULT[0]}-{DEFAULT[1]}"
-set timeout={TIMEOUT}
+if [ "${{vs_back}}" = "1" ]; then
+    set default="vs-{DEFAULT[0]}"
+    set timeout=-1
+else
+    set timeout={TIMEOUT}
+fi
 set timeout_style=menu
 """]
-    for lid, lname, lextra, _back, entries in LANGS:
+    for lid, lname, lextra, back, entries in LANGS:
         sub = [f'submenu "{lname}" --id "vs-{lid}" {{']
         for eid, title, extra in entries:
             sub.append(f'    menuentry "{title}" --id "vs-{lid}-{eid}" {{\n'
                        f'        set gfxpayload="keep"\n'
                        f'        linux {kernel} {merge_args(base, extra + " " + lextra)}\n'
                        f'        initrd {initrd}\n    }}')
+        # 2. Seite: Zurueck zur Sprachwahl (Esc geht auch)
+        sub.append(f'    menuentry "{back}" --id "vs-{lid}-back" {{\n'
+                   f'        set vs_back="1"\n        export vs_back\n'
+                   f'        configfile "(${{voidlive}}){cfg_path}"\n    }}')
         sub.append("}\n")
         out.append("\n".join(sub))
     out.append(f'menuentry "{REBOOT[1]}" --id "{REBOOT[0]}" {{\n    reboot\n}}\n')
@@ -194,7 +203,6 @@ UI vesamenu.c32
 PROMPT 0
 TIMEOUT {TIMEOUT * 10}
 ONTIMEOUT vs-{DEFAULT[0]}-{DEFAULT[1]}
-DEFAULT vs-{DEFAULT[0]}-{DEFAULT[1]}
 MENU BACKGROUND {SPLASH}
 MENU TABMSG
 MENU AUTOBOOT Start in # s
@@ -223,7 +231,10 @@ MENU COLOR timeout_msg 0 #ff8a8f94 #00000000 none
 MENU COLOR timeout     0 #ff8a8f94 #00000000 none
 MENU COLOR help        0 #ff8a8f94 #00000000 none
 """]
-    # Untermenues erben Farben und Hintergrund; je zwei Eintraege + Zurueck = drei Zeilen wie oben
+    # Kein DEFAULT: stuende er im Untermenue, oeffnete isolinux gleich dort statt auf der Sprachseite.
+    # ONTIMEOUT startet trotzdem Deutsch › VoidStation Live (Labels gelten im ganzen Menue).
+    # Untermenues erben Farben und Hintergrund; je zwei Eintraege + Zurueck = drei Zeilen wie oben.
+    # Die Datei wird in Codepage 437 geschrieben (Schrift des BIOS), so klappt auch das ü in "Zurück".
     for lid, lname, lextra, back, entries in LANGS:
         out.append(f"MENU BEGIN vs-{lid}\n  MENU LABEL {lname}\n  MENU TITLE\n")
         for eid, title, extra in entries:
@@ -256,14 +267,14 @@ def main(src, dst, liesmich, readme, art):
                         path = n
                         break
         fonts = [f for f in FONTS if (theme / f).is_file()]
-        local.write_text(build_grub(cfg, fonts), encoding="utf-8")
+        local.write_text(build_grub(cfg, fonts, path), encoding="utf-8")
         maps += ["-map", str(local), path, "-map", str(theme), THEME_DIR]
         missing = [f for f in FONTS if f not in fonts]
         done.append(f"UEFI ({path}{', ohne ' + ', '.join(missing) if missing else ''})")
 
         if ISOLINUX in iso_files(src, "/boot/isolinux", "*.cfg"):
             iloc = Path(td) / "isolinux.cfg"
-            iloc.write_text(build_isolinux(extract(src, ISOLINUX, iloc)), encoding="utf-8")
+            iloc.write_text(build_isolinux(extract(src, ISOLINUX, iloc)), encoding="cp437", errors="replace")
             maps += ["-map", str(iloc), ISOLINUX, "-map", str(art / "isolinux" / "splash.png"), f"/boot/isolinux/{SPLASH}"]
             done.append(f"BIOS ({ISOLINUX})")
         else:
