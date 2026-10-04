@@ -82,7 +82,15 @@ vspub --init-key                                 # einmalig: Signaturschlüssel 
 vspub                                            # Bundle aus ~/share/Updates übernehmen, bauen, signieren,
                                                  # nach main (Kanal Testing) pushen
 vspub --release                                  # Test-Stand für alle freigeben (stable)
+vspub --iso                                      # neueste Live-ISO aus ~/share/ISO nach SourceForge
 ```
+
+`vspub --iso` prüft die Prüfsumme der ISO, signiert die `.sha256` mit dem Release-Schlüssel (`.sha256.sig`),
+lädt alles per rsync nach `frs.sourceforge.net:/home/frs/project/voidstation/<version>/` (ein Abbruch setzt beim
+nächsten Aufruf fort), stellt den Download auf voidstation.de um (`site/config.json`) und löscht die ISO danach
+lokal. Am besten in `tmux` starten. Einmalig nötig: SSH-Schlüssel bei SourceForge hinterlegen und in `~/.ssh/config`
+eintragen (`Host frs.sourceforge.net` · `User <SourceForge-Name>` · `IdentityFile ~/.ssh/sourceforge`).
+Danach im Browser die ISO als *Default Download* markieren.
 
 Neue Versionen bekommen einen Eintrag oben in `CHANGELOG.md` (`## 0.4.1 – JJJJ-MM-TT` plus Stichpunkte)
 und denselben Eintrag auf Englisch in `CHANGELOG.en.md` – fehlt er, bricht `build.sh` ab.
@@ -142,6 +150,16 @@ sudo bash dist/build-iso.sh
 
 Die ISO landet unter `~/share/ISO/` (mit `.sha256`), eigene Radio- und TV-Favoriten kommen mit.
 Auf einen Ventoy-Stick kopieren oder mit Rufus/balenaEtcher schreiben.
+
+**Download prüfen:** Neben jeder ISO auf SourceForge liegen `.sha256` und die Signatur `.sha256.sig`.
+
+```sh
+sha256sum -c voidstation-<version>-<datum>.iso.sha256
+curl -fsSL https://raw.githubusercontent.com/Panther92/VoidStation/stable/keys/voidstation-release.pub \
+  | awk '{print "voidstation-release namespaces=\"voidstation\" "$1" "$2}' > voidstation-signers
+ssh-keygen -Y verify -f voidstation-signers -I voidstation-release -n voidstation \
+  -s voidstation-<version>-<datum>.iso.sha256.sig < voidstation-<version>-<datum>.iso.sha256
+```
 
 ## Bedienung
 
