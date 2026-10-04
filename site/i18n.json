@@ -41,6 +41,8 @@
     "s.tv": "Fernsehen",
     "s.appcenter": "AppCenter",
     "s.radio": "Radio",
+    "s.installer": "Installer",
+    "s.disk": "Installer: Ziel-SSD",
 
     "iso.button": "ISO herunterladen",
     "iso.title": "VoidStation {v} – Live-ISO",
@@ -50,8 +52,7 @@
     "iso.soon.sub": "Live-ISO",
     "iso.soon.label": "Kommt bald",
     "iso.soon.title": "Die Live-ISO kommt bald",
-    "iso.soon.text": "Sie erscheint hier zum Download. Bis dahin lässt sich VoidStation über die offizielle Void-ISO installieren – mit einem einzigen Befehl.",
-    "iso.soon.jump": "So geht's",
+    "iso.soon.text": "Die neue Version wird gerade hochgeladen und erscheint hier in Kürze.",
 
     "latest.line": "Aktuelle Version: {v} vom {d}.",
     "latest.more": "Was ist neu?",
@@ -127,6 +128,8 @@
     "s.tv": "TV",
     "s.appcenter": "AppCenter",
     "s.radio": "Radio",
+    "s.installer": "Installer",
+    "s.disk": "Installer: target SSD",
 
     "iso.button": "Download ISO",
     "iso.title": "VoidStation {v} – live ISO",
@@ -136,8 +139,7 @@
     "iso.soon.sub": "Live ISO",
     "iso.soon.label": "Coming soon",
     "iso.soon.title": "The live ISO is coming soon",
-    "iso.soon.text": "It will be available for download here. Until then, VoidStation can be installed from the official Void ISO – with a single command.",
-    "iso.soon.jump": "Here's how",
+    "iso.soon.text": "The new version is being uploaded and will appear here shortly.",
 
     "latest.line": "Current version: {v} from {d}.",
     "latest.more": "What's new?",

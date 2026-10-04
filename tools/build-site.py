@@ -17,7 +17,6 @@ Quellen (alles unter site/):
 Dazu aus dem Repo:
   CHANGELOG.md / CHANGELOG.en.md  aus --stable: jede freigegebene Version wird eine News
   docs/screenshots/               Bilder fuer Start- und Funktionsseite
-  docs/vs                         aus --stable: Install-Starter unter /vs
   dist/                           aus --src (Kanal Testing) -> /main/dist, aus --stable -> /stable/dist
 
 Auf GitHub baut .github/workflows/pages.yml die Seite bei jedem Push nach main oder stable:
@@ -452,16 +451,23 @@ class Site:
   <div class="isotext">
     <h2 id="iso">{esc(self.t(lang, 'iso.soon.title'))}</h2>
     <p>{esc(self.t(lang, 'iso.soon.text'))}{sf_link}</p>
-    <p><a class="btn" href="#void-iso">{esc(self.t(lang, 'iso.soon.jump'))}</a></p>
   </div>
 </div>"""
 
+    def shot(self, lang, f):
+        """Screenshot in der Sprache der Seite (docs/screenshots/en/…), sonst der deutsche"""
+        if lang != "de" and (self.out / "assets" / "screens" / lang / f).exists():
+            return f"/assets/screens/{lang}/{f}"
+        return f"/assets/screens/{f}"
+
     def screens(self, lang):
         figs = []
-        for f, key in (("1-start.webp", "s.start"), ("2-fernsehen.webp", "s.tv"), ("3-appcenter.webp", "s.appcenter"), ("4-radio.webp", "s.radio")):
+        for f, key in (("1-start.webp", "s.start"), ("2-fernsehen.webp", "s.tv"), ("3-appcenter.webp", "s.appcenter"),
+                       ("4-radio.webp", "s.radio"), ("5-installer.webp", "s.installer"), ("6-ziel-ssd.webp", "s.disk")):
             if (self.out / "assets" / "screens" / f).exists():
                 cap = esc(self.t(lang, key))
-                figs.append(f'<figure><a href="/assets/screens/{f}"><img src="/assets/screens/{f}" alt="{cap}" loading="lazy" width="1280" height="720"></a><figcaption>{cap}</figcaption></figure>')
+                src = self.shot(lang, f)
+                figs.append(f'<figure><a href="{src}"><img src="{src}" alt="{cap}" loading="lazy" width="1600" height="900"></a><figcaption>{cap}</figcaption></figure>')
         return f'<div class="screens">{"".join(figs)}</div>'
 
     def address(self, lang, full):
@@ -611,12 +617,12 @@ class Site:
                 self.tile("medium", "#284843", u("download", "voraussetzungen" if lang == "de" else "requirements"), t("t.req"), "monitor"),
             ])
             g2 = "".join([
-                self.tile("large", "#22262b", u("features", "screenshots"), t("t.screens"), img="/assets/screens/1-start.webp", cls="pic"),
+                self.tile("large", "#22262b", u("features", "screenshots"), t("t.screens"), img=self.shot(lang, "1-start.webp"), cls="pic"),
                 self.tile("wide", "#6e2b2b", u("features"), t("t.features"), "play", t("t.features.sub")),
                 self.tile("wide", "#24414a", f'{u("news")}{news["slug"]}/', t("t.news"),
                           extra=f'<span class="kick">{esc(self.fmt_date(news["date"], lang))}</span><span class="txt">{esc(news["title"][lang])}</span>', cls="text"),
-                self.tile("wide", "#24414a", u("features", "fernsehen" if lang == "de" else "tv"), t("t.tv"), img="/assets/screens/2-fernsehen.webp", cls="pic"),
-                self.tile("wide", "#3b2f4f", u("features", "radio"), t("t.radio"), img="/assets/screens/4-radio.webp", cls="pic"),
+                self.tile("wide", "#24414a", u("features", "fernsehen" if lang == "de" else "tv"), t("t.tv"), img=self.shot(lang, "2-fernsehen.webp"), cls="pic"),
+                self.tile("wide", "#3b2f4f", u("features", "radio"), t("t.radio"), img=self.shot(lang, "4-radio.webp"), cls="pic"),
             ])
             g3 = "".join([
                 f'<div class="tile wide clock" style="--c:#23272c" aria-hidden="true"><span class="big" data-clock="{lang}"></span><span class="date" data-date="{lang}"></span></div>',
@@ -692,12 +698,6 @@ class Site:
                 shutil.copytree(d, self.out / name / "dist")
             else:
                 warn(f"kein dist/ in {repo} – Kanal {name} fehlt auf der Seite")
-        vs = self.stable / "docs" / "vs"
-        if vs.exists():
-            for rel in ("vs", "VoidStation/vs"):          # VoidStation/vs: falls alte Links ueber github.io weiterleiten
-                p = self.out / rel
-                p.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy(vs, p)
         (self.out / "CNAME").write_text(self.base.split("://", 1)[1] + "\n")
 
     def build(self):
@@ -732,7 +732,7 @@ class Site:
 def main():
     ap = argparse.ArgumentParser(description="Webseite voidstation.de bauen")
     ap.add_argument("--src", default=str(ROOT), help="Repo mit site/ und dist/ des Kanals Testing (Standard: dieses Repo)")
-    ap.add_argument("--stable", default=None, help="Stand des Kanals Stable (CHANGELOG, dist/, docs/vs); Standard: --src")
+    ap.add_argument("--stable", default=None, help="Stand des Kanals Stable (CHANGELOG, dist/); Standard: --src")
     ap.add_argument("--out", default=None, help="Ausgabeordner (Standard: <src>/_site)")
     ap.add_argument("--preview", action="store_true", help="komplette Seite auch ohne Impressum bauen (nur zum Ansehen)")
     a = ap.parse_args()

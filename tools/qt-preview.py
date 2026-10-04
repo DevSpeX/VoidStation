@@ -224,7 +224,14 @@ def main():
     ap.add_argument("--live", action="store_true", help="Live-System mit Installer-Kachel")
     ap.add_argument("--fail", action="store_true", help="Installation scheitert beim Startmanager (Fehlerseite)")
     ap.add_argument("--bios", action="store_true", help="Geraet im BIOS-Modus")
+    ap.add_argument("--clean", action="store_true", help="fuer Screenshots: kein Update-Hinweis, keine laufende App")
+    ap.add_argument("--scale", type=float, help="Skalierung der Oberflaeche (Standard 1.25)")
     a = ap.parse_args()
+    if a.clean:
+        STATE["running"] = []
+        STATE["update"] = {"available": False}
+    if a.scale:
+        S.SETTINGS["scale"] = a.scale
     if a.theme:
         S.SETTINGS["theme"] = a.theme
     if a.live:

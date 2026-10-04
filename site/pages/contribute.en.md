@@ -4,7 +4,7 @@ VoidStation is free software. Report bugs, translate, build themes or contribute
 
 ## Source code {#source}
 
-Everything is on [GitHub](https://github.com/Panther92/VoidStation): the start screen and backend (`launcher/`), the installer, the ISO build (`iso/`), the update and install scripts and this website (`site/`). The README in the repository explains the layout in detail (in German).
+Everything is on [GitHub](https://github.com/Panther92/VoidStation): the start screen and backend (`launcher/`), the installer, the ISO build (`iso/`), the update and install scripts and this website (`site/`). The README in the repository explains the layout in detail.
 
 ## Reporting bugs {#bugs}
 
