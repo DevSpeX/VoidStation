@@ -306,7 +306,10 @@ Window {
         function tick() {
             var d = new Date()
             if (Ui.lang === "de") { clockMain = Qt.formatTime(d, "HH:mm"); clockAp = "" }
-            else { clockMain = Qt.formatTime(d, "h:mm"); clockAp = d.getHours() < 12 ? "AM" : "PM" }
+            else {                                        // 12-Stunden-Uhr: "h" allein waere in Qt 0–23
+                clockMain = ((d.getHours() % 12) || 12) + ":" + Qt.formatTime(d, "mm")
+                clockAp = d.getHours() < 12 ? "AM" : "PM"
+            }
             hdrTime = clockAp ? clockMain + " " + clockAp : clockMain
             clockDate = Ui.lang === "de" ? Ui.loc.toString(d, "dddd, d. MMMM") : Ui.loc.toString(d, "dddd, MMMM d")
         }

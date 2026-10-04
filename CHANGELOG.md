@@ -4,6 +4,9 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.14.1 – 2026-10-04
+- Englische Oberfläche: Die Uhr zeigt nachmittags wieder „2:53 PM“ statt „14:53 PM“
+
 ## 0.14.0 – 2026-10-04
 - Installer jetzt auch als Qt-Programm: Live-System und Installation laufen ohne WebKit – flüssig auch mit NVIDIA-Treiber in 4K, Maus inklusive
 - Alle Wege wie gewohnt: ganze SSD, neben einem anderen System (Grenze per Steuerkreuz oder Maus ziehen), freier Bereich, selbst einteilen mit GParted; Konto und Rechnername über die Bildschirmtastatur oder die echte Tastatur; „A halten“ zum Installieren; Fortschritt, Fehlerseite mit „Anders versuchen“ und Protokoll

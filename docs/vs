@@ -1,7 +1,0 @@
-#!/bin/sh
-# VoidStation: laedt den aktuellen Installer von GitHub und startet ihn
-U=https://raw.githubusercontent.com/Panther92/VoidStation/stable/dist/voidstation-install.sh
-cd /tmp || exit 1
-rm -f voidstation-install.sh
-xbps-fetch -o voidstation-install.sh "$U" || { echo "Download fehlgeschlagen - Internet ok?"; exit 1; }
-exec bash voidstation-install.sh
