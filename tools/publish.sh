@@ -62,7 +62,7 @@ signers_line() {           # oeffentlicher Schluessel -> Zeile fuer ssh-keygen -
 verify_dist() {            # prueft alle Signaturen in dist/ gegen keys/…pub
   local ok=0 f
   local signers; signers="$(mktemp)"; signers_line "$PUB" > "$signers"
-  for f in dist/update.sh dist/install.sh dist/voidstation-install.sh; do
+  for f in dist/update.sh dist/install.sh; do
     if ! ssh-keygen -Y verify -f "$signers" -I voidstation-release -n voidstation -s "$f.sig" < "$f" >/dev/null 2>&1; then
       ok=1; echo "  Signatur fehlt/ungueltig: $f"
     fi
@@ -301,6 +301,7 @@ cp dist/*.sig "$sigs/" 2>/dev/null || true
 ./build.sh | sed -n '/^Version:/p'
 cp "$sigs"/*.sig dist/ 2>/dev/null || true
 rm -rf "$sigs"
+for f in dist/*.sig; do [ -e "${f%.sig}" ] || rm -f "$f"; done   # Signaturen weggefallener Dateien
 
 say "Signieren"
 if verify_dist >/dev/null 2>&1; then
@@ -312,7 +313,7 @@ else
     trap 'ssh-agent -k >/dev/null 2>&1' EXIT
     if ssh-add -q -t 300 "$KEY"; then signkey="$KEY.pub"; else ssh-agent -k >/dev/null 2>&1; trap - EXIT; fi
   fi
-  for f in dist/update.sh dist/install.sh dist/voidstation-install.sh; do
+  for f in dist/update.sh dist/install.sh; do
     rm -f "$f.sig"
     ssh-keygen -q -Y sign -f "$signkey" -n voidstation "$f"
   done

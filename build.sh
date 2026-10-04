@@ -1,9 +1,8 @@
 #!/bin/bash
 # =====================================================================
 #  Baut die fertigen Skripte (Standard: nach dist/, anders mit OUT=...):
-#    install.sh              – VoidStation auf ein bestehendes Void installieren
+#    install.sh              – VoidStation einrichten (laeuft beim ISO-Bau und im Installer)
 #    update.sh               – VoidStation aktualisieren (behaelt eigene Kacheln/Favoriten)
-#    voidstation-install.sh  – komplette Neuinstallation von der offiziellen Void-ISO aus
 #    build-iso.sh            – Live-ISO mit Installer im Kacheldesign bauen (auf einem Void-System)
 #    version.json            – Versionsnummer, Build-Kennung, Aenderungen (fuer die Geraete)
 #    version.txt             – nur die Build-Kennung (fuer aeltere Geraete)
@@ -97,9 +96,6 @@ subst() {
 { subst update-head.sh;  base64 -w 76 "$tmp/payload.tgz"; } > "$OUT/update.sh"
 cp "$tmp/version.json" "$OUT/version.json"
 echo "$BUILD" > "$OUT/version.txt"
-
-# Einzeldatei fuer die offizielle Void-ISO
-{ cat iso/voidstation-install; echo '__INSTALLER_BELOW__'; base64 -w 76 "$OUT/install.sh"; } > "$OUT/voidstation-install.sh"
 
 # ISO-Bauskript (Live-System mit Installer): install.sh, Installer und die Live-Teile im Anhang
 mkdir "$tmp/iso"
