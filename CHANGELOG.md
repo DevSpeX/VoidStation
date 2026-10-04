@@ -8,6 +8,7 @@ Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.
 - Installer jetzt auch als Qt-Programm: Live-System und Installation laufen ohne WebKit – flüssig auch mit NVIDIA-Treiber in 4K, Maus inklusive
 - Alle Wege wie gewohnt: ganze SSD, neben einem anderen System (Grenze per Steuerkreuz oder Maus ziehen), freier Bereich, selbst einteilen mit GParted; Konto und Rechnername über die Bildschirmtastatur oder die echte Tastatur; „A halten“ zum Installieren; Fortschritt, Fehlerseite mit „Anders versuchen“ und Protokoll
 - „WLAN“ im Installer öffnet direkt die WLAN-Einstellungen
+- Startmenü des Sticks: zuerst die Sprache (Deutsch / English), darunter die beiden Starteinträge in dieser Sprache – Oberfläche, Installer und Tastatur starten gleich passend (English mit US-Tastatur)
 - Die Blätter-Pfeile oben rechts funktionieren wieder (mit der Qt-Startseite ohne Wirkung)
 - Die Web-Oberfläche bleibt als Rückfall: startet die Qt-Oberfläche dreimal nicht, übernimmt sie – auch im Live-System
 

@@ -7,6 +7,7 @@ Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, foll
 - The installer is now a Qt program as well: the live system and the installation run without WebKit – smooth even with the NVIDIA driver in 4K, mouse included
 - All paths as before: whole SSD, next to another system (move the boundary with the d-pad or drag it with the mouse), free space, manual partitioning with GParted; account and hostname via the on-screen keyboard or a real keyboard; “hold A” to install; progress, error page with “Try another way” and log
 - “Wi-Fi” in the installer opens the Wi-Fi settings directly
+- Stick boot menu: pick the language first (Deutsch / English), then the two boot entries in that language – interface, installer and keyboard start out matching (English with a US keyboard)
 - The page arrows at the top right work again (they had no effect with the Qt start page)
 - The web interface stays as a fallback: if the Qt interface fails to start three times, it takes over – in the live system too
 

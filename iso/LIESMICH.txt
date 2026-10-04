@@ -8,11 +8,13 @@ Starten
   das geht auch, dann installiert VoidStation aber nur auf eine ganze SSD.
 
 Startmenü
-  Start VoidStation Live                 Live-System (nichts wird installiert), freie Grafiktreiber
-  Start VoidStation Live (NVIDIA only)   mit NVIDIA-Treiber – für GeForce GTX 16xx, RTX 20xx und neuer
-  Reboot                                 Neustart
-  Sprache: im Live-System unter Einstellungen; Sprache und Tastatur fürs System wählt der Installer.
-  Mit NVIDIA-Karte über „NVIDIA only“ starten und von dort installieren – dann bekommt auch
+  Zuerst die Sprache wählen (Deutsch / English), darunter die beiden Einträge:
+  VoidStation Live starten                Live-System (nichts wird installiert), freie Grafiktreiber
+  VoidStation Live starten (nur NVIDIA)   mit NVIDIA-Treiber – für GeForce GTX 16xx, RTX 20xx und neuer
+  Reboot                                  Neustart
+  Die Sprache gilt für Oberfläche, Installer und Tastatur (English: US-Tastatur); ändern lässt
+  sie sich im Live-System unter Einstellungen und für das System im Installer. Esc führt zurück.
+  Mit NVIDIA-Karte über „nur NVIDIA“ starten und von dort installieren – dann bekommt auch
   das installierte System den NVIDIA-Treiber. Startet die Oberfläche damit nicht, den ersten
   Eintrag nehmen.
 

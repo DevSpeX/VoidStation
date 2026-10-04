@@ -6,11 +6,16 @@ VoidStation Live-ISO: eigenes Startmenue mit Logo, LIESMICH/README beilegen.
   grub-entries.py <iso-ein> <iso-aus> <LIESMICH.txt> <README.txt> <art-ordner>
 
 void-mklive baut zwei Startmenues: GRUB fuer UEFI (boot/grub/grub_void.cfg) und isolinux fuer BIOS
-(boot/isolinux/isolinux.cfg). Beide werden komplett ersetzt – es bleiben genau drei Eintraege:
+(boot/isolinux/isolinux.cfg). Beide werden komplett ersetzt – oben steht die Sprache, darunter je zwei Starteintraege:
 
-  Start VoidStation Live                freie Treiber (Intel, AMD, nouveau fuer NVIDIA)
-  Start VoidStation Live (NVIDIA only)  NVIDIA-Treiber statt nouveau (GeForce GTX 16xx / RTX 20xx und neuer)
+  Deutsch  ›  VoidStation Live starten                freie Treiber (Intel, AMD, nouveau fuer NVIDIA)
+              VoidStation Live starten (nur NVIDIA)   NVIDIA-Treiber statt nouveau (GTX 16xx / RTX 20xx und neuer)
+  English  ›  Start VoidStation Live
+              Start VoidStation Live (NVIDIA only)
   Reboot
+
+Die Sprache stellt Oberflaeche, Installer und Tastatur ein (voidstation.lang, locale.LANG, vconsole.keymap).
+Ohne Tastendruck startet nach TIMEOUT Sekunden "Deutsch › VoidStation Live starten".
 
 Kernel, Initramfs und die Grund-Befehlszeile kommen aus dem ersten mklive-Eintrag. Das UEFI-Menue
 bekommt das Theme aus <art-ordner>/grub (Hintergrund, Logo, Kacheln, Schriften), das BIOS-Menue
@@ -37,11 +42,15 @@ NVIDIA = "splash voidstation.gpu=nvidia modprobe.blacklist=nouveau,nova_core,nov
 # so gibt es auch ohne UEFI ein Startbild statt Textmeldungen. 791 (0x317) ist seit VBE 1.2 genormt; fehlt
 # der Modus trotzdem, fragt der Kernel 30 s nach und startet dann im Textmodus weiter.
 BIOS_EXTRA = "vga=791"
-ENTRIES = [  # (id, Titel, Zusatz-Parameter); None = Neustart
-    ("vs-live", "Start VoidStation Live", FREE),
-    ("vs-nvidia", "Start VoidStation Live (NVIDIA only)", NVIDIA),
-    ("vs-reboot", "Reboot", None),
+# BIOS-Menue (isolinux) kennt nur Codepage 437 ohne UTF-8 – dort keine Umlaute
+LANGS = [  # (id, Menuepunkt, Zusatz-Parameter der Sprache, zurueck zur Sprachwahl (BIOS), [(id, Titel, Treiber-Parameter)])
+    ("de", "Deutsch", "voidstation.lang=de locale.LANG=de_DE.UTF-8 vconsole.keymap=de", "Andere Sprache",
+     [("live", "VoidStation Live starten", FREE), ("nvidia", "VoidStation Live starten (nur NVIDIA)", NVIDIA)]),
+    ("en", "English", "voidstation.lang=en locale.LANG=en_US.UTF-8 vconsole.keymap=us", "Other language",
+     [("live", "Start VoidStation Live", FREE), ("nvidia", "Start VoidStation Live (NVIDIA only)", NVIDIA)]),
 ]
+REBOOT = ("vs-reboot", "Reboot")
+DEFAULT = ("de", "live")                                    # Start nach Ablauf des Countdowns
 FONTS = ("vs-20.pf2", "vs-30.pf2", "vs-mono-20.pf2")        # build-iso.sh erzeugt sie mit grub-mkfont
 
 
@@ -129,6 +138,7 @@ insmod png
 insmod gfxmenu
 
 set vs_theme="(${{voidlive}}){THEME_DIR}"
+export vs_theme
 # eigene Schriften zuerst: GRUB nimmt fuer unbekannte Namen die zuletzt geladene (unicode.pf2)
 {fonts}
 if loadfont "(${{voidlive}})/boot/grub/fonts/unicode.pf2" ; then
@@ -140,21 +150,25 @@ if loadfont "(${{voidlive}})/boot/grub/fonts/unicode.pf2" ; then
     terminal_output gfxterm
     if [ -e "${{vs_theme}}/theme.txt" ]; then
         set theme="${{vs_theme}}/theme.txt"
+        export theme
     fi
 fi
 
-set default="vs-live"
+# Sprache waehlen, darunter die beiden Starteintraege (Esc fuehrt zurueck zur Sprachwahl)
+set default="vs-{DEFAULT[0]}>vs-{DEFAULT[0]}-{DEFAULT[1]}"
 set timeout={TIMEOUT}
 set timeout_style=menu
 """]
-    for eid, title, extra in ENTRIES:
-        if extra is None:
-            out.append(f'menuentry "{title}" --id "{eid}" {{\n    reboot\n}}\n')
-            continue
-        out.append(f'menuentry "{title}" --id "{eid}" {{\n'
-                   f'    set gfxpayload="keep"\n'
-                   f'    linux {kernel} {merge_args(base, extra)}\n'
-                   f'    initrd {initrd}\n}}\n')
+    for lid, lname, lextra, _back, entries in LANGS:
+        sub = [f'submenu "{lname}" --id "vs-{lid}" {{']
+        for eid, title, extra in entries:
+            sub.append(f'    menuentry "{title}" --id "vs-{lid}-{eid}" {{\n'
+                       f'        set gfxpayload="keep"\n'
+                       f'        linux {kernel} {merge_args(base, extra + " " + lextra)}\n'
+                       f'        initrd {initrd}\n    }}')
+        sub.append("}\n")
+        out.append("\n".join(sub))
+    out.append(f'menuentry "{REBOOT[1]}" --id "{REBOOT[0]}" {{\n    reboot\n}}\n')
     return "\n".join(out)
 
 
@@ -179,8 +193,8 @@ def build_isolinux(cfg):
 UI vesamenu.c32
 PROMPT 0
 TIMEOUT {TIMEOUT * 10}
-ONTIMEOUT vs-live
-DEFAULT vs-live
+ONTIMEOUT vs-{DEFAULT[0]}-{DEFAULT[1]}
+DEFAULT vs-{DEFAULT[0]}-{DEFAULT[1]}
 MENU BACKGROUND {SPLASH}
 MENU TABMSG
 MENU AUTOBOOT Start in # s
@@ -209,11 +223,14 @@ MENU COLOR timeout_msg 0 #ff8a8f94 #00000000 none
 MENU COLOR timeout     0 #ff8a8f94 #00000000 none
 MENU COLOR help        0 #ff8a8f94 #00000000 none
 """]
-    for eid, title, extra in ENTRIES:
-        if extra is None:
-            out.append(f"LABEL {eid}\n  MENU LABEL {title}\n  COM32 reboot.c32\n")
-            continue
-        out.append(f"LABEL {eid}\n  MENU LABEL {title}\n  KERNEL {kernel}\n  APPEND {merge_args(base, extra + ' ' + BIOS_EXTRA)}\n")
+    # Untermenues erben Farben und Hintergrund; je zwei Eintraege + Zurueck = drei Zeilen wie oben
+    for lid, lname, lextra, back, entries in LANGS:
+        out.append(f"MENU BEGIN vs-{lid}\n  MENU LABEL {lname}\n  MENU TITLE\n")
+        for eid, title, extra in entries:
+            out.append(f"  LABEL vs-{lid}-{eid}\n    MENU LABEL {title}\n    KERNEL {kernel}\n"
+                       f"    APPEND {merge_args(base, extra + ' ' + lextra + ' ' + BIOS_EXTRA)}\n")
+        out.append(f"  LABEL vs-{lid}-back\n    MENU LABEL {back}\n    MENU EXIT\nMENU END\n")
+    out.append(f"LABEL {REBOOT[0]}\n  MENU LABEL {REBOOT[1]}\n  COM32 reboot.c32\n")
     return "\n".join(out)
 
 
@@ -254,7 +271,7 @@ def main(src, dst, liesmich, readme, art):
 
         xorriso("-indev", src, "-outdev", dst, "-boot_image", "any", "replay",
                 *maps, "-map", liesmich, "/LIESMICH.txt", "-map", readme, "/README.txt", "-commit")
-    print("Startmenue angepasst: " + ", ".join(done) + " – " + " / ".join(t for _, t, _ in ENTRIES))
+    print("Startmenue angepasst: " + ", ".join(done) + " – " + " / ".join(l[1] for l in LANGS) + " / " + REBOOT[1])
 
 
 if __name__ == "__main__":

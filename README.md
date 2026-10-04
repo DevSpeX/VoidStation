@@ -125,7 +125,8 @@ das Live-System auf die SSD – dafür braucht er kein Internet.
 - **Startmodus:** UEFI kann alle Wege. Im BIOS-Modus (Legacy/CSM, z. B. ältere PCs oder VirtualBox/QEMU mit
   Standardeinstellungen) gibt es nur „ganze SSD“: GPT mit BIOS-Boot-Partition, GRUB für BIOS und zusätzlich
   für UEFI – die SSD startet danach in beiden Modi.
-- **Startmenü des Sticks:** mit Logo – *Start VoidStation Live* (freie Treiber) · *Start VoidStation Live (NVIDIA only)*
+- **Startmenü des Sticks:** mit Logo – oben die Sprache (*Deutsch* / *English*, stellt Oberfläche, Installer und Tastatur ein),
+  darunter je *VoidStation Live starten* (freie Treiber) und *… (nur NVIDIA)* bzw. *Start VoidStation Live* / *… (NVIDIA only)*
   (NVIDIA-Treiber für GeForce GTX 16xx / RTX 20xx und neuer) · *Reboot*. Beim Hochfahren zeigt ein Startbild das Logo.
   Wer über „NVIDIA only“ installiert, bekommt den NVIDIA-Treiber auch im installierten System – sonst entfernt der
   Installer ihn wieder (samt DKMS und Compiler).

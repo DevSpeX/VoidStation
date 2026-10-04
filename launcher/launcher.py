@@ -411,11 +411,26 @@ def settings_load():
     return s
 
 
+def cmdline_value(name):
+    """Wert eines Kernel-Parameters name=wert (z. B. voidstation.lang aus dem Startmenue des Sticks)."""
+    try:
+        for a in Path("/proc/cmdline").read_text().split():
+            if a.startswith(name + "="):
+                return a.split("=", 1)[1]
+    except OSError:
+        pass
+    return None
+
+
 def ui_lang(s=None):
-    """Sprache der Oberflaeche: Einstellung, sonst aus LANG der Sitzung (en_US.UTF-8 -> en), sonst Deutsch."""
+    """Sprache der Oberflaeche: Einstellung, im Live-System sonst die Sprache aus dem Startmenue,
+    sonst aus LANG der Sitzung (en_US.UTF-8 -> en), sonst Deutsch."""
+    ids = {l["id"] for l in LANGS}
     lang = (s or settings_load()).get("lang")
-    if lang in {l["id"] for l in LANGS}:
+    if lang in ids:
         return lang
+    if Path("/etc/voidstation-live").exists() and cmdline_value("voidstation.lang") in ids:
+        return cmdline_value("voidstation.lang")
     env = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or ""
     return "en" if env.startswith("en") else "de"
 
