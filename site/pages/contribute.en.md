@@ -8,7 +8,7 @@ Everything is on [GitHub](https://github.com/Panther92/VoidStation): the start s
 
 ## Reporting bugs {#bugs}
 
-Ideally as an [issue on GitHub](https://github.com/Panther92/VoidStation/issues). Helpful details:
+Ideally as an [issue on GitHub](https://github.com/Panther92/VoidStation/issues). Questions, ideas and "how do I …?" belong in the [Discussions](https://github.com/Panther92/VoidStation/discussions) instead. Helpful details for bugs:
 
 - the VoidStation version (shown in the update dialog and in the news)
 - the device (CPU, graphics) and how VoidStation was installed

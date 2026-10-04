@@ -1,6 +1,6 @@
 # VoidStation
 
-**[English](README.md)** · Deutsch · [voidstation.de](https://voidstation.de) · [Download](https://voidstation.de/download/)
+**[English](README.md)** · Deutsch · [voidstation.de](https://voidstation.de) · [Download](https://voidstation.de/download/) · [Fragen](https://github.com/Panther92/VoidStation/discussions) · [Fehler melden](https://github.com/Panther92/VoidStation/issues)
 
 Void Linux als TV-Station: Kacheloberfläche im Stil von Windows 8, dunkel, bedienbar mit Gamepad, Fernbedienung, Maus und Tastatur.
 Läuft auf Openbox; die Startseite ist ein eigenes Programm in Python + Qt 6, das direkt auf der Grafikkarte zeichnet.

@@ -36,6 +36,9 @@
     "t.contribute": "Mitmachen",
     "t.versions": "Versionen",
     "t.issues": "Fehler melden",
+    "t.issues.sub": "GitHub Issues",
+    "t.discuss": "Fragen & Hilfe",
+    "t.discuss.sub": "GitHub Discussions",
 
     "s.start": "Startseite",
     "s.tv": "Fernsehen",
@@ -123,6 +126,9 @@
     "t.contribute": "Contribute",
     "t.versions": "Releases",
     "t.issues": "Report a bug",
+    "t.issues.sub": "GitHub Issues",
+    "t.discuss": "Questions & help",
+    "t.discuss.sub": "GitHub Discussions",
 
     "s.start": "Start screen",
     "s.tv": "TV",

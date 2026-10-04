@@ -8,7 +8,7 @@ Alles liegt auf [GitHub](https://github.com/Panther92/VoidStation): Startseite u
 
 ## Fehler melden {#fehler}
 
-Am besten als [Issue auf GitHub](https://github.com/Panther92/VoidStation/issues). Hilfreich sind:
+Am besten als [Issue auf GitHub](https://github.com/Panther92/VoidStation/issues). Fragen, Ideen und „Wie geht …?“ gehören dagegen in die [Discussions](https://github.com/Panther92/VoidStation/discussions). Hilfreich bei Fehlern sind:
 
 - die VoidStation-Version (steht im Update-Dialog und in den News)
 - das Gerät (Prozessor, Grafik) und wie VoidStation installiert wurde

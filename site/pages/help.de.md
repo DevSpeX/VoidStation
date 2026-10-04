@@ -1,6 +1,13 @@
 # Hilfe
 
-Bedienung, Updates, Freigabe und die häufigsten Fragen. Fehlt etwas? Dann [frag auf GitHub](https://github.com/Panther92/VoidStation/issues).
+Bedienung, Updates, Freigabe und die häufigsten Fragen. Fehlt etwas? Dann [frag in den Discussions](https://github.com/Panther92/VoidStation/discussions).
+
+## Hilfe bekommen {#support}
+
+- **Fragen, Ideen, Erfahrungen:** in den [Discussions auf GitHub](https://github.com/Panther92/VoidStation/discussions). Unter *Q&A* lassen sich Antworten als Lösung markieren, so finden andere sie später wieder.
+- **Etwas funktioniert nicht:** als [Issue auf GitHub](https://github.com/Panther92/VoidStation/issues). Was dabei hilft, steht unter [Fehler melden](seite:contribute#fehler).
+
+Zum Lesen brauchst du kein Konto, zum Schreiben ein kostenloses GitHub-Konto.
 
 ## Bedienung {#bedienung}
 
@@ -67,4 +74,4 @@ Unter `~/.local/share/voidstation/logs/`. Das Protokoll des Installers liegt wä
 
 ### Ist VoidStation ein offizielles Void-Linux-Projekt?
 
-Nein. VoidStation ist ein eigenständiges Projekt, das auf Void Linux aufbaut. Fragen zu VoidStation bitte nicht an das Void-Team, sondern [hierher](https://github.com/Panther92/VoidStation/issues).
+Nein. VoidStation ist ein eigenständiges Projekt, das auf Void Linux aufbaut. Fragen zu VoidStation bitte nicht an das Void-Team, sondern [in die Discussions](https://github.com/Panther92/VoidStation/discussions).

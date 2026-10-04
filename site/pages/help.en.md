@@ -1,6 +1,13 @@
 # Help
 
-Controls, updates, the shared folder and the most common questions. Something missing? [Ask on GitHub](https://github.com/Panther92/VoidStation/issues).
+Controls, updates, the shared folder and the most common questions. Something missing? [Ask in the Discussions](https://github.com/Panther92/VoidStation/discussions).
+
+## Getting help {#support}
+
+- **Questions, ideas, experiences:** in the [Discussions on GitHub](https://github.com/Panther92/VoidStation/discussions). In *Q&A*, answers can be marked as the solution, so others find them later.
+- **Something is broken:** open an [issue on GitHub](https://github.com/Panther92/VoidStation/issues). What helps is listed under [Reporting bugs](seite:contribute#bugs).
+
+Reading needs no account; posting needs a free GitHub account.
 
 ## Controls {#controls}
 
@@ -67,4 +74,4 @@ In `~/.local/share/voidstation/logs/`. During installation, the installer's log 
 
 ### Is VoidStation an official Void Linux project?
 
-No. VoidStation is an independent project built on Void Linux. Please don't take questions about VoidStation to the Void team – ask [here](https://github.com/Panther92/VoidStation/issues) instead.
+No. VoidStation is an independent project built on Void Linux. Please don't take questions about VoidStation to the Void team – ask [in the Discussions](https://github.com/Panther92/VoidStation/discussions) instead.
