@@ -41,17 +41,24 @@ Flickable {
         x = Math.max(0, Math.min(maxX, x))
         if (Math.abs(x - target) > 0.5 || instant) scrollTo(x, instant)
     }
+    // Gruppen auch eine Ebene tiefer (z. B. in einem Loader, der je nach Schritt andere Gruppen zeigt)
     function groupList() {
         var out = []
-        for (var i = 0; i < row.children.length; i++) {
-            var g = row.children[i]
-            if (g.isGroup && g.visible) out.push(g)
+        function walk(it, depth) {
+            for (var i = 0; i < it.children.length; i++) {
+                var g = it.children[i]
+                if (!g.visible) continue
+                if (g.isGroup) out.push(g)
+                else if (depth < 3) walk(g, depth + 1)
+            }
         }
+        walk(row, 0)
         return out
     }
     function groupOf(item) {
-        for (var p = item; p; p = p.parent) if (p.isGroup && p.parent === row) return p
-        return null
+        var g = null
+        for (var p = item; p && p !== row; p = p.parent) if (p.isGroup) g = p
+        return g
     }
     WheelHandler {
         onWheel: function (ev) {

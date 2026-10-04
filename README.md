@@ -2,7 +2,7 @@
 
 Void Linux als TV-Station: Kacheloberfläche im Stil von Windows 8, dunkel, bedienbar mit Maus, Tastatur und Gamepad.
 Läuft auf Openbox; die Startseite ist ein eigenes Programm in Python + Qt 6, das direkt auf der Grafikkarte zeichnet.
-Die bisherige Web-Oberfläche (WebKitGTK) bleibt umschaltbar (Einstellungen → System → Oberfläche) und läuft im Live-System mit dem Installer.
+Auch der Installer im Live-System ist Qt. Die bisherige Web-Oberfläche (WebKitGTK) bleibt als Rückfall umschaltbar (Einstellungen → System → Oberfläche).
 
 **Funktionen:** YouTube (Firefox im Kiosk-Modus), Radio mit Suche und Favoriten, TV-Sender aus aller Welt (iptv-org),
 Emulatoren, AppCenter für optionale Apps (xbps, Flatpak, AppImage, Web), Einstellungen (Sprache, Skalierung, Auflösung,
@@ -218,7 +218,7 @@ VoidStation erkennt neue CSS-Dateien im Theme-Ordner automatisch und bietet sie 
 |---|---|
 | `launcher/launcher.py` | Backend: HTTP-API auf 127.0.0.1:8765, Apps starten/umschalten, Radio, TV, AppCenter, Einstellungen |
 | `launcher/qt/` | Startseite (Python + Qt 6): `voidstation-home.py` (Fenster, Gamepad, Texte, Farben), `qml/` (Oberfläche), `icons.py` |
-| `launcher/web/index.html` | Web-Oberfläche (Kacheln, Radio, TV, AppCenter, Einstellungen) und Installer im Live-System |
+| `launcher/web/index.html` | Web-Oberfläche (Kacheln, Radio, TV, AppCenter, Einstellungen, Installer) – Rückfall, falls Qt nicht startet |
 | `launcher/web/themes/` | Themes als modulare CSS-Dateien (`default-dark`, `default-light`, `high-contrast`, `nord`) – gelten für beide Oberflächen |
 | `launcher/web/i18n/` | Texte beider Oberflächen: `de.json`, `en.json` |
 | `launcher/voidstation-shell.py` | Vollbild-Fenster (WebKitGTK) für die Web-Oberfläche; Firefox als Rückfall |
@@ -239,7 +239,7 @@ VoidStation erkennt neue CSS-Dateien im Theme-Ordner automatisch und bietet sie 
 | `dist/` | **fertige Skripte**, erzeugt mit `./build.sh` |
 
 Zum Ausprobieren ohne Veröffentlichung: `OUT=/tmp/vs ./build.sh`.
-Qt-Startseite ohne Void ausprobieren: `python3 tools/qt-preview.py` (braucht `pip install PySide6-Essentials`).
+Qt-Startseite ohne Void ausprobieren: `python3 tools/qt-preview.py` (braucht `pip install PySide6-Essentials`), Installer: `--live` (dazu `--fail` für die Fehlerseite, `--bios` für den BIOS-Modus).
 Screenshots neu erzeugen (mit Beispieldaten, ohne Void): `python3 tools/screenshots.py`
 (braucht `pip install playwright pillow` und `playwright install chromium`).
 

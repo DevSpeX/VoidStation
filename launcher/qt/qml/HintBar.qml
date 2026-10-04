@@ -18,7 +18,7 @@ Item {
     }
     function hintsFor(l) {
         var T = Ui.t, h
-        Nav.serial
+        Nav.serial; inst.step
         if (l === "home") h = [T("hint.open"), T("hint.close"), T("hint.home")]
         else if (l === "radio") h = [T("hint.play"), T("hint.fav"), T("hint.volume"), T("hint.back")]
         else if (l === "settings") h = [settings.cat ? T("hint.select") : T("hint.open"), T("hint.back")]
@@ -27,6 +27,7 @@ Item {
         else if (l === "apps") h = [Nav.current && Nav.current.isCat ? T("hint.appCat") : T("hint.appInstall"), T("hint.appCats"), T("hint.back")]
         else if (l === "adlg") h = (adlg.fits ? [] : [T("hint.scrollText")]).concat([T("hint.cancel")])
         else if (l === "dialog") h = [T("hint.cancel")]
+        else if (l === "inst") h = inst.hints().slice()
         else if (l === "osk") h = [T("hint.select"), T("osk.space"), T("osk.backspace"), T("common.cancel")]
         else h = [T("hint.back")]
         var tr = app.curTrack()

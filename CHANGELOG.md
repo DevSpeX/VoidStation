@@ -4,6 +4,13 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.14.0 – 2026-10-04
+- Installer jetzt auch als Qt-Programm: Live-System und Installation laufen ohne WebKit – flüssig auch mit NVIDIA-Treiber in 4K, Maus inklusive
+- Alle Wege wie gewohnt: ganze SSD, neben einem anderen System (Grenze per Steuerkreuz oder Maus ziehen), freier Bereich, selbst einteilen mit GParted; Konto und Rechnername über die Bildschirmtastatur oder die echte Tastatur; „A halten“ zum Installieren; Fortschritt, Fehlerseite mit „Anders versuchen“ und Protokoll
+- „WLAN“ im Installer öffnet direkt die WLAN-Einstellungen
+- Die Blätter-Pfeile oben rechts funktionieren wieder (mit der Qt-Startseite ohne Wirkung)
+- Die Web-Oberfläche bleibt als Rückfall: startet die Qt-Oberfläche dreimal nicht, übernimmt sie – auch im Live-System
+
 ## 0.13.3 – 2026-10-03
 - WLAN: Falsches Passwort meldet jetzt „Passwort falsch? Bitte nochmal eingeben.“ statt der nmcli-Rohmeldung, das Feld wird geleert und die Bildschirmtastatur geht wieder auf; auch „Netz nicht gefunden“, „antwortet nicht“ und „kein WLAN-Adapter“ im Klartext
 - WLAN: Ein altes, gespeichertes Profil für dasselbe Netz wird beim Verbinden mit Passwort ersetzt, ein fehlgeschlagener Versuch hinterlässt kein halbes Profil mehr (das blockierte bisher den nächsten Versuch)

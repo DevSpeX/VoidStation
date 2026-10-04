@@ -118,7 +118,7 @@ for p in $LIVE_PKGS; do
   if xbps-query -R "$p" >/dev/null 2>&1; then OK_PKGS="$OK_PKGS $p"; else SKIPPED="$SKIPPED $p"; fi
 done
 [ -n "$SKIPPED" ] && warn "nicht in den Paketquellen, weggelassen:$SKIPPED"
-for p in xlibre-minimal firefox python3 NetworkManager grub grub-x86_64-efi nvidia; do
+for p in xlibre-minimal firefox python3 python3-pyside6-declarative NetworkManager grub grub-x86_64-efi nvidia; do
   case " $OK_PKGS " in *" $p "*) ;; *) die "Pflichtpaket fehlt in den Paketquellen: $p" ;; esac
 done
 LIVE_PKGS="${OK_PKGS# }"

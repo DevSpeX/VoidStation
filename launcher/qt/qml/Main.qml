@@ -61,14 +61,16 @@ Window {
             var H = win.height, W = win.width
             if (!H || !W) return
             Ui.screenW = W; Ui.screenH = H
-            var r = H / 768, f = Ui.scale * r
+            // Der Installer ist dichter als die anderen Seiten: Schrift hoechstens so gross wie Skalierung 1,15
+            var sc = layerName === "inst" ? Math.min(Ui.scale, 1.15) : Ui.scale
+            var r = H / 768, f = sc * r
             Ui.f = f
             Ui.padX = W * 0.06
             Ui.hintH = hint.height + 22 * f
             var stageH = H - homeHeader.height - Ui.hintH
             var titleH = 18 * f * 1.36 + 14 * f
             var avail = stageH - titleH
-            var gap = 10 * f, want = 161 * r * (1 + (Ui.scale - 1) * 0.55), rows = 3, u = want
+            var gap = 10 * f, want = 161 * r * (1 + (sc - 1) * 0.55), rows = 3, u = want
             for (rows = 3; rows >= 1; rows--) {
                 var fit = (avail - gap * (rows - 1)) / rows
                 if (rows === 1 || fit >= want * 0.82) { u = Math.min(want, fit); break }
@@ -81,7 +83,7 @@ Window {
         Connections { target: hint; function onHeightChanged() { Qt.callLater(app.layout) } }
 
         // ------------------------------------------------------------ Ebenen
-        readonly property var layerOrder: [osk, adlg, powerDlg, roms, tv, apps, radio, settings]
+        readonly property var layerOrder: [osk, adlg, powerDlg, roms, tv, apps, radio, settings, inst]
         property string layerName: "home"
         property Item layerRoot: homeView
         function updateLayer() {
@@ -94,10 +96,13 @@ Window {
             else if (apps.open) { n = "apps"; r = apps }
             else if (radio.open) { n = "radio"; r = radio }
             else if (settings.open) { n = "settings"; r = settings }
+            else if (inst.open) { n = "inst"; r = inst }            // Installer liegt unter den anderen Ebenen
+            var relayout = (n === "inst") !== (layerName === "inst")
             layerName = n; layerRoot = r
+            if (relayout) layout()
         }
         function curTrack() {
-            return ({ home: homeTrack, radio: radio.track, tv: tv.track, apps: null, settings: settings.track, roms: roms.track })[layerName] || null
+            return ({ home: homeTrack, radio: radio.track, tv: tv.track, apps: null, settings: settings.track, roms: roms.track, inst: inst.track })[layerName] || null
         }
         function navItems() { return Nav.collect(layerRoot) }
         function setFocus(item, instant) { Nav.setFocus(item, instant, layerName) }
@@ -200,15 +205,29 @@ Window {
                 return back()
             }
             if (item.clickActivate) return item.clickActivate()
-            if (item.navigable) setFocus(item)
+            if (item.navigable === false) {         // nur mit der Maus bedienbar (z. B. Blaetter-Pfeile oben rechts)
+                if (!item.off) item.activate()
+                return
+            }
+            setFocus(item)
             activate(item)
         }
-        function mousePress(item) { if (Nav.alive(item, layerRoot) && item.pressFlash) item.pressedNow = true }
-        function mouseRelease(item) { item.pressedNow = false }
+        function mousePress(item) {
+            if (!Nav.alive(item, layerRoot)) return
+            if (item.pressFlash) item.pressedNow = true
+            if (item.pressStart) item.pressStart()
+        }
+        function mouseRelease(item) { item.pressedNow = false; if (item.pressEnd) item.pressEnd() }
+        property bool keyHeld: false              // Enter / Leertaste gedrueckt (Installieren: halten)
+        Keys.onReleased: function (e) {
+            if ((e.key === Qt.Key_Return || e.key === Qt.Key_Enter || e.key === Qt.Key_Space) && !e.isAutoRepeat) keyHeld = false
+        }
 
         Keys.onPressed: function (e) {
             var k = e.key
             if (layerName === "osk" && osk.key(e)) { e.accepted = true; return }
+            if (layerRoot.keyFilter && layerRoot.keyFilter(e)) { e.accepted = true; return }
+            if ((k === Qt.Key_Return || k === Qt.Key_Enter || k === Qt.Key_Space) && !e.isAutoRepeat) keyHeld = true
             e.accepted = true
             if (k === Qt.Key_Left) move("left")
             else if (k === Qt.Key_Right) move("right")
@@ -228,6 +247,7 @@ Window {
             target: vs
             function onPadKey(k) {
                 if (app.layerName === "osk") return osk.pad(k)
+                if (app.layerRoot.padFilter && app.layerRoot.padFilter(k)) return
                 if (k === "a") app.activate()
                 else if (k === "b") app.back()
                 else if (k === "x" || k === "y") app.secondary()
@@ -255,9 +275,16 @@ Window {
                 load()
                 poll()
                 started = true
+                if (live) liveStart()
             }, function () { retryInit.restart() })
         }
         Timer { id: retryInit; interval: 1000; onTriggered: app.init() }
+        // Live-System: Installer gleich zeigen, wenn mit "voidstation.install" gestartet oder eine Installation laeuft/lief
+        function liveStart() {
+            Api.get("/api/install/status", function (st) {
+                if (st.autostart || ["running", "error", "done"].indexOf(st.state) >= 0) inst.openInst()
+            })
+        }
 
         function load(keepFocus) {
             Api.get("/tiles.json", function (c) {
@@ -314,7 +341,7 @@ Window {
             if (t.type === "tv") return openLayer(tv)
             if (t.type === "apps") return openLayer(apps)
             if (t.type === "roms") return roms.openFor(t)
-            if (t.type === "install") return toast(Ui.t("qt.installerWeb"))
+            if (t.type === "install") return inst.openInst()
             if (emuSystems.indexOf(t.id) >= 0) {
                 return Api.get("/api/roms?system=" + encodeURIComponent(t.id), function (r) {
                     if (r && (r.count > 0 || (r.roms && r.roms.length))) roms.openFor(t); else launch(t)
@@ -504,6 +531,7 @@ Window {
 
         // ------------------------------------------------------------ Ebenen
         RadioLayer { id: radio; anchors.fill: parent }
+        InstallLayer { id: inst; anchors.fill: parent }
         SettingsLayer { id: settings; anchors.fill: parent }
         AppsLayer { id: apps; anchors.fill: parent }
         TvLayer { id: tv; anchors.fill: parent }

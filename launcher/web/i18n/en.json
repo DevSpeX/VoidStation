@@ -156,7 +156,6 @@
   "frontend.web": "Classic (web)",
   "settings.frontendHint": "The new interface is a program of its own and draws directly on the graphics card; the classic one is the previous web interface. Switching briefly restarts the start page.",
   "settings.frontendToast": "Switching interface …",
-  "qt.installerWeb": "In the live system, the installer runs in the web interface.",
   "settings.channel": "Update channel",
   "settings.update": "Update",
   "settings.sysRemind": "Remind about system updates after",

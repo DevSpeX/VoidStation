@@ -4,7 +4,7 @@
 #   qt  (Standard) natives Programm, Python + Qt 6 (qt/voidstation-home.py)
 #   web Web-Oberflaeche in der WebKit-Shell, Firefox als Rueckfall
 #       (Firefox erzwingen mit:  touch ~/.local/share/voidstation/use-firefox)
-# Das Live-System nimmt immer die Web-Oberflaeche (dort steckt der Installer).
+# Auch das Live-System nimmt die Qt-Oberflaeche (mit Installer); die Web-Oberflaeche bleibt Rueckfall.
 # Beendet sich die Qt-Oberflaeche dreimal hintereinander gleich nach dem Start, geht es mit web weiter.
 # Web-Oberflaeche mit NVIDIA-Treiber: Firefox statt WebKit – WebKit muss dort jedes Bild ueber den
 # Hauptspeicher kopieren (der schnelle DMA-BUF-Weg bleibt grau), in 4K ruckelt das. Firefox zeichnet
@@ -24,7 +24,7 @@ wait_launcher() {
 }
 QT_FAILS=0
 want_qt() {
-  [ ! -e /etc/voidstation-live ] && [ "$QT_FAILS" -lt 3 ] && [ -f "$TV/qt/voidstation-home.py" ] \
+  [ "$QT_FAILS" -lt 3 ] && [ -f "$TV/qt/voidstation-home.py" ] \
     && [ "$(cat "$TV/frontend" 2>/dev/null || echo qt)" != web ] \
     && python3 -c 'import PySide6.QtQuick' 2>/dev/null
 }

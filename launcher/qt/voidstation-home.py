@@ -289,6 +289,7 @@ class Vs(QObject):
         self._de = self._load_lang("de")
         self._set_lang("de")
         self._icons = {}
+        self.pad = None
 
     # ---- HTTP (in Threads, Antwort per Signal) ----
     @Slot(int, str, str, str)
@@ -374,6 +375,24 @@ class Vs(QObject):
             self._icons[key] = "data:image/svg+xml;base64," + base64.b64encode(svg.encode()).decode()
         return self._icons[key]
 
+    @Slot(str, result=str)
+    def tzTime(self, tz):
+        """Uhrzeit in einer Zeitzone (fuer die Auswahl im Installer), im Format der Sprache."""
+        try:
+            from datetime import datetime
+            from zoneinfo import ZoneInfo
+            t = datetime.now(ZoneInfo(tz))
+        except Exception:  # noqa: BLE001
+            return ""
+        if self._lang == "de":
+            return t.strftime("%H:%M")
+        return t.strftime("%I:%M %p").lstrip("0")
+
+    @Slot(str, result=bool)
+    def padDown(self, key):
+        """Wird diese Gamepad-Taste gerade gehalten? (Installieren: A halten)"""
+        return self.pad is not None and key in self.pad.pressed()
+
     @Slot(result=float)
     def uptime(self):
         return time.monotonic() - T0
@@ -401,7 +420,8 @@ def main():
             app.setFont(f)
             break
     vs = Vs()
-    pump = PadPump(Gamepad())
+    vs.pad = Gamepad()
+    pump = PadPump(vs.pad)
     pump.key.connect(vs.padKey)
     pump.connected.connect(vs.padConnected)
 
@@ -452,11 +472,15 @@ def main():
                     for typ in (QEvent.KeyPress, QEvent.KeyRelease):
                         QGuiApplication.sendEvent(win, QKeyEvent(typ, 0, Qt.NoModifier, ch))
                 return
+            if name.startswith(("kd:", "ku:")):                  # Taste nur druecken / nur loslassen (halten)
+                key = getattr(Qt, "Key_" + name[3:])
+                QGuiApplication.sendEvent(win, QKeyEvent(QEvent.KeyPress if name[1] == "d" else QEvent.KeyRelease, key, Qt.NoModifier))
+                return
             key = getattr(Qt, "Key_" + name[2:])
             for typ in (QEvent.KeyPress, QEvent.KeyRelease):
                 QGuiApplication.sendEvent(win, QKeyEvent(typ, key, Qt.NoModifier))
         for k in steps:
-            if k.startswith(("k:", "t:", "c:", "m:")):
+            if k.startswith(("k:", "t:", "c:", "m:", "kd:", "ku:")):
                 QTimer.singleShot(t, lambda k=k: press(k))
             elif k.startswith("shot:"):
                 QTimer.singleShot(t, lambda f=k[5:]: win.grabWindow().save(f))

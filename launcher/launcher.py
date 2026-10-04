@@ -548,8 +548,8 @@ def restart_home_later(delay=0.8):
     threading.Thread(target=_go, daemon=True).start()
 
 
-# Oberflaeche der Startseite: "qt" (Python + Qt 6, Standard) oder "web" (WebKit-Shell / Firefox).
-# home.sh liest die Datei "frontend"; das Live-System nimmt immer "web" (Installer).
+# Oberflaeche der Startseite: "qt" (Python + Qt 6, Standard, auch mit Installer im Live-System)
+# oder "web" (WebKit-Shell / Firefox, Rueckfall). home.sh liest die Datei "frontend".
 FRONTEND_FILE = BASE / "frontend"
 
 
@@ -562,7 +562,7 @@ def qt_available():
 
 
 def frontends():
-    return ["web"] if LIVE else (["qt", "web"] if qt_available() else ["web"])
+    return ["qt", "web"] if qt_available() else ["web"]
 
 
 def frontend():

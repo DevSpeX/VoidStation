@@ -3,6 +3,13 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.14.0 – 2026-10-04
+- The installer is now a Qt program as well: the live system and the installation run without WebKit – smooth even with the NVIDIA driver in 4K, mouse included
+- All paths as before: whole SSD, next to another system (move the boundary with the d-pad or drag it with the mouse), free space, manual partitioning with GParted; account and hostname via the on-screen keyboard or a real keyboard; “hold A” to install; progress, error page with “Try another way” and log
+- “Wi-Fi” in the installer opens the Wi-Fi settings directly
+- The page arrows at the top right work again (they had no effect with the Qt start page)
+- The web interface stays as a fallback: if the Qt interface fails to start three times, it takes over – in the live system too
+
 ## 0.13.3 – 2026-10-03
 - Wi-Fi: a wrong password now shows “Wrong password? Please enter it again.” instead of the raw nmcli message, the field is cleared and the on-screen keyboard opens again; “network not found”, “not responding” and “no Wi-Fi adapter” are shown in plain words too
 - Wi-Fi: connecting with a password replaces an old saved profile for the same network, and a failed attempt no longer leaves a half-made profile behind (it used to block the next attempt)

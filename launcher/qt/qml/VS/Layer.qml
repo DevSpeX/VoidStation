@@ -15,6 +15,7 @@ Rectangle {
     property alias stage: stageBox
     property alias backButton: backBtn
     property bool hasBar: barBox.children.length > 0
+    property bool showBar: true
     default property alias content: stageBox.data
     signal opened()
     signal closed()
@@ -94,7 +95,7 @@ Rectangle {
     }
     Flow {
         id: barBox
-        visible: children.length > 0
+        visible: children.length > 0 && ly.showBar
         anchors.top: header.bottom
         x: Ui.padX
         width: parent.width - 2 * Ui.padX
