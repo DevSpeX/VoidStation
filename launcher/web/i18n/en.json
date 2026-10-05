@@ -62,6 +62,7 @@
   "upd.sysError": "Package repository not reachable",
   "upd.rebootKernel": "New kernel installed – restart required",
   "upd.rebootVs": "VoidStation updated – restart required",
+  "upd.kernelStuck": "Kernel {version} is installed, but {running} keeps starting – restarting won’t change that. Please report it on GitHub.",
   "upd.xbpsBusy": "The package manager is busy right now (e.g. in a terminal) – please try again in a moment",
   "upd.more": "and {n} more",
   "upd.keepNoReboot": "Your tiles, favorites and settings are kept. No restart needed.",

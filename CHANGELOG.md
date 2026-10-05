@@ -4,6 +4,13 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.14.2 – 2026-10-05
+- Kernel-Updates: Die gelbe Meldung „Neustart nötig“ verschwand nach dem Neustart nicht, weil der Rechner weiter den alten Kernel startete. Der Direktstart (EFISTUB) nutzt jetzt einen festen Starteintrag „VoidStation EFISTUB“, der bei Kernel-Updates gleich bleibt – der neue Kernel liegt unter festem Namen auf der EFI-Partition
+- Das Initramfs enthält keine Grafiktreiber mehr (die laden ohnehin später) – rund 200 MB kleiner je Kernel; die EFI-Partition lief damit fast voll. Alte Kernel-Dateien werden von dort entfernt
+- Passt ein Kernel nicht auf die EFI-Partition, startet automatisch GRUB mit dem neuesten Kernel
+- Bestehende Geräte werden beim Update umgestellt (Initramfs wird einmal neu gebaut, danach einmal neu starten)
+- Startet ein neuer Kernel trotz Neustart nicht, erscheint statt der Dauermeldung ein Hinweis in Einstellungen → Updates
+
 ## 0.14.1 – 2026-10-04
 - Englische Oberfläche: Die Uhr zeigt nachmittags wieder „2:53 PM“ statt „14:53 PM“
 

@@ -1673,6 +1673,7 @@ function showVs() {
   if (y.error && !y.pkgs.length) line = esc(T('upd.sysError'));
   const rb = vsState.reboot || {};
   if (rb.kernel || rb.voidstation) line += `<br><b>${esc(T(rb.kernel ? 'upd.rebootKernel' : 'upd.rebootVs'))}</b>`;
+  if (rb.kernel_stuck) line += `<br>${esc(T('upd.kernelStuck', { version: rb.kernel_stuck.version, running: rb.kernel_stuck.running }))}`;
   si.innerHTML = `${esc(T('upd.system'))}<br>${line}`;
 }
 async function setSsh(on) {

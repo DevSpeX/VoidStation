@@ -1280,35 +1280,32 @@ class Run:
             os.chmod(gd, 0o755)
         elif gd.exists():
             gd.unlink()
-        # EFISTUB (nur ganze SSD): Kernel direkt starten, GRUB bleibt als Rueckfall
-        hook = T / "etc/default/efibootmgr-kernel-hook"
+        # EFISTUB (nur ganze SSD): Kernel direkt starten, GRUB bleibt als Rueckfall. Der Kernel liegt unter
+        # festen Namen auf der EFI-Partition, der Eintrag "VoidStation EFISTUB" bleibt bei Kernel-Updates gleich
+        # (voidstation-efistub, von install.sh nach /usr/local/sbin gelegt; Hooks in /etc/kernel.d)
         ru = blkid(self.dev("root"), "UUID")
         espdev = self.dev("esp")
         disk = "/dev/" + sh(["lsblk", "-no", "PKNAME", espdev], quiet=True).stdout.split()[0]
         partno = Path(f"/sys/class/block/{Path(espdev).name}/partition").read_text().strip()
-        kd = T / "etc/kernel.d/post-install"
-        for f in (kd / "40-voidstation-esp", kd / "60-voidstation-bootorder", T / "etc/kernel.d/post-remove/40-voidstation-esp"):
-            if f.exists():
-                f.unlink()
+        efistub = T / "usr/local/sbin/voidstation-efistub"
+        if use_stub and not efistub.exists():
+            log("voidstation-efistub fehlt im Zielsystem – Start nur ueber GRUB")
+            use_stub = False
+            self.st["boot"]["efistub"] = False
+            save_state(self.st)
         if use_stub:
-            hook.write_text(f'MODIFY_EFI_ENTRIES=1\nOPTIONS="root=UUID={ru} ro quiet loglevel=3 rd.udev.log_level=3"\n'
-                            f'DISK="{disk}"\nPART={partno}\n')
-            kd.mkdir(parents=True, exist_ok=True)
-            (T / "etc/kernel.d/post-remove").mkdir(parents=True, exist_ok=True)
-            (kd / "40-voidstation-esp").write_text(
-                '#!/bin/sh\n# VoidStation: Kernel fuer EFISTUB auf die EFI-Partition kopieren\n'
-                'cp -f "/boot/vmlinuz-$2" "/boot/initramfs-$2.img" "/boot/efi/"\n')
-            (T / "etc/kernel.d/post-remove/40-voidstation-esp").write_text('#!/bin/sh\nrm -f "/boot/efi/vmlinuz-$2" "/boot/efi/initramfs-$2.img"\n')
-            (kd / "60-voidstation-bootorder").write_text(
-                '#!/bin/sh\nmajor=$(echo "$1" | cut -c 6-)\n'
-                'num=$(efibootmgr | grep -E "^Boot[0-9A-Fa-f]{4}\\*? Void Linux with kernel ${major}([^0-9]|$)" | head -1 | cut -c5-8)\n'
-                '[ -n "$num" ] || exit 0\n'
-                'rest=$(efibootmgr | sed -n "s/^BootOrder: //p" | tr "," "\\n" | grep -vi "^${num}$" | paste -sd, -)\n'
-                'efibootmgr -qo "${num}${rest:+,$rest}"\n')
-            for f in (kd / "40-voidstation-esp", kd / "60-voidstation-bootorder", T / "etc/kernel.d/post-remove/40-voidstation-esp"):
-                os.chmod(f, 0o744)
+            (T / "etc/default/voidstation-efistub").write_text(
+                "# VoidStation: Kernel direkt starten (EFISTUB). Nach Aenderungen:  sudo voidstation-efistub\n"
+                f'ESP="/boot/efi"\nDISK="{disk}"\nPART={partno}\n'
+                f'OPTIONS="root=UUID={ru} ro quiet loglevel=3 rd.udev.log_level=3"\n')
+            chroot(["/usr/local/sbin/voidstation-efistub", "--setup"], check=False)
+        elif efistub.exists():
+            chroot(["/usr/local/sbin/voidstation-efistub", "--remove"], check=False)
         else:
-            hook.write_text("MODIFY_EFI_ENTRIES=0\n")
+            (T / "etc/default/efibootmgr-kernel-hook").write_text("MODIFY_EFI_ENTRIES=0\n")
+            for f in ("etc/kernel.d/post-install/40-voidstation-esp", "etc/kernel.d/post-install/60-voidstation-bootorder",
+                      "etc/kernel.d/post-remove/40-voidstation-esp"):
+                (T / f).unlink(missing_ok=True)
         self.progress("boot", 0.15)
         # GRUB
         bootx = None
@@ -1349,12 +1346,18 @@ class Run:
         # weil es im chroot vom Live-System aus gebaut wird (hostonly wuerde die Live-Hardware-Sicht nehmen)
         dc = T / "etc/dracut.conf.d"
         dc.mkdir(parents=True, exist_ok=True)
-        (dc / "10-voidstation.conf").write_text('# VoidStation: Initramfs fuer jede Hardware\nhostonly="no"\n')
+        tmpl = T / "usr/local/share/voidstation/dracut-voidstation.conf"   # von install.sh (launcher/dracut-voidstation.conf)
+        (dc / "10-voidstation.conf").write_text(tmpl.read_text() if tmpl.exists() else
+                                                '# VoidStation: Initramfs fuer jede Hardware\nhostonly="no"\n'
+                                                'omit_dracutmodules+=" drm plymouth "\n')
         for kv in kvers:
             pkg = "linux" + ".".join(kv.split(".")[:2])
             r = chroot(["xbps-reconfigure", "-f", pkg], check=False)
             if r.returncode != 0 or not (T / f"boot/initramfs-{kv}.img").exists():
                 chroot(["dracut", "--no-hostonly", "--force", f"/boot/initramfs-{kv}.img", kv])
+        if use_stub:
+            # meist schon per Kernel-Hook erledigt; noetig, wenn oben nur dracut lief
+            chroot(["/usr/local/sbin/voidstation-efistub"], check=False)
         self.progress("boot", 0.85)
         chroot(["grub-mkconfig", "-o", "/boot/grub/grub.cfg"])
 

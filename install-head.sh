@@ -232,40 +232,20 @@ if [ "${EFISTUB:-0}" = 1 ]; then
       KPKG="linux$(echo "${KVER:-$(uname -r)}" | cut -d. -f1-2)"
       FREE_MB=$(( $(df --output=avail -k "$ESP" | tail -1) / 1024 ))
       echo "EFI-Partition: $ESPDEV ($ESP) auf $DISKDEV, Partition $PARTNO, frei: ${FREE_MB} MB"
-      if [ "$ESP" != "/boot" ] && [ "$FREE_MB" -lt 150 ]; then
+      if [ "$ESP" = "/boot" ]; then
+        warn "EFI-Partition haengt unter /boot – EFISTUB braucht sie unter /boot/efi, uebersprungen"
+      elif [ "$FREE_MB" -lt 150 ]; then
         warn "Zu wenig Platz auf der EFI-Partition (<150 MB) – uebersprungen"
       else
-        printf '%s\n' \
-          'MODIFY_EFI_ENTRIES=1' \
-          "OPTIONS=\"root=UUID=$ROOTUUID ro quiet loglevel=3 rd.udev.log_level=3\"" \
-          "DISK=\"$DISKDEV\"" \
-          "PART=$PARTNO" > /etc/default/efibootmgr-kernel-hook
-
-        # Kernel + Initramfs auf die EFI-Partition kopieren (nur noetig, wenn sie unter /boot/efi haengt)
-        if [ "$ESP" != "/boot" ]; then
-          printf '%s\n' '#!/bin/sh' \
-            '# VoidStation: Kernel fuer EFISTUB auf die EFI-Partition kopieren' \
-            "cp -f \"/boot/vmlinuz-\$2\" \"/boot/initramfs-\$2.img\" \"$ESP/\"" \
-            > /etc/kernel.d/post-install/40-voidstation-esp
-          printf '%s\n' '#!/bin/sh' \
-            "rm -f \"$ESP/vmlinuz-\$2\" \"$ESP/initramfs-\$2.img\"" \
-            > /etc/kernel.d/post-remove/40-voidstation-esp
-          chmod 744 /etc/kernel.d/post-install/40-voidstation-esp /etc/kernel.d/post-remove/40-voidstation-esp
-        fi
-
-        # Neuesten Void-Eintrag in der Bootreihenfolge nach vorn (auch nach Kernel-Updates)
-        printf '%s\n' '#!/bin/sh' \
-          'major=$(echo "$1" | cut -c 6-)' \
-          'num=$(efibootmgr | grep -E "^Boot[0-9A-Fa-f]{4}\*? Void Linux with kernel ${major}([^0-9]|$)" | head -1 | cut -c5-8)' \
-          '[ -n "$num" ] || exit 0' \
-          'rest=$(efibootmgr | sed -n "s/^BootOrder: //p" | tr "," "\n" | grep -vi "^${num}$" | paste -sd, -)' \
-          'efibootmgr -qo "${num}${rest:+,$rest}"' \
-          > /etc/kernel.d/post-install/60-voidstation-bootorder
-        chmod 744 /etc/kernel.d/post-install/60-voidstation-bootorder
-
+        # Kernel unter festen Namen auf die EFI-Partition, ein fester Starteintrag (voidstation-efistub)
+        install -o root -g root -m 755 "$TV/voidstation-efistub" /usr/local/sbin/voidstation-efistub
+        printf '%s\n' '# VoidStation: Kernel direkt starten (EFISTUB). Nach Aenderungen:  sudo voidstation-efistub' \
+          "ESP=\"$ESP\"" "DISK=\"$DISKDEV\"" "PART=$PARTNO" \
+          "OPTIONS=\"root=UUID=$ROOTUUID ro quiet loglevel=3 rd.udev.log_level=3\"" > /etc/default/voidstation-efistub
+        /usr/local/sbin/voidstation-efistub --setup >/dev/null
         if xbps-reconfigure -f "$KPKG"; then
           echo
-          efibootmgr 2>/dev/null | sed -n '1,4p;/Void Linux/p' || true
+          efibootmgr 2>/dev/null | sed -n '1,4p;/VoidStation/p' || true
           echo "EFISTUB eingerichtet. GRUB bleibt als zweiter Eintrag erhalten."
         else
           warn "Kernel-Hook fehlgeschlagen – es bleibt beim Booten ueber GRUB"
@@ -331,6 +311,9 @@ say "Extra: AppCenter-Helfer (installiert nur freigegebene Pakete)"
 install -o root -g root -m 755 "$TV/voidstation-pkg" /usr/local/sbin/voidstation-pkg
 ln -sfn "$TV/vsctl" /usr/local/bin/vsctl          # "vsctl update" im Terminal = Einstellungen → Updates
 install -d -o root -g root -m 755 /usr/local/share/voidstation
+# Kernel-Start: EFISTUB-Helfer und Initramfs-Vorgabe (nutzt der Installer des Live-Sticks)
+install -o root -g root -m 755 "$TV/voidstation-efistub" /usr/local/sbin/voidstation-efistub
+install -o root -g root -m 644 "$TV/dracut-voidstation.conf" /usr/local/share/voidstation/dracut-voidstation.conf
 python3 - "$TV/catalog.json" > /usr/local/share/voidstation/allowed-packages <<'PYEOF'
 import json, sys
 c = json.load(open(sys.argv[1], encoding="utf-8"))

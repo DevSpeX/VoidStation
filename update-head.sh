@@ -178,6 +178,55 @@ if [ -n "$SIGNERS" ]; then
 fi
 
 # ---------------------------------------------------------------------
+# Kernel-Start (ab 0.14.2): EFISTUB mit festen Dateinamen + kleineres Initramfs.
+# Vorher: Eintrag je Kernelversion (manche Firmware startete weiter den alten Kernel) und
+# ~240 MB Initramfs je Kernel auf der 512-MB-EFI-Partition.
+install -o root -g root -m 755 "$TV/voidstation-efistub" /usr/local/sbin/voidstation-efistub
+KCHANGED=0
+DCONF=/etc/dracut.conf.d/10-voidstation.conf
+if [ -f "$DCONF" ] && grep -q '^hostonly="no"' "$DCONF" && ! grep -q 'omit_dracutmodules' "$DCONF"; then
+  say "Kernel-Start: kleineres Initramfs (ohne Grafiktreiber)"
+  install -m 644 "$TV/dracut-voidstation.conf" "$DCONF"
+  KCHANGED=1
+fi
+if [ -f /etc/kernel.d/post-install/40-voidstation-esp ] && [ ! -f /etc/default/voidstation-efistub ]; then
+  say "Kernel-Start: EFISTUB mit festem Starteintrag"
+  ESPM="$(findmnt -no TARGET -t vfat /boot/efi 2>/dev/null || true)"
+  if [ -n "$ESPM" ] && [ -f /etc/default/efibootmgr-kernel-hook ]; then
+    OLDOPT="$(. /etc/default/efibootmgr-kernel-hook; echo "$OPTIONS")"
+    OLDDISK="$(. /etc/default/efibootmgr-kernel-hook; echo "$DISK")"
+    OLDPART="$(. /etc/default/efibootmgr-kernel-hook; echo "$PART")"
+    if [ -n "$OLDOPT" ] && [ -n "$OLDDISK" ] && [ -n "$OLDPART" ]; then
+      printf '%s\n' '# VoidStation: Kernel direkt starten (EFISTUB). Nach Aenderungen:  sudo voidstation-efistub' \
+        "ESP=\"$ESPM\"" "DISK=\"$OLDDISK\"" "PART=$OLDPART" "OPTIONS=\"$OLDOPT\"" > /etc/default/voidstation-efistub
+      KCHANGED=2
+    else
+      warn "EFISTUB-Einstellungen unvollstaendig – Umstellung uebersprungen (Start bleibt wie bisher)"
+    fi
+  else
+    warn "EFI-Partition unter /boot/efi nicht gefunden – Umstellung uebersprungen"
+  fi
+fi
+if [ "$KCHANGED" != 0 ]; then
+  [ -f /etc/default/voidstation-efistub ] && /usr/local/sbin/voidstation-efistub --setup >/dev/null
+  # Initramfs des neuesten Kernels neu bauen; der Hook legt ihn danach auf die EFI-Partition
+  UKV="$(ls /boot/vmlinuz-* 2>/dev/null | sed 's|.*/vmlinuz-||' | sort -V | tail -1)"
+  if [ -n "$UKV" ]; then
+    echo "Initramfs fuer Kernel $UKV wird neu erzeugt (dauert etwas) ..."
+    if xbps-reconfigure -f "linux$(echo "$UKV" | cut -d. -f1-2)" >/dev/null 2>&1; then
+      echo "Initramfs: $(( $(stat -c %s "/boot/initramfs-$UKV.img" 2>/dev/null || echo 0) / 1048576 )) MB"
+    else
+      warn "Kernel-Neukonfiguration fehlgeschlagen"
+    fi
+  fi
+  if [ -f /etc/default/voidstation-efistub ]; then
+    /usr/local/sbin/voidstation-efistub
+    efibootmgr 2>/dev/null | sed -n '/^BootOrder/p;/VoidStation/p' || true
+  fi
+  df -h /boot/efi 2>/dev/null | tail -1 || true
+fi
+
+# ---------------------------------------------------------------------
 say "Grafik-Server: XLibre (ersetzt ein noch vorhandenes X.Org)"
 sh /usr/local/sbin/voidstation-pkg xserver ensure || warn "XLibre nicht eingerichtet – naechstes Update versucht es erneut"
 

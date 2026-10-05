@@ -1,0 +1,153 @@
+#!/bin/sh
+# =====================================================================
+#  VoidStation: Kernel direkt starten (EFISTUB)
+#
+#  Legt den neuesten Kernel unter festen Namen auf die EFI-Partition:
+#      vmlinuz-voidstation, initramfs-voidstation.img
+#  Der Starteintrag "VoidStation EFISTUB" zeigt immer auf diese Namen und bleibt bei
+#  Kernel-Updates unveraendert. Vorher gab es je Kernelversion einen neuen Eintrag
+#  (Void-Hook 50-efibootmgr) – manche Firmware startet dann weiter den alten Kernel,
+#  und alte Kernel fuellten die EFI-Partition.
+#
+#  Klappt etwas nicht (zu wenig Platz, Datei kaputt), kommt GRUB in der Startreihenfolge
+#  nach vorn – GRUB startet den neuesten Kernel direkt von /boot.
+#
+#  Einstellungen:  /etc/default/voidstation-efistub  (ESP, DISK, PART, OPTIONS)
+#  Aufruf: automatisch aus /etc/kernel.d (post-install, post-remove) oder von Hand:
+#      sudo voidstation-efistub
+# =====================================================================
+CONF=/etc/default/voidstation-efistub
+STAMP_DIR=/usr/local/share/voidstation
+LABEL="VoidStation EFISTUB"
+GRUB_LABEL="VoidStation"
+
+log() { echo "voidstation-efistub: $*" >&2; }
+
+OLD_HOOKS="/etc/kernel.d/post-install/40-voidstation-esp /etc/kernel.d/post-install/60-voidstation-bootorder
+           /etc/kernel.d/post-remove/40-voidstation-esp"
+NEW_HOOKS="/etc/kernel.d/post-install/40-voidstation-efistub /etc/kernel.d/post-remove/40-voidstation-efistub"
+
+case "${1:-}" in
+  --setup)    # Kernel-Hooks einrichten (Installer, install.sh, update.sh), danach normal weiter
+    [ -r "$CONF" ] || { log "$CONF fehlt"; exit 1; }
+    # shellcheck disable=SC2086
+    rm -f $OLD_HOOKS
+    mkdir -p /etc/kernel.d/post-install /etc/kernel.d/post-remove
+    for h in $NEW_HOOKS; do
+      printf '%s\n' '#!/bin/sh' \
+        '# VoidStation: neuesten Kernel fuer den EFISTUB-Start auf die EFI-Partition (siehe voidstation-efistub)' \
+        '[ -x /usr/local/sbin/voidstation-efistub ] && /usr/local/sbin/voidstation-efistub' 'exit 0' > "$h"
+      chmod 744 "$h"
+    done
+    # Void-Hook 50-efibootmgr (neuer Eintrag je Kernelversion) abschalten
+    printf '%s\n' '# VoidStation: Starteintrag verwaltet voidstation-efistub (/etc/default/voidstation-efistub)' \
+      'MODIFY_EFI_ENTRIES=0' > /etc/default/efibootmgr-kernel-hook
+    ;;
+  --remove)   # kein EFISTUB (z. B. Dual-Boot): nur GRUB
+    # shellcheck disable=SC2086
+    rm -f $OLD_HOOKS $NEW_HOOKS "$CONF" /usr/local/share/voidstation/efistub-kernel /usr/local/share/voidstation/efistub-entry
+    printf '%s\n' 'MODIFY_EFI_ENTRIES=0' > /etc/default/efibootmgr-kernel-hook
+    exit 0
+    ;;
+esac
+
+[ -r "$CONF" ] || exit 0
+ESP=/boot/efi; DISK=""; PART=""; OPTIONS=""
+# shellcheck disable=SC1090
+. "$CONF"
+
+case "$ESP" in /boot|/boot/|/) log "EFI-Partition muss unter /boot/efi haengen (ist: $ESP)"; exit 0 ;; esac
+command -v efibootmgr >/dev/null 2>&1 || { log "efibootmgr fehlt"; exit 0; }
+[ -d /sys/firmware/efi ] || { log "kein UEFI-Start"; exit 0; }
+if ! awk -v m="$ESP" '$2 == m { f = 1 } END { exit !f }' /proc/mounts; then
+  log "$ESP ist nicht eingehaengt"; exit 0
+fi
+
+# Neuester vollstaendiger Kernel (vmlinuz + initramfs + Module)
+KV=""
+for f in $(ls /boot/vmlinuz-* 2>/dev/null | sort -V); do
+  v="${f#/boot/vmlinuz-}"
+  [ -s "/boot/initramfs-$v.img" ] && [ -d "/usr/lib/modules/$v" ] && KV="$v"
+done
+[ -n "$KV" ] || { log "kein vollstaendiger Kernel unter /boot"; exit 0; }
+SRC_K="/boot/vmlinuz-$KV"
+SRC_I="/boot/initramfs-$KV.img"
+DST_K="$ESP/vmlinuz-voidstation"
+DST_I="$ESP/initramfs-voidstation.img"
+
+same() {
+  [ -f "$2" ] || return 1
+  if command -v cmp >/dev/null 2>&1; then cmp -s "$1" "$2"
+  else [ "$(stat -c %s "$1")" = "$(stat -c %s "$2")" ]; fi
+}
+TAB="$(printf '\t')"
+entry() {   # Nummer des Eintrags mit genau dieser Bezeichnung (danach Tab mit Geraetepfad oder Zeilenende)
+  efibootmgr 2>/dev/null | grep -E "^Boot[0-9A-Fa-f]{4}\*? $1(${TAB}|\$)" | head -1 | cut -c5-8
+}
+first() {   # Eintrag an die Spitze der Startreihenfolge (nur schreiben, wenn noetig)
+  [ -n "$1" ] || return 0
+  order="$(efibootmgr 2>/dev/null | sed -n 's/^BootOrder: //p')"
+  [ "${order%%,*}" = "$1" ] && return 0
+  rest="$(printf '%s\n' "$order" | tr ',' '\n' | grep -vix "$1" | grep . | paste -sd, -)"
+  efibootmgr -qo "$1${rest:+,$rest}" || log "Startreihenfolge nicht geaendert"
+}
+
+# Kernel-Dateien mit Versionsnummer aus der Zeit vor 0.14.2 (je Kernel ~250 MB) weg
+rm -f "$ESP"/vmlinuz-[0-9]* "$ESP"/initramfs-[0-9]*.img
+
+OK=1
+if ! same "$SRC_K" "$DST_K" || ! same "$SRC_I" "$DST_I"; then
+  rm -f "$DST_K.new" "$DST_I.new"
+  need_kb=$(( ( $(stat -c %s "$SRC_K") + $(stat -c %s "$SRC_I") ) / 1024 + 2048 ))
+  free_kb=$(df -Pk "$ESP" | awk 'NR == 2 { print $4 }')
+  if [ "${free_kb:-0}" -lt "$need_kb" ]; then
+    # kein Platz fuer alt + neu: alten Stand vorher entfernen (bis zum Ende startet GRUB)
+    rm -f "$DST_K" "$DST_I"
+  fi
+  if cp "$SRC_K" "$DST_K.new" && cp "$SRC_I" "$DST_I.new" \
+     && same "$SRC_K" "$DST_K.new" && same "$SRC_I" "$DST_I.new" \
+     && mv -f "$DST_K.new" "$DST_K" && mv -f "$DST_I.new" "$DST_I"; then
+    sync
+    echo "voidstation-efistub: Kernel $KV auf $ESP"
+  else
+    rm -f "$DST_K.new" "$DST_I.new"
+    log "Kernel $KV passt nicht auf $ESP (frei: $(( ${free_kb:-0} / 1024 )) MB) – Start ueber GRUB"
+    OK=0
+  fi
+fi
+
+# Starteintrag: nur neu anlegen, wenn er fehlt oder sich die Optionen geaendert haben
+NUM=""
+if [ "$OK" = 1 ]; then
+  CMD="$OPTIONS initrd=/initramfs-voidstation.img"
+  SUM="$(printf '%s|%s|%s' "$DISK" "$PART" "$CMD" | cksum | cut -d' ' -f1)"
+  NUM="$(entry "$LABEL")"
+  if [ -n "$NUM" ] && [ "$(cat "$STAMP_DIR/efistub-entry" 2>/dev/null)" != "$SUM" ]; then
+    efibootmgr -qBb "$NUM" >/dev/null 2>&1; NUM=""
+  fi
+  if [ -z "$NUM" ]; then
+    set --
+    [ -n "$DISK" ] && set -- -d "$DISK"
+    [ -n "$PART" ] && set -- "$@" -p "$PART"
+    if efibootmgr -qc "$@" -L "$LABEL" -l /vmlinuz-voidstation -u "$CMD" >/dev/null; then
+      NUM="$(entry "$LABEL")"
+      mkdir -p "$STAMP_DIR" && echo "$SUM" > "$STAMP_DIR/efistub-entry"
+    else
+      log "Starteintrag \"$LABEL\" konnte nicht angelegt werden – Start ueber GRUB"
+    fi
+  fi
+fi
+
+if [ -n "$NUM" ]; then
+  first "$NUM"
+  # alte Eintraege je Kernelversion ("Void Linux with kernel 6.18") entfernen
+  for n in $(efibootmgr 2>/dev/null | grep -E '^Boot[0-9A-Fa-f]{4}\*? Void Linux with kernel ' | cut -c5-8); do
+    efibootmgr -qBb "$n" >/dev/null 2>&1
+  done
+  mkdir -p "$STAMP_DIR" && echo "$KV" > "$STAMP_DIR/efistub-kernel"
+else
+  first "$(entry "$GRUB_LABEL")"
+  mkdir -p "$STAMP_DIR" && : > "$STAMP_DIR/efistub-kernel"
+fi
+chmod 644 "$STAMP_DIR/efistub-kernel" "$STAMP_DIR/efistub-entry" 2>/dev/null
+exit 0

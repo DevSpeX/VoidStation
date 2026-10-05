@@ -62,6 +62,7 @@
   "upd.sysError": "Paketquelle nicht erreichbar",
   "upd.rebootKernel": "Neuer Kernel installiert – Neustart nötig",
   "upd.rebootVs": "VoidStation aktualisiert – Neustart nötig",
+  "upd.kernelStuck": "Kernel {version} ist installiert, gestartet wird aber weiter {running} – ein Neustart ändert daran nichts. Bitte auf GitHub melden.",
   "upd.xbpsBusy": "Die Paketverwaltung ist gerade beschäftigt (z. B. im Terminal) – bitte gleich noch einmal versuchen",
   "upd.more": "und {n} weitere",
   "upd.keepNoReboot": "Eigene Kacheln, Favoriten und Einstellungen bleiben erhalten. Ein Neustart ist nicht nötig.",

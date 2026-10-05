@@ -143,6 +143,7 @@ Layer {
         if (y.error && !(y.pkgs && y.pkgs.length)) line = Ui.esc(Ui.t("upd.sysError"))
         var rb = vsState.reboot || {}
         if (rb.kernel || rb.voidstation) line += "<br><b>" + Ui.esc(Ui.t(rb.kernel ? "upd.rebootKernel" : "upd.rebootVs")) + "</b>"
+        if (rb.kernel_stuck) line += "<br>" + Ui.esc(Ui.t("upd.kernelStuck", { version: rb.kernel_stuck.version, running: rb.kernel_stuck.running }))
         return Ui.esc(Ui.t("upd.system")) + "<br>" + line
     }
     function refreshVs(force, then) {

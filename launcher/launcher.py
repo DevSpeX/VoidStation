@@ -1852,17 +1852,49 @@ def vkey(v):
     return [int(x) for x in re.findall(r"\d+", v)]
 
 
-def reboot_needed():
-    """kernel: neuerer Kernel installiert als der laufende; voidstation: Oberflaeche seit dem Start aktualisiert."""
-    if LIVE:
-        return {"kernel": False, "voidstation": False}
+def boot_time():
+    """Startzeitpunkt (Unix-Zeit) aus /proc/stat."""
     try:
-        ks = sorted((d.name for d in Path("/usr/lib/modules").iterdir() if d.is_dir()), key=vkey)
+        for line in Path("/proc/stat").read_text().splitlines():
+            if line.startswith("btime "):
+                return int(line.split()[1])
+    except (OSError, ValueError):
+        pass
+    return 0
+
+
+def reboot_needed():
+    """kernel: seit dem Start ist ein neuerer Kernel dazugekommen (ein Neustart nimmt ihn);
+    kernel_stuck: ein neuerer Kernel war schon vor dem Start da und laeuft trotzdem nicht – ein Neustart
+    hilft dann nicht, also kein Dauerhinweis "Neustart noetig" ({"version", "running"} oder None);
+    voidstation: Oberflaeche seit dem Start aktualisiert.
+    Als Kernel zaehlt nur, was Module UND /boot/vmlinuz-<version> hat (Reste in /usr/lib/modules nicht)."""
+    out = {"kernel": False, "kernel_stuck": None, "voidstation": False}
+    if LIVE:
+        return out
+    running = os.uname().release
+    try:
+        ks = [d.name for d in Path("/usr/lib/modules").iterdir()
+              if d.is_dir() and Path(f"/boot/vmlinuz-{d.name}").is_file()]
     except OSError:
         ks = []
-    kernel = bool(ks) and ks[-1] != os.uname().release
+    ks.sort(key=vkey)
+    if ks and vkey(ks[-1]) > vkey(running):
+        new = ks[-1]
+        stamps = []
+        for p in (Path("/usr/lib/modules") / new, Path(f"/boot/initramfs-{new}.img")):
+            try:
+                stamps.append(p.stat().st_mtime)   # beim Einrichten des Kernels geschrieben (depmod, dracut)
+            except OSError:
+                pass
+        bt = boot_time()
+        if stamps and bt and max(stamps) < bt:
+            out["kernel_stuck"] = {"version": re.sub(r"_\d+$", "", new), "running": re.sub(r"_\d+$", "", running)}
+        else:
+            out["kernel"] = True
     build = vs_version().get("build")
-    return {"kernel": kernel, "voidstation": bool(BOOT_BUILD and build and build != BOOT_BUILD)}
+    out["voidstation"] = bool(BOOT_BUILD and build and build != BOOT_BUILD)
+    return out
 
 
 def asset_stamp(headers):

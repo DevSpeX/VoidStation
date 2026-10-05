@@ -3,6 +3,13 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.14.2 – 2026-10-05
+- Kernel updates: the yellow “Restart required” notice stayed after restarting because the PC kept booting the old kernel. Direct boot (EFISTUB) now uses one fixed boot entry, “VoidStation EFISTUB”, that stays the same across kernel updates – the new kernel is placed on the EFI partition under a fixed name
+- The initramfs no longer contains graphics drivers (they load later anyway) – about 200 MB smaller per kernel; the EFI partition was almost full. Old kernel files are removed from it
+- If a kernel doesn’t fit on the EFI partition, GRUB starts automatically with the newest kernel
+- Existing devices are switched over during the update (the initramfs is rebuilt once, then restart once)
+- If a new kernel still doesn’t start after a restart, Settings → Updates shows a note instead of the permanent notice
+
 ## 0.14.1 – 2026-10-04
 - English interface: the clock shows “2:53 PM” again in the afternoon instead of “14:53 PM”
 
