@@ -600,19 +600,18 @@ class Site:
         return f'<a class="tile {size} {cls}" style="--c:{color}" href="{href}"{rel}>{inner}</a>'
 
     def build_home(self, items):
+        # 3 Gruppen, je 3 Kachelreihen hoch, zusammen 8 Spalten (3 + 2 + 3) – passt zu --u in style.css
         v = self.latest["version"]
         for lang in LANGS:
             t = lambda k, **kw: self.t(lang, k, **kw)
             u = lambda k, a="": self.url(k, lang, a)
-            entry, _ = self.version_entry(lang, v)
-            first = re.search(r"^\s*-\s+(.*)$", entry["body"], re.M)
-            vtext = shorten(Markdown().inline(first.group(1)) if first else "", 120)
             posts = [i for i in items if i["kind"] == "post"] or items
             news = posts[0]
             gh = self.cfg["github"]
             g1 = "".join([
                 self.tile("large", "#2b5f46", u("download"), t("t.download"), "download", t("t.download.sub"), cls="dl"),
-                self.tile("wide", "#2d3763", f'{u("news")}v{v}/', t("t.latest", v=v), extra=f'<span class="txt">{esc(vtext)}</span>', cls="text"),
+                self.tile("wide", "#2d3763", f'{u("news")}v{v}/', t("t.latest"), cls="ver",
+                          extra=f'<span class="kick">{esc(self.fmt_date(self.latest["date"], lang))}</span><span class="big">{esc(v)}</span>'),
                 self.tile("medium", "#3a3f46", u("download", "installieren" if lang == "de" else "install"), t("t.install"), "cube"),
                 self.tile("medium", "#3b2f4f", u("help", "bedienung" if lang == "de" else "controls"), t("t.controls"), "gamepad"),
                 self.tile("medium", "#284843", u("download", "voraussetzungen" if lang == "de" else "requirements"), t("t.req"), "monitor"),
@@ -620,21 +619,16 @@ class Site:
             g2 = "".join([
                 self.tile("large", "#22262b", u("features", "screenshots"), t("t.screens"), img=self.shot(lang, "1-start.webp"), cls="pic"),
                 self.tile("wide", "#6e2b2b", u("features"), t("t.features"), "play", t("t.features.sub")),
-                self.tile("wide", "#24414a", f'{u("news")}{news["slug"]}/', t("t.news"),
-                          extra=f'<span class="kick">{esc(self.fmt_date(news["date"], lang))}</span><span class="txt">{esc(news["title"][lang])}</span>', cls="text"),
-                self.tile("wide", "#24414a", u("features", "fernsehen" if lang == "de" else "tv"), t("t.tv"), img=self.shot(lang, "2-fernsehen.webp"), cls="pic"),
-                self.tile("wide", "#3b2f4f", u("features", "radio"), t("t.radio"), img=self.shot(lang, "4-radio.webp"), cls="pic"),
             ])
             g3 = "".join([
-                f'<div class="tile wide clock" style="--c:#23272c" aria-hidden="true"><span class="big" data-clock="{lang}"></span><span class="date" data-date="{lang}"></span></div>',
+                # links drei breite (News, GitHub, Fragen), rechts drei kleine (Fehler, Mitmachen, Lizenz)
+                self.tile("wide", "#24414a", f'{u("news")}{news["slug"]}/', t("t.news"),
+                          extra=f'<span class="kick">{esc(self.fmt_date(news["date"], lang))}</span><span class="txt">{esc(news["title"][lang])}</span>', cls="text"),
                 self.tile("wide", "#2f3238", gh, "GitHub", sub=t("t.github.sub"), extra=f'<span class="icon">{ICONS["github"]}</span>', ext=True),
-                # 4 x 3 Felder: links Uhr, GitHub, Fragen (je breit); rechts Fehler (breit) ueber vier mittleren
                 self.tile("wide", "#2b5f46", gh + "/discussions", t("t.discuss"), "help", t("t.discuss.sub"), ext=True),
-                self.tile("wide", "#6e2b2b", gh + "/issues", t("t.issues"), "bug", t("t.issues.sub"), ext=True),
+                self.tile("medium", "#6e2b2b", gh + "/issues", t("t.issues"), "bug", ext=True),
                 self.tile("medium", "#39414d", u("contribute"), t("t.contribute"), "chat"),
                 self.tile("medium", "#3a3f46", u("contribute", "lizenz" if lang == "de" else "license"), "GPL-3.0", "scale"),
-                self.tile("medium", "#74461f", u("news") + "feed.xml", "RSS", "rss"),
-                self.tile("medium", "#2d3763", u("news"), t("t.versions"), "update"),
             ])
             groups = (f'<section class="group g1"><h2>{esc(t("g.start"))}</h2><div class="grid">{g1}</div></section>'
                       f'<section class="group g2"><h2>{esc(t("g.explore"))}</h2><div class="grid">{g2}</div></section>'

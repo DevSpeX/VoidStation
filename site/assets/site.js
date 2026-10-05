@@ -1,29 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later
-   voidstation.de – Uhr-Kachel, News-Filter, Kopier-Knoepfe, Pfeiltasten zwischen den Kacheln */
+   voidstation.de – News-Filter, Kopier-Knoepfe, Pfeiltasten zwischen den Kacheln */
 (function () {
   'use strict';
   var doc = document.documentElement;
-
-  /* Uhr wie auf der Startseite der Geraete */
-  var clocks = document.querySelectorAll('[data-clock]');
-  function tick() {
-    var now = new Date();
-    clocks.forEach(function (el) {
-      var en = el.getAttribute('data-clock') === 'en';
-      if (en) {
-        var h = now.getHours(), ap = h < 12 ? 'AM' : 'PM';
-        h = h % 12 || 12;
-        el.innerHTML = h + ':' + String(now.getMinutes()).padStart(2, '0') + '<span class="ap">' + ap + '</span>';
-      } else {
-        el.textContent = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-      }
-    });
-    document.querySelectorAll('[data-date]').forEach(function (el) {
-      var loc = el.getAttribute('data-date') === 'en' ? 'en-US' : 'de-DE';
-      el.textContent = now.toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' });
-    });
-  }
-  if (clocks.length) { tick(); setInterval(tick, 10000); }
 
   /* News: Alle / Versionen / Beitraege */
   var chips = document.querySelectorAll('.chips [data-filter]');
