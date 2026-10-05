@@ -2060,6 +2060,36 @@ def updates_background_check():
         time.sleep(wait)
 
 
+def kernel_autopurge():
+    """Alte Kernel automatisch entfernen, sobald das System mit dem neuesten Kernel fehlerfrei laeuft:
+    die Oberflaeche ist seit 10 Minuten oben und es laeuft der neueste installierte Kernel.
+    Einmal je Start der Oberflaeche; laeuft gerade ein Auftrag oder xbps, spaeter nochmal."""
+    time.sleep(600)
+    for _ in range(12):
+        try:
+            rb = reboot_needed()
+            if rb["kernel"] or rb["kernel_stuck"]:
+                return                                 # neuester Kernel laeuft (noch) nicht: nichts anfassen
+            ks = [d.name for d in Path("/usr/lib/modules").iterdir()
+                  if d.is_dir() and Path(f"/boot/vmlinuz-{d.name}").is_file()]
+            if len(ks) < 2:
+                return
+            if JOBS.busy() or xbps_busy() or not SYS_LOCK.acquire(timeout=5):
+                time.sleep(600)
+                continue
+            try:
+                r = run(["sudo", "-n", PKG_HELPER, "kernelpurge"], timeout=600)
+            finally:
+                SYS_LOCK.release()
+            out = ((r.stdout or "") + (r.stderr or "")).strip() if r else "kein Ergebnis"
+            log("Alte Kernel:", out.replace("\n", " | "))
+            if r and r.returncode == 0:
+                return
+        except Exception as e:  # noqa: BLE001
+            log("Alte Kernel entfernen fehlgeschlagen:", e)
+        time.sleep(600)
+
+
 def shutil_which(name):
     return shutil.which(name)
 
@@ -3068,6 +3098,7 @@ def main():
     threading.Thread(target=gamepad_watcher, daemon=True).start()
     if not LIVE:                                    # im Live-System gibt es keine Updates
         threading.Thread(target=updates_background_check, daemon=True).start()
+        threading.Thread(target=kernel_autopurge, daemon=True).start()
     httpd = ThreadingHTTPServer((HOST, PORT), Handler)
     log(f"laeuft auf http://{HOST}:{PORT}/")
     try:

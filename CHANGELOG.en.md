@@ -3,6 +3,9 @@
 English version of `CHANGELOG.md`, shown in the update dialog when the interface is set to English.
 Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, followed by bullet points.
 
+## 0.14.3 – 2026-10-05
+- Old kernels are removed automatically once the system runs fine with the newest kernel (interface up for 10 minutes) – saves about 300 MB per kernel
+
 ## 0.14.2 – 2026-10-05
 - Kernel updates: the yellow “Restart required” notice stayed after restarting because the PC kept booting the old kernel. Direct boot (EFISTUB) now uses one fixed boot entry, “VoidStation EFISTUB”, that stays the same across kernel updates – the new kernel is placed on the EFI partition under a fixed name
 - The initramfs no longer contains graphics drivers (they load later anyway) – about 200 MB smaller per kernel; the EFI partition was almost full. Old kernel files are removed from it
