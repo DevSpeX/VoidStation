@@ -4,6 +4,10 @@ Neueste Version oben. Die erste Überschrift bestimmt die Versionsnummer, die Ge
 Format: `## <Version> – <JJJJ-MM-TT>`, darunter Stichpunkte.
 Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.sh` ab.
 
+## 0.14.3 – 2026-10-05
+- Alte Kernel werden automatisch entfernt, sobald das System mit dem neuesten Kernel fehlerfrei läuft (Oberfläche seit 10 Minuten oben) – spart pro Kernel rund 300 MB
+- Direktstart (EFISTUB): Stellt die Firmware die Startreihenfolge selbst um (z. B. GRUB immer zuerst), bleibt das so, statt bei jedem Kernel-Update dagegen anzuschreiben – GRUB startet ebenfalls den neuesten Kernel. Erzwingen: `sudo voidstation-efistub --order`
+
 ## 0.14.2 – 2026-10-05
 - Kernel-Updates: Die gelbe Meldung „Neustart nötig“ verschwand nach dem Neustart nicht, weil der Rechner weiter den alten Kernel startete. Der Direktstart (EFISTUB) nutzt jetzt einen festen Starteintrag „VoidStation EFISTUB“, der bei Kernel-Updates gleich bleibt – der neue Kernel liegt unter festem Namen auf der EFI-Partition
 - Das Initramfs enthält keine Grafiktreiber mehr (die laden ohnehin später) – rund 200 MB kleiner je Kernel; die EFI-Partition lief damit fast voll. Alte Kernel-Dateien werden von dort entfernt

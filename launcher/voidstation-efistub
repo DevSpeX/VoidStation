@@ -14,12 +14,14 @@
 #
 #  Einstellungen:  /etc/default/voidstation-efistub  (ESP, DISK, PART, OPTIONS)
 #  Aufruf: automatisch aus /etc/kernel.d (post-install, post-remove) oder von Hand:
-#      sudo voidstation-efistub
+#      sudo voidstation-efistub            (Startreihenfolge der Firmware bleibt, wenn sie umgestellt hat)
+#      sudo voidstation-efistub --order    (EFISTUB-Eintrag trotzdem an die Spitze)
 # =====================================================================
 CONF=/etc/default/voidstation-efistub
 STAMP_DIR=/usr/local/share/voidstation
 LABEL="VoidStation EFISTUB"
 GRUB_LABEL="VoidStation"
+ORDER_STAMP="$STAMP_DIR/efistub-first"     # Eintrag, den wir zuletzt selbst nach vorn gesetzt haben
 
 log() { echo "voidstation-efistub: $*" >&2; }
 
@@ -27,7 +29,11 @@ OLD_HOOKS="/etc/kernel.d/post-install/40-voidstation-esp /etc/kernel.d/post-inst
            /etc/kernel.d/post-remove/40-voidstation-esp"
 NEW_HOOKS="/etc/kernel.d/post-install/40-voidstation-efistub /etc/kernel.d/post-remove/40-voidstation-efistub"
 
+FORCE_ORDER=0
 case "${1:-}" in
+  --order)    # Eintrag "VoidStation EFISTUB" wieder an die Spitze, auch wenn die Firmware umgestellt hat
+    FORCE_ORDER=1
+    ;;
   --setup)    # Kernel-Hooks einrichten (Installer, install.sh, update.sh), danach normal weiter
     [ -r "$CONF" ] || { log "$CONF fehlt"; exit 1; }
     # shellcheck disable=SC2086
@@ -45,7 +51,7 @@ case "${1:-}" in
     ;;
   --remove)   # kein EFISTUB (z. B. Dual-Boot): nur GRUB
     # shellcheck disable=SC2086
-    rm -f $OLD_HOOKS $NEW_HOOKS "$CONF" /usr/local/share/voidstation/efistub-kernel /usr/local/share/voidstation/efistub-entry
+    rm -f $OLD_HOOKS $NEW_HOOKS "$CONF" "$STAMP_DIR/efistub-kernel" "$STAMP_DIR/efistub-entry" "$STAMP_DIR/efistub-first"
     printf '%s\n' 'MODIFY_EFI_ENTRIES=0' > /etc/default/efibootmgr-kernel-hook
     exit 0
     ;;
@@ -139,7 +145,17 @@ if [ "$OK" = 1 ]; then
 fi
 
 if [ -n "$NUM" ]; then
-  first "$NUM"
+  # Nach vorn nur einmal: Hat die Firmware (oder jemand im BIOS) die Reihenfolge danach wieder geaendert,
+  # bleibt sie so – manche Firmware stellt GRUB bei jedem Start nach vorn. Auch GRUB startet den neuesten
+  # Kernel. Erzwingen:  sudo voidstation-efistub --order
+  cur="$(efibootmgr 2>/dev/null | sed -n 's/^BootOrder: //p' | cut -d, -f1)"
+  if [ "$cur" = "$NUM" ]; then
+    echo "$NUM" > "$ORDER_STAMP"
+  elif [ "$FORCE_ORDER" != 1 ] && [ "$(cat "$ORDER_STAMP" 2>/dev/null)" = "$NUM" ]; then
+    echo "voidstation-efistub: Startreihenfolge kommt von der Firmware/dem BIOS ($cur zuerst) – bleibt so"
+  else
+    first "$NUM" && echo "$NUM" > "$ORDER_STAMP"
+  fi
   # alte Eintraege je Kernelversion ("Void Linux with kernel 6.18") entfernen
   for n in $(efibootmgr 2>/dev/null | grep -E '^Boot[0-9A-Fa-f]{4}\*? Void Linux with kernel ' | cut -c5-8); do
     efibootmgr -qBb "$n" >/dev/null 2>&1
@@ -148,6 +164,7 @@ if [ -n "$NUM" ]; then
 else
   first "$(entry "$GRUB_LABEL")"
   mkdir -p "$STAMP_DIR" && : > "$STAMP_DIR/efistub-kernel"
+  rm -f "$ORDER_STAMP"
 fi
-chmod 644 "$STAMP_DIR/efistub-kernel" "$STAMP_DIR/efistub-entry" 2>/dev/null
+chmod 644 "$STAMP_DIR/efistub-kernel" "$STAMP_DIR/efistub-entry" "$ORDER_STAMP" 2>/dev/null
 exit 0

@@ -171,6 +171,30 @@ ssh_ctl() {
   esac
 }
 
+kernel_purge() {
+  # Alte Kernel entfernen – nur, wenn gerade der neueste installierte Kernel laeuft (der Aufrufer
+  # wartet zusaetzlich, bis die Oberflaeche eine Weile stabil laeuft). Prueft hier selbst noch einmal.
+  command -v vkpurge >/dev/null 2>&1 || { echo "vkpurge fehlt – nichts entfernt"; return 0; }
+  run="$(uname -r)"
+  newest=""
+  for d in /usr/lib/modules/*/; do
+    v="${d%/}"; v="${v##*/}"
+    [ -f "/boot/vmlinuz-$v" ] && newest="$(printf '%s\n%s\n' "$newest" "$v" | grep . | sort -V | tail -1)"
+  done
+  if [ -z "$newest" ] || [ "$newest" != "$run" ]; then
+    echo "laeuft nicht mit dem neuesten Kernel ($run, neuester: ${newest:-?}) – nichts entfernt"; return 0
+  fi
+  if pgrep -x 'xbps-install|xbps-remove|xbps-reconfigure' >/dev/null 2>&1; then
+    echo "xbps laeuft gerade – spaeter"; return 1
+  fi
+  old="$(vkpurge list 2>/dev/null | grep -vx "$run")"
+  [ -n "$old" ] || { echo "keine alten Kernel"; return 0; }
+  for v in $old; do
+    echo "entferne Kernel $v"
+    vkpurge rm "$v" || { echo "Kernel $v konnte nicht entfernt werden"; return 1; }
+  done
+}
+
 main() {
   cmd="$1"; [ $# -gt 0 ] && shift
   case "$cmd" in
@@ -221,12 +245,15 @@ main() {
     bluetooth)                              # Bluetooth-Dienst: on | off | status
       bluetooth_ctl "$1"
       ;;
+    kernelpurge)                            # alte Kernel weg, wenn der neueste laeuft
+      kernel_purge
+      ;;
     channel)                                # Update-Kanal waehlen: stable (Standard) oder main (Test)
       case "$1" in stable|main) echo "$1" > "$CHANNELFILE"; chmod 644 "$CHANNELFILE"; echo "Kanal: $1" ;;
         *) echo "Kanal muss stable oder main sein"; return 2 ;; esac
       ;;
     *)
-      echo "Benutzung: voidstation-pkg install|remove|markauto <paket>... | sync | update | check [--nosync] | selfupdate | channel stable|main | xserver ensure|repair|status | ssh on|off|status | bluetooth on|off|status"
+      echo "Benutzung: voidstation-pkg install|remove|markauto <paket>... | sync | update | check [--nosync] | selfupdate | kernelpurge | channel stable|main | xserver ensure|repair|status | ssh on|off|status | bluetooth on|off|status"
       return 2
       ;;
   esac
