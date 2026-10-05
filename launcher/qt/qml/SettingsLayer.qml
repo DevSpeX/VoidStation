@@ -106,13 +106,15 @@ Layer {
             if (sett.live) return Ui.t("settings.liveShort")
             if (app.updInfo) return app.updNoteText(app.updInfo)
             if (vsState && vsState.system && vsState.system.count) return vsVersion() + " · " + Ui.t("upd.noteSystem", { n: Ui.num(vsState.system.count) })
-            return vsVersion() + (vsState ? " · " + (vsState.remote ? Ui.t("upd.allCurrent") : Ui.t("upd.unreachable")) : "")
+            return vsVersion() + (vsState ? " · " + (vsState.remote ? Ui.t("upd.allCurrent") : vsNoRemote(vsState)) : "")
         case "system": return sett.ssh === undefined ? sett.net.hostname : Ui.t("settings.ssh") + ": " + Ui.t(sett.ssh ? "common.on" : "common.off")
         }
         return ""
     }
 
     // ---- Updates: VoidStation + Void-Pakete (inkl. Kernel) + Flatpak/AppImages/Proton-GE, alles mit einem Knopf
+    // Kein Stand vom Update-Server: offline, noch nicht geprueft oder Server wirklich nicht erreichbar
+    function vsNoRemote(v) { return Ui.t(v && v.online === false ? "upd.offline" : v && !v.checked && !v.error ? "upd.searching" : "upd.unreachable") }
     function vsVersion() { var sv = sett && sett.version; return (vsState && vsState.local) || (sv && (sv.version || sv.build)) || "\u2013" }
     function chLabel(v) { return Ui.t("channel." + v.channel, null, v.channel_label) }
     function sysSummary(st) {
@@ -130,7 +132,7 @@ Layer {
         if (sett.live) return "VoidStation " + Ui.esc(vsVersion()) + "<br>" + Ui.esc(Ui.t("settings.liveInfo"))
         var st = Ui.esc(Ui.t("upd.searching"))
         if (vsState) st = vsState.available ? "<b>" + Ui.esc(Ui.t("upd.available", { version: vsState.remote })) + "</b>"
-                                            : Ui.esc(vsState.remote ? Ui.t("upd.current") : Ui.t("upd.unreachable"))
+                                            : Ui.esc(vsState.remote ? Ui.t("upd.current") : vsNoRemote(vsState))
         var ch = vsState ? " · " + Ui.esc(Ui.t("upd.channel", { channel: chLabel(vsState) })) : ""
         return "VoidStation " + Ui.esc(vsVersion()) + ch + "<br>" + st
     }
@@ -148,7 +150,7 @@ Layer {
     }
     function refreshVs(force, then) {
         Api.get("/api/updates" + (force ? "?force=1" : ""), function (j) { update(function () { vsState = j }); if (then) then() },
-                function () { vsState = { local: null, remote: null, available: false, any: false }; if (then) then() })
+                function () { vsState = { local: null, remote: null, available: false, any: false, error: "api" }; if (then) then() })
     }
     function runUpdates() {
         if (app.jobBusy) return app.toast(Ui.t("common.busy"))
@@ -161,7 +163,7 @@ Layer {
             var rb = v.reboot || {}
             if (!v.any) {
                 if (rb.kernel || rb.voidstation) return app.rebootPrompt(rb)
-                if (!v.remote) return app.toast(Ui.t("upd.unreachable"), true)
+                if (!v.remote) return app.toast(vsNoRemote(v), true)
                 return app.toast(Ui.t("upd.upToDate"))
             }
             var parts = []

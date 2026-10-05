@@ -1392,7 +1392,7 @@ function catSub(id) {
       if (sett.live) return esc(T('settings.liveShort'));
       if (updInfo) return UPD_MARK + '<b>' + esc(updNoteText(updInfo)) + '</b>';
       if (vsState?.system?.count) return esc(vsVersion()) + ' · ' + esc(T('upd.noteSystem', { n: num(vsState.system.count) }));   // noch nicht faellig: ohne Warnzeichen
-      return esc(vsVersion()) + (vsState ? ' · ' + esc(vsState.remote ? T('upd.allCurrent') : T('upd.unreachable')) : '');
+      return esc(vsVersion()) + (vsState ? ' · ' + esc(vsState.remote ? T('upd.allCurrent') : vsNoRemote(vsState)) : '');
     case 'system': return sett.ssh === undefined ? esc(sett.net.hostname) : esc(T('settings.ssh') + ': ' + T(sett.ssh ? 'common.on' : 'common.off'));
   }
   return '';
@@ -1656,13 +1656,15 @@ function sysSummary(st) {                                  // "12 Void-Pakete (K
   if (y.proton) p.push('Proton-GE ' + y.proton);
   return p.join(' · ');
 }
+// Kein Stand vom Update-Server: offline, noch nicht geprueft oder Server wirklich nicht erreichbar
+function vsNoRemote(v) { return T(v?.online === false ? 'upd.offline' : v && !v.checked && !v.error ? 'upd.searching' : 'upd.unreachable'); }
 function showVs() {
   const el = $('#vsInfo'); if (!el) return;
   const ver = vsVersion();
   if (sett?.live) { el.innerHTML = `VoidStation ${esc(ver)}<br>${esc(T('settings.liveInfo'))}`; return; }
   let st = esc(T('upd.searching'));
   if (vsState) st = vsState.available ? `<b>${esc(T('upd.available', { version: vsState.remote }))}</b>`
-    : esc(vsState.remote ? T('upd.current') : T('upd.unreachable'));
+    : esc(vsState.remote ? T('upd.current') : vsNoRemote(vsState));
   const ch = vsState ? ` · ${esc(T('upd.channel', { channel: chLabel(vsState) }))}` : '';
   el.innerHTML = `VoidStation ${esc(ver)}${ch}<br>${st}`;
   const si = $('#sysInfo'); if (!si || !vsState?.system) return;
@@ -1703,7 +1705,7 @@ async function setSysDays(d) {
 }
 async function refreshVs(force) {
   if (offline) return;
-  try { vsState = await getJSON('/api/updates' + (force ? '?force=1' : '')); } catch { vsState = { local: null, remote: null, available: false, any: false }; }
+  try { vsState = await getJSON('/api/updates' + (force ? '?force=1' : '')); } catch { vsState = { local: null, remote: null, available: false, any: false, error: 'api' }; }
   if (layer() === 'settings' && $('#vsInfo')) renderSettings(); else { showVs(); updCatSubs(); }
 }
 // Der einzige Weg zu Updates: frisch pruefen, dann alles Ausstehende in einem Auftrag
@@ -1717,7 +1719,7 @@ async function runUpdates() {
   const rb = vsState.reboot || {};
   if (!vsState.any) {
     if (rb.kernel || rb.voidstation) return rebootPrompt(rb);
-    if (!vsState.remote) return toast(T('upd.unreachable'), true);
+    if (!vsState.remote) return toast(vsNoRemote(vsState), true);
     return toast(T('upd.upToDate'));
   }
   const parts = [];

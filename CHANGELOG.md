@@ -10,6 +10,7 @@ Jede Version steht auch in `CHANGELOG.en.md` (englisch) – sonst bricht `build.
 - Passt ein Kernel nicht auf die EFI-Partition, startet automatisch GRUB mit dem neuesten Kernel
 - Bestehende Geräte werden beim Update umgestellt (Initramfs wird einmal neu gebaut, danach einmal neu starten)
 - Startet ein neuer Kernel trotz Neustart nicht, erscheint statt der Dauermeldung ein Hinweis in Einstellungen → Updates
+- Updates: statt „Update-Server nicht erreichbar“ direkt nach dem Start wird jetzt sofort geprüft; ohne Netz steht dort „offline – keine Internetverbindung“, die Server-Meldung kommt nur noch, wenn das Netz da ist und der Server wirklich nicht antwortet
 
 ## 0.14.1 – 2026-10-04
 - Englische Oberfläche: Die Uhr zeigt nachmittags wieder „2:53 PM“ statt „14:53 PM“

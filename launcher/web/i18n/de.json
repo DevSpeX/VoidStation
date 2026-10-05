@@ -74,6 +74,7 @@
   "upd.available": "Update auf {version} verfügbar",
   "upd.current": "ist aktuell",
   "upd.unreachable": "Update-Server nicht erreichbar",
+  "upd.offline": "offline – keine Internetverbindung",
   "upd.channel": "Kanal {channel}",
   "upd.checking": "Suche nach Updates …",
   "upd.upToDate": "Alles ist auf dem neuesten Stand",

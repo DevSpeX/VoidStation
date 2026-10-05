@@ -9,6 +9,7 @@ Same format and the same version headings: `## <version> – <YYYY-MM-DD>`, foll
 - If a kernel doesn’t fit on the EFI partition, GRUB starts automatically with the newest kernel
 - Existing devices are switched over during the update (the initramfs is rebuilt once, then restart once)
 - If a new kernel still doesn’t start after a restart, Settings → Updates shows a note instead of the permanent notice
+- Updates: instead of “Update server not reachable” right after starting, the check now runs immediately; without a network it says “offline – no internet connection”, and the server message only appears when the network is up and the server really doesn’t answer
 
 ## 0.14.1 – 2026-10-04
 - English interface: the clock shows “2:53 PM” again in the afternoon instead of “14:53 PM”

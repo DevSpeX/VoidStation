@@ -1756,6 +1756,10 @@ def vs_update_status(force=False):
     except (OSError, IndexError):
         base = None
     if base and not LIVE and (force or time.time() - _VCACHE["t"] > 600 or _VCACHE["key"] != base):
+        if not net_online():
+            # ohne Netz gar nicht erst versuchen; naechster Aufruf prueft wieder (kein 10-min-Zwischenspeicher)
+            _VCACHE.update(error="offline")
+            return vs_state()
         try:
             _VCACHE.update(remote=_fetch_remote(base), error=None)
         except Exception as e:  # noqa: BLE001
@@ -1764,6 +1768,25 @@ def vs_update_status(force=False):
                 _VCACHE["remote"] = None
         _VCACHE.update(t=time.time(), key=base)
     return vs_state()
+
+
+def net_online():
+    """Gibt es eine Standardroute ins Netz (IPv4 oder IPv6, nicht ueber lo)? Schnell, ohne Netzwerkzugriff."""
+    try:
+        for line in Path("/proc/net/route").read_text().splitlines()[1:]:
+            f = line.split()
+            if len(f) > 3 and f[1] == "00000000" and int(f[3], 16) & 1:      # Ziel 0.0.0.0, Route aktiv (RTF_UP)
+                return True
+    except (OSError, ValueError):
+        return True                                                        # unbekannt: nicht als offline melden
+    try:
+        for line in Path("/proc/net/ipv6_route").read_text().splitlines():
+            f = line.split()
+            if len(f) == 10 and f[0] == "0" * 32 and f[1] == "00" and f[9] != "lo" and not int(f[8], 16) & 0x200:
+                return True                                                # ::/0, kein Reject-Eintrag
+    except (OSError, ValueError):
+        pass
+    return False
 
 
 def vtuple(v):
@@ -1795,7 +1818,8 @@ def vs_state():
             "remote": (remote.get("version") or remote.get("build")) if remote else None,
             "remote_build": remote.get("build") if remote else None,
             "available": available, "changes": changes[:5], "error": _VCACHE["error"],
-            "channel": ch, "channel_label": CHANNELS[ch], "checked": _VCACHE["t"] or None}
+            "channel": ch, "channel_label": CHANNELS[ch], "checked": _VCACHE["t"] or None,
+            "online": True if remote and _VCACHE["error"] != "offline" else net_online()}
 
 
 # ---------------------------------------------------------------------------
@@ -2001,7 +2025,7 @@ def sys_state():
 
 def updates_state(force=False):
     """Gesamtstand fuer Einstellungen → Updates: VoidStation + System + Neustart."""
-    vs = vs_update_status(force) if force else vs_state()
+    vs = vs_update_status(force)          # ohne force: nur, wenn der letzte Stand aelter als 10 min ist
     busy = False
     if force and not sys_check(sync=True):
         busy = JOBS.busy() or xbps_busy()
