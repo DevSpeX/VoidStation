@@ -123,8 +123,8 @@ Every version released to *Stable* is tagged `v<version>` and listed under
 [Releases](https://github.com/Panther92/VoidStation/releases) – with a link to its live ISO, if that version has one.
 
 **Versions** follow the calendar: `2026.11` is the release of November 2026, hotfixes to it are `2026.11.1`,
-`2026.11.2` … New features spend at least 14 days in *Testing* before a monthly release train takes them to
-*Stable*; a new live ISO comes out every three months. Details: [RELEASING.md](RELEASING.md).
+`2026.11.2` … New features go to *Testing* first; the monthly release train takes to *Stable* what arrived
+before the feature freeze, which starts on the Monday of the release week. A new live ISO comes out every three months. Details: [RELEASING.md](RELEASING.md).
 
 **Signatures:** Updates run as root, so devices only install updates signed with the publisher's key
 (`ssh-keygen -Y`, namespace `voidstation`). The public key is in `keys/voidstation-release.pub` and comes onto
@@ -265,8 +265,8 @@ vspub --init-key                                 # once: create signing key (bac
 vsget                                            # fetch Claude branches (claude/*) as one bundle -> ~/share/Updates (pick: 2, 1,3, 1-3, alle)
 vspub                                            # take the bundle from ~/share/Updates, build, sign,
                                                  # push to main (Testing channel)
-vspub --status                                   # what's in Testing, since when, what is ripe?
-vspub --release                                  # release train: everything 14+ days in Testing -> stable as YYYY.MM
+vspub --status                                   # what's in Testing, since when, what goes with the release train?
+vspub --release                                  # release train: everything from before the freeze -> stable as YYYY.MM
 vspub --hotfix <commit>                          # a single fix from Testing -> stable right away as YYYY.MM.N
 vspub --iso                                      # newest live ISO from ~/share/ISO to SourceForge
 ```

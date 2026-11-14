@@ -124,8 +124,8 @@ Jede für *Stable* freigegebene Version bekommt den Tag `v<version>` und steht u
 [Releases](https://github.com/Panther92/VoidStation/releases) – mit Link zur Live-ISO, falls es für diese Version eine gibt.
 
 **Versionen** richten sich nach dem Kalender: `2026.11` ist die Version vom November 2026, Hotfixes dazu heißen
-`2026.11.1`, `2026.11.2` … Neues liegt mindestens 14 Tage in *Testing*, bevor es mit dem monatlichen Release-Zug
-nach *Stable* geht; eine neue Live-ISO gibt es alle drei Monate. Einzelheiten: [RELEASING.md](RELEASING.md) (englisch).
+`2026.11.1`, `2026.11.2` … Neues kommt zuerst nach *Testing*; der monatliche Release-Zug bringt nach *Stable*, was vor
+der Sperrfrist dort lag (sie beginnt am Montag der Release-Woche). Eine neue Live-ISO gibt es alle drei Monate. Einzelheiten: [RELEASING.md](RELEASING.md) (englisch).
 
 **Signaturen:** Updates laufen als root, deshalb installieren Geräte nur Updates, die mit dem Schlüssel des
 Herausgebers signiert sind (`ssh-keygen -Y`, Namensraum `voidstation`). Der öffentliche Schlüssel liegt in
@@ -266,8 +266,8 @@ vspub --init-key                                 # einmalig: Signaturschlüssel 
 vsget                                            # Claude-Zweige (claude/*) als ein Bundle -> ~/share/Updates holen (Auswahl: 2, 1,3, 1-3, alle)
 vspub                                            # Bundle aus ~/share/Updates übernehmen, bauen, signieren,
                                                  # nach main (Kanal Testing) pushen
-vspub --status                                   # was liegt in Testing, seit wann, was ist reif?
-vspub --release                                  # Release-Zug: alles ab 14 Tagen in Testing -> stable als JJJJ.MM
+vspub --status                                   # was liegt in Testing, seit wann, was fährt mit dem Release-Zug?
+vspub --release                                  # Release-Zug: alles von vor der Sperrfrist -> stable als JJJJ.MM
 vspub --hotfix <commit>                          # einzelne Fehlerbehebung aus Testing sofort -> stable als JJJJ.MM.N
 vspub --iso                                      # neueste Live-ISO aus ~/share/ISO nach SourceForge
 ```

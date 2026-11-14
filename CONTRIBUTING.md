@@ -26,8 +26,9 @@ Devices download their updates straight from these branches (`update-url`), so b
 update mechanism and must not be renamed. Released versions are tagged `v<version>` and listed under
 [Releases](https://github.com/Panther92/VoidStation/releases) – the tags and releases are created automatically.
 
-Versions follow the calendar (`2026.11`, hotfixes `2026.11.1`). Merged changes spend at least 14 days in *Testing*
-before the monthly release train takes them to *Stable* – see [RELEASING.md](RELEASING.md).
+Versions follow the calendar (`2026.11`, hotfixes `2026.11.1`). Merged changes go to *Testing* first; the monthly
+release train takes to *Stable* what arrived before the feature freeze (the Monday of the release week) –
+see [RELEASING.md](RELEASING.md).
 
 ## Pull requests
 

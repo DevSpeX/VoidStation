@@ -98,30 +98,37 @@ commit hash as the end point – `vspub` then fails with "Konnte Remote-Referenz
 
 ## Release train (monthly)
 
-Once a month – usually on the first weekend – *Stable* is updated:
+Once a month – at the beginning of the month, usually on a Friday – *Stable* is updated:
 
-1. **Only what has been in Testing for at least 14 days goes along.** Younger changes wait for the next train.
+1. **Feature freeze from the Monday of the release week.** The train takes what reached Testing before that
+   Monday. Whatever arrives during the freeze (Monday up to the train) waits for the next one.
    Only changes that reach the devices count (`launcher/`, `iso/`, install/update scripts, keys, changelog) –
    website or tooling changes don't hold anything up.
+   The freeze replaces the earlier rule of 14 days in Testing (decided on 14 Nov 2026).
 2. **Checklist** before releasing, on both reference devices (Intel: Esprimo, AMD: NiPoGi):
    update from the previous Stable version, restart, start screen, YouTube, Settings → Updates.
    If the installer changed: a run in QEMU + OVMF.
 3. **No blockers:** an open bug that came in with one of the changes stops that change (release an older state
    with `vspub --release <commit>` or fix it first).
-4. **Nothing ripe, no train.** No empty releases just because of the calendar.
+4. **Nothing new before the freeze, no train.** No empty releases just because of the calendar.
 
 **One-off exception for 2026.11** (decided on 29 Oct 2026): this train takes *everything* up to 6 Nov, so that
 every device – Testing included – ends up on the same state; that is what lets former Testing devices return to
 Stable without a downgrade. To keep the risk small: feature freeze on 3 Nov (only fixes after that), the
 checklist also covers everything that came after 23 Oct, and the weekend until the ISO (Monday, 9 Nov) is the buffer for a
 `2026.11.1` hotfix. Released with `vspub --release HEAD` (it warns about the young commits and asks).
-From 2026.12 on the 14 days apply again.
+From 2026.12 on the feature freeze described above applies.
 
 ```sh
-vspub --status            # what's in Testing, since when, what is ripe?
-vspub --release           # release everything that is ripe as YYYY.MM
-vspub --release <commit>  # release exactly this state (e.g. HEAD – warns about anything younger than 14 days)
+vspub --status             # what's in Testing, since when, what goes along if the train leaves this week?
+vspub --status 2026-12-04  # the same for a train on that day
+vspub --release            # release everything that reached Testing before the freeze, as YYYY.MM
+vspub --release <commit>   # release exactly this state (e.g. HEAD – warns about anything that came during the freeze)
 ```
+
+`vspub --release` takes the Monday of the current week as the start of the freeze and shows that date before it
+asks. If the train leaves in another week than planned (say, on the Monday after), name the planned day:
+`VS_TRAIN=2026-12-04 vspub --release`.
 
 `vspub --release` builds a release commit (changelog section renamed, `dist/` rebuilt and signed), pushes it to
 `stable` and merges it back into `main`, so that `main` always contains `stable`. GitHub tag and release follow
@@ -142,8 +149,9 @@ without changing anything – then a separate version of the fix for Stable is n
 
 ## Live ISO (quarterly)
 
-A new ISO every three months: **February, May, August, November**, on the day of that month's train or up to three days
-after it, always **after** `vspub --release`. If a serious bug turns up in the new Stable version that also affects
+A new ISO every three months: **March, June, September, December**, on the day of that month's train or up to three days
+after it, always **after** `vspub --release`. (Until November 2026 the months were February, May, August, November;
+ISO 2026.11 was the last one in that rhythm, so the next one follows with 2026.12.) If a serious bug turns up in the new Stable version that also affects
 new installations, the ISO waits for the hotfix; otherwise it goes out, and installed devices get later fixes as a
 normal update.
 
@@ -165,14 +173,15 @@ important hardware support): same procedure, same version number, new build date
 
 | When | What |
 |---|---|
-| beginning of November | train → Stable 2026.11 |
-| Monday after the train (9 Nov) | ISO 2026.11 |
-| beginning of December | train → Stable 2026.12 (no ISO) |
+| Monday of the release week | feature freeze begins |
+| beginning of December | train → Stable 2026.12, then ISO 2026.12 (same day or up to three days later) |
 | beginning of January | train → Stable 2027.01 (no ISO) |
-| beginning of February | train → Stable 2027.02, then ISO 2027.02 (same day or up to three days later) |
+| beginning of February | train → Stable 2027.02 (no ISO) |
+| beginning of March | train → Stable 2027.03, then ISO 2027.03 |
 | any time | hotfixes `.1`, `.2` … |
 
 ## Settings
 
-`vspub` reads a few environment variables, e.g. for a shorter waiting time while testing the tool itself:
-`VS_SOAK_DAYS` (default 14), `VS_HOTFIX_DAYS` (default 2), `VS_REPO`, `VS_INBOX`, `VS_KEY`.
+`vspub` reads a few environment variables: `VS_TRAIN` (day of the release train as `YYYY-MM-DD`, default today;
+the freeze starts on the Monday of that week), `VS_HOTFIX_DAYS` (default 2, e.g. shorter while testing the tool
+itself), `VS_REPO`, `VS_INBOX`, `VS_KEY`.

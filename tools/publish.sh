@@ -5,10 +5,13 @@
 #
 #    vspub --init-key       einmalig: Signaturschluessel anlegen
 #    vspub                  Bundle einspielen, bauen, signieren, nach "main" (Kanal Testing) pushen
-#    vspub --status         was liegt in Testing, wie lange schon, was ist reif fuer Stable?
-#    vspub --release        Release-Zug: alles, was mind. 14 Tage in Testing liegt, als
-#                           Version JJJJ.MM fuer alle freigeben ("stable")
-#    vspub --release <rev>  genau diesen Stand freigeben (z. B. HEAD = alles, auch Junges)
+#    vspub --status [tag]   was liegt in Testing, seit wann, was faehrt mit dem Release-Zug?
+#                           tag = Tag des Zugs (JJJJ-MM-TT), ohne Angabe: diese Woche
+#    vspub --release        Release-Zug: alles, was vor der Sperrfrist nach Testing kam, als
+#                           Version JJJJ.MM fuer alle freigeben ("stable"). Die Sperrfrist
+#                           beginnt am Montag der Woche, in der der Zug faehrt.
+#    vspub --release <rev>  genau diesen Stand freigeben (z. B. HEAD = alles, auch was erst
+#                           in der Sperrfrist kam)
 #    vspub --hotfix <rev>…  einzelne Fehlerbehebungen aus Testing sofort als JJJJ.MM.N auf Stable
 #    vspub --iso [datei]    Live-ISO pruefen, Pruefsumme signieren, nach SourceForge
 #                           hochladen, Webseite umstellen, ISO hier loeschen
@@ -43,9 +46,9 @@ ISO_DIR="${VS_ISO_DIR:-$HOME/share/ISO}"
 SF_HOST="${VS_SF_HOST:-frs.sourceforge.net}"
 SF_PROJECT="${VS_SF_PROJECT:-voidstation}"
 SF_KEY="${VS_SF_KEY:-$HOME/.ssh/sourceforge}"
-SOAK_DAYS="${VS_SOAK_DAYS:-14}"          # Mindestliegezeit in Testing fuer den Release-Zug
+TRAIN="${VS_TRAIN:-}"                    # Tag des Release-Zugs (JJJJ-MM-TT), leer = heute; legt die Sperrfrist fest
 HOTFIX_DAYS="${VS_HOTFIX_DAYS:-2}"       # Mindestliegezeit fuer Hotfixes
-# Was auf den Geraeten landet – nur Aenderungen hier zaehlen fuer die Liegezeit
+# Was auf den Geraeten landet – nur Aenderungen hier zaehlen fuer Sperrfrist und Liegezeit
 DEVICE_PATHS=(launcher install-head.sh update-head.sh iso build.sh update-url keys CHANGELOG.md CHANGELOG.en.md)
 
 say()  { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
@@ -187,13 +190,33 @@ collect_pending() {
   done < <(git log --first-parent --format='%H %ct' origin/stable..origin/main)
 }
 
-# Release-Zug: neuester Stand, in dem alles mind. SOAK_DAYS in Testing lag -> RIPE (leer = nichts reif)
+# Sperrfrist: beginnt am Montag (0 Uhr) der Woche, in der der Release-Zug faehrt, und dauert
+# bis zum Zug. Was vorher nach Testing kam, faehrt mit; was in der Sperrfrist kommt, wartet
+# auf den naechsten Zug. Tag des Zugs: Argument, sonst VS_TRAIN, sonst heute.
+# -> TRAIN_DAY / FREEZE_DAY (JJJJ-MM-TT), FREEZE_TS, TRAIN_GIVEN (1 = Tag wurde angegeben)
+TRAIN_DAY=""; FREEZE_DAY=""; FREEZE_TS=0; TRAIN_GIVEN=0
+set_freeze() {             # [<JJJJ-MM-TT>]
+  local d="${1:-$TRAIN}" wd
+  TRAIN_GIVEN=1
+  if [ -z "$d" ]; then d="$(date +%Y-%m-%d)"; TRAIN_GIVEN=0; fi
+  if ! [[ "$d" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || [ "$(date -d "$d" +%Y-%m-%d 2>/dev/null)" != "$d" ]; then
+    die "Tag des Release-Zugs nicht lesbar: $d  (erwartet JJJJ-MM-TT, z. B. 2026-12-04)"
+  fi
+  TRAIN_DAY="$d"
+  wd="$(date -d "$d 12:00" +%u)"                                      # 1 = Montag
+  FREEZE_DAY="$(date -d "$d 12:00 $(( wd - 1 )) days ago" +%Y-%m-%d)"
+  FREEZE_TS="$(date -d "$FREEZE_DAY 00:00:00" +%s)"
+}
+fmt_day() { date -d "$1 12:00" +%d.%m.%Y; }                           # <JJJJ-MM-TT>
+
+# Release-Zug: neuester Stand, in dem alles vor der Sperrfrist nach Testing kam -> RIPE
+# (leer = nichts im Zug). Vorher set_freeze aufrufen.
 RIPE=""; UNRIPE_IDX=-1
 pick_ripe() {
-  local i now; now="$(date +%s)"; RIPE=""; UNRIPE_IDX=-1
+  local i; RIPE=""; UNRIPE_IDX=-1
   [ ${#PEND_SHA[@]} -gt 0 ] || return 0
   for i in "${!PEND_SHA[@]}"; do
-    if [ $(( now - PEND_TS[i] )) -lt $(( SOAK_DAYS * 86400 )) ]; then UNRIPE_IDX=$i; fi
+    if [ "${PEND_TS[i]}" -ge "$FREEZE_TS" ]; then UNRIPE_IDX=$i; fi
   done
   if [ "$UNRIPE_IDX" -lt 0 ]; then RIPE="$(git rev-parse origin/main)"
   elif [ "$UNRIPE_IDX" -lt $(( ${#PEND_SHA[@]} - 1 )) ]; then RIPE="$(git rev-parse "${PEND_SHA[UNRIPE_IDX]}^1")"
@@ -201,15 +224,13 @@ pick_ripe() {
 }
 
 print_pending() {
-  local i now age left; now="$(date +%s)"
+  local i
   if [ ${#PEND_SHA[@]} -eq 0 ]; then echo "  (nichts – Testing enthaelt fuer die Geraete nichts Neues)"; return; fi
   for i in "${!PEND_SHA[@]}"; do
-    age=$(( (now - PEND_TS[i]) / 86400 ))
     if [ "$i" -le "$UNRIPE_IDX" ]; then
-      left=$(( PEND_TS[i] + SOAK_DAYS * 86400 ))
-      printf '  wartet  %s  %2d Tage, reif am %s  %s\n' "${PEND_SHA[i]:0:7}" "$age" "$(fmt_date "$left")" "${PEND_TXT[i]}"
+      printf '  wartet  %s  seit %s  %s\n' "${PEND_SHA[i]:0:7}" "$(fmt_date "${PEND_TS[i]}")" "${PEND_TXT[i]}"
     else
-      printf '  reif    %s  %2d Tage                    %s\n' "${PEND_SHA[i]:0:7}" "$age" "${PEND_TXT[i]}"
+      printf '  im Zug  %s  seit %s  %s\n' "${PEND_SHA[i]:0:7}" "$(fmt_date "${PEND_TS[i]}")" "${PEND_TXT[i]}"
     fi
   done
 }
@@ -417,8 +438,9 @@ EOF
 # ---------------------------------------------------------------------
 #  vspub --status
 # ---------------------------------------------------------------------
-do_status() {
+do_status() {               # [<Tag des Zugs JJJJ-MM-TT>]
   local t sv sd mv
+  set_freeze "${1:-}"
   git fetch -q origin || warn "GitHub nicht erreichbar – zeige den letzten bekannten Stand."
   t="$(mktemp)"; TMPS+=("$t")
   read -r sv sd < <(top_of origin/stable "$t") || die "CHANGELOG.md auf stable nicht lesbar."
@@ -427,28 +449,38 @@ do_status() {
   echo "Testing:  $mv  ($(git log -1 --format=%h origin/main))"
   collect_pending; pick_ripe
   echo
-  echo "Seit Stable in Testing (Liegezeit fuer den Release-Zug: $SOAK_DAYS Tage):"
+  if [ "$TRAIN_GIVEN" = 1 ]; then
+    echo "Release-Zug am $(fmt_day "$TRAIN_DAY"): Sperrfrist ab Montag, $(fmt_day "$FREEZE_DAY")."
+  else
+    echo "Angenommen, der Release-Zug faehrt diese Woche: Sperrfrist ab Montag, $(fmt_day "$FREEZE_DAY")."
+    echo "Anderer Termin:  vspub --status JJJJ-MM-TT"
+  fi
+  [ "$FREEZE_TS" -le "$(date +%s)" ] || echo "Die Sperrfrist hat noch nicht begonnen – was bis dahin nach Testing kommt, faehrt mit."
+  echo
+  echo "Seit Stable in Testing:"
   print_pending
   echo
   if [ ${#PEND_SHA[@]} -eq 0 ]; then
     echo "Nichts freizugeben."
   elif [ -n "$RIPE" ]; then
-    echo "Release-Zug moeglich:  vspub --release   (Version $("${CL[@]}" next --mode release --stable "$t" 2>/dev/null || echo ?), Stand $(git log -1 --format=%h "$RIPE"))"
+    echo "Im Zug:  Stand $(git log -1 --format=%h "$RIPE") als Version $("${CL[@]}" next --mode release --stable "$t" --month "${TRAIN_DAY:0:4}.${TRAIN_DAY:5:2}" 2>/dev/null || echo ?) – freigeben am Tag des Zugs mit  vspub --release"
   else
-    echo "Noch nichts reif – der aelteste Stand ist am $(fmt_date $(( PEND_TS[${#PEND_TS[@]}-1] + SOAK_DAYS * 86400 ))) so weit."
+    echo "Nichts im Zug – alles kam erst in der Sperrfrist (ab $(fmt_day "$FREEZE_DAY")) nach Testing."
   fi
   echo "Hotfix (einzelne Fehlerbehebung sofort):  vspub --hotfix <commit>"
 }
 
 # ---------------------------------------------------------------------
 #  vspub --release [<rev>]  – Release-Zug
-#  Ohne <rev>: neuester Stand, in dem alles mind. SOAK_DAYS Tage in Testing lag.
+#  Ohne <rev>: neuester Stand, in dem alles vor der Sperrfrist nach Testing kam
+#  (Sperrfrist ab Montag dieser Woche; Zug an einem anderen Tag: VS_TRAIN=JJJJ-MM-TT).
 #  Ablauf: Freigabe-Commit R = <stand> + CHANGELOG "Testing" -> "JJJJ.MM – heute"
 #  + neu gebautes, signiertes dist/; R wird stable, main holt R zurueck.
 # ---------------------------------------------------------------------
 do_release() {
-  local rev="${1:-}" x t sv sd ver i young=() now r d f conf
+  local rev="${1:-}" x t sv sd ver i young=() r d f conf
   require_synced
+  set_freeze
   t="$(mktemp)"; TMPS+=("$t")
   read -r sv sd < <(top_of origin/stable "$t") || die "CHANGELOG.md auf stable nicht lesbar."
   collect_pending; pick_ripe
@@ -457,16 +489,15 @@ do_release() {
     [ ${#PEND_SHA[@]} -gt 0 ] || die "Testing enthaelt seit $sv nichts Neues fuer die Geraete – nichts freizugeben."
     if [ -z "$RIPE" ]; then
       print_pending
-      die "Noch nichts reif ($SOAK_DAYS Tage). Trotzdem alles freigeben:  vspub --release HEAD"
+      die "Nichts im Zug – alles kam erst in der Sperrfrist (ab $(fmt_day "$FREEZE_DAY")) nach Testing. Trotzdem alles freigeben:  vspub --release HEAD"
     fi
     x="$RIPE"
   else
     x="$(git rev-parse -q --verify "$rev^{commit}")" || die "Unbekannter Stand: $rev"
     git merge-base --is-ancestor "$x" origin/main || die "$rev ist nicht in main (Testing) – freigegeben wird nur, was getestet wurde."
-    now="$(date +%s)"
     for i in "${!PEND_SHA[@]}"; do
-      if git merge-base --is-ancestor "${PEND_SHA[i]}" "$x" && [ $(( now - PEND_TS[i] )) -lt $(( SOAK_DAYS * 86400 )) ]; then
-        young+=("  ${PEND_SHA[i]:0:7}  erst $(days_ago "${PEND_TS[i]}") Tage in Testing  ${PEND_TXT[i]}")
+      if git merge-base --is-ancestor "${PEND_SHA[i]}" "$x" && [ "${PEND_TS[i]}" -ge "$FREEZE_TS" ]; then
+        young+=("  ${PEND_SHA[i]:0:7}  seit $(fmt_date "${PEND_TS[i]}") in Testing  ${PEND_TXT[i]}")
       fi
     done
   fi
@@ -479,13 +510,14 @@ do_release() {
   say "Release-Zug $ver"
   echo "Stable bisher:  $sv vom $sd"
   echo "Neu:            $ver – Stand $(git log -1 --format='%h %s' "$x")"
+  echo "Sperrfrist:     ab Montag, $(fmt_day "$FREEZE_DAY") (Zug am $(fmt_day "$TRAIN_DAY"); anderer Tag: VS_TRAIN=JJJJ-MM-TT)"
   [ "$x" = "$(git rev-parse origin/main)" ] || echo "Bleibt in Testing: alles nach $(git log -1 --format=%h "$x") (wartet auf den naechsten Zug)"
   echo
   echo "Aenderungen ($(show_file "$x" CHANGELOG.md | sed -n '/^## Testing/,/^## /p' | grep -c '^- ') Eintraege):"
   show_file "$x" CHANGELOG.md | sed -n '/^## Testing/,/^## /{/^- /p}' | cut -c1-110 | sed 's/^/  /'
   if [ ${#young[@]} -gt 0 ]; then
     echo
-    warn "Kuerzer als $SOAK_DAYS Tage in Testing:"
+    warn "Erst in der Sperrfrist (ab $(fmt_day "$FREEZE_DAY")) nach Testing gekommen:"
     printf '%s\n' "${young[@]}"
   fi
   echo
@@ -525,7 +557,7 @@ do_release() {
 
   say "Veroeffentlichen"
   push_release "$r" "$ver"
-  echo "ISO dazu (Quartal?): siehe RELEASING.md – gebaut wird aus stable."
+  echo "ISO dazu (Maerz, Juni, September, Dezember): siehe RELEASING.md – gebaut wird aus stable."
 }
 
 # ---------------------------------------------------------------------
@@ -627,7 +659,7 @@ Weiter mit:  vspub
 EOF
   exit 0 ;;
 
---status)   do_status; exit 0 ;;
+--status)   do_status "${2:-}"; exit 0 ;;
 --release)  do_release "${2:-}"; exit 0 ;;
 --hotfix)   shift; do_hotfix "$@"; exit 0 ;;
 
@@ -641,7 +673,7 @@ EOF
 "")
   ;;
 *)
-  die "Unbekannte Option: $1  (erlaubt: --status, --release [stand], --hotfix <commit>…, --iso [datei], --init-key)" ;;
+  die "Unbekannte Option: $1  (erlaubt: --status [tag], --release [stand], --hotfix <commit>…, --iso [datei], --init-key)" ;;
 esac
 
 # ---- Normaler Lauf: Bundle einspielen, bauen, signieren, nach Testing
@@ -690,5 +722,5 @@ cat <<EOF
 
 Veroeffentlicht: $ver im Kanal Testing (main).
 Testen:    Geraet auf Kanal "Testing" -> Einstellungen -> Updates
-Stand:     vspub --status    (was ist reif fuer den naechsten Release-Zug?)
+Stand:     vspub --status    (was faehrt mit dem naechsten Release-Zug?)
 EOF
