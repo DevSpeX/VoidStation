@@ -10,6 +10,7 @@ Baut die Webseite voidstation.de (statisch, ohne Fremdpakete – nur Python 3).
 Quellen (alles unter site/):
   config.json                     Links und ISO-Download (Version, Datei, Adresse, SHA-256)
   impressum.json                  Anbieterangaben – fehlen sie, gibt es nur eine Baustellenseite
+  config.json "security"          Adresse fuer Sicherheitsmeldungen -> /.well-known/security.txt (RFC 9116)
   i18n.json                       Texte der Seitenelemente, deutsch und englisch
   pages/<seite>.<de|en>.md        Inhaltsseiten (erste Zeile "# Titel")
   news/JJJJ-MM-TT-<name>.<de|en>.md   eigene Beitraege (erste Zeile "# Titel")
@@ -23,7 +24,7 @@ Auf GitHub baut .github/workflows/pages.yml die Seite bei jedem Push nach main o
   --src = Zweig main, --stable = Zweig stable.
 """
 import argparse, hashlib, html, json, re, shutil, sys
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from email.utils import format_datetime
 from pathlib import Path
 
@@ -717,6 +718,22 @@ class Site:
         self.write("404.html", '<!doctype html><meta charset="utf-8"><title>404</title><p>404 – <a href="/">voidstation.de</a></p>\n', sitemap=False)
         self.write("robots.txt", "User-agent: *\nDisallow: /\n", sitemap=False)
 
+    def build_security_txt(self):
+        # RFC 9116; Expires wird bei jedem Bau neu gesetzt (ein Jahr), die Seite wird oft genug gebaut.
+        # Liegt unter /.well-known/ -> pages.yml braucht include-hidden-files: true
+        mail = str(self.cfg.get("security", "")).strip()
+        if not mail:
+            return
+        expires = (datetime.now(timezone.utc) + timedelta(days=365)).strftime("%Y-%m-%dT00:00:00Z")
+        gh = self.cfg["github"].rstrip("/")
+        self.write(".well-known/security.txt",
+                   f"Contact: mailto:{mail}\n"
+                   f"Contact: {gh}/security/advisories/new\n"
+                   f"Expires: {expires}\n"
+                   "Preferred-Languages: en, de\n"
+                   f"Canonical: {self.base}/.well-known/security.txt\n"
+                   f"Policy: {gh}/blob/main/SECURITY.md\n", sitemap=False)
+
     def copy_static(self):
         a = self.out / "assets"
         shutil.copytree(self.sd / "assets", a)
@@ -757,6 +774,7 @@ class Site:
         if self.preview and not self.legal_ok:
             robots = "User-agent: *\nDisallow: /\n"
         self.write("robots.txt", robots + f"Sitemap: {self.base}/sitemap.xml\n", sitemap=False)
+        self.build_security_txt()
         today = date.today().isoformat()
         urls = "".join(f"<url><loc>{self.base}{p}</loc><lastmod>{today}</lastmod></url>" for p in sorted(set(self.sitemap)))
         self.write("sitemap.xml", f'<?xml version="1.0" encoding="utf-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>\n', sitemap=False)

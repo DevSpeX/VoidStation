@@ -17,7 +17,7 @@ Please **do not open a public issue** for security problems.
 
 - Preferred: [report it privately on GitHub](https://github.com/Panther92/VoidStation/security/advisories/new)
   (*Security* tab → *Report a vulnerability*).
-- Alternatively by e-mail to **paulvolz92@gmail.com** with “VoidStation security” in the subject.
+- Alternatively by e-mail to **security@voidstation.de** with “VoidStation security” in the subject.
 
 English or German is fine. Helpful details: the VoidStation version and channel (*Settings → Updates*),
 what an attacker needs (local user, same network, physical access …), and steps to reproduce.

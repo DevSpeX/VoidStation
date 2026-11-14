@@ -4,6 +4,7 @@
   "sourceforge": "https://sourceforge.net/projects/voidstation/files/",
   "distrowatch": "https://distrowatch.com/table.php?distribution=voidstation",
   "donate": "https://buymeacoffee.com/paulvolz92n",
+  "security": "security@voidstation.de",
   "iso": {
     "version": "2026.11",
     "date": "2026-11-08",

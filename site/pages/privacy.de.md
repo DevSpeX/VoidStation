@@ -26,7 +26,7 @@ Links führen unter anderem zu GitHub, zu SourceForge (Download der ISO) und zu 
 
 ## Kontakt {#kontakt}
 
-Schreibst du mir eine E-Mail, verwende ich deine Angaben nur, um deine Anfrage zu beantworten (Art. 6 Abs. 1 lit. f DSGVO), und lösche sie, wenn sie dafür nicht mehr gebraucht werden. Fehlermeldungen auf GitHub sind öffentlich – dafür gelten die Bedingungen von GitHub.
+E-Mails an Adressen unter voidstation.de liegen bei iCloud Mail (Apple Distribution International Ltd., Irland), das sie für mich speichert. Schreibst du mir eine E-Mail, verwende ich deine Angaben nur, um deine Anfrage zu beantworten (Art. 6 Abs. 1 lit. f DSGVO), und lösche sie, wenn sie dafür nicht mehr gebraucht werden. Fehlermeldungen auf GitHub sind öffentlich – dafür gelten die Bedingungen von GitHub.
 
 ## Deine Rechte {#rechte}
 

@@ -26,7 +26,7 @@ Links lead to GitHub, SourceForge (ISO download) and Buy Me a Coffee (donations)
 
 ## Contact {#contact}
 
-If you email me, I only use your details to answer your request (Art. 6 (1) (f) GDPR) and delete them once they are no longer needed for that. Bug reports on GitHub are public – GitHub's terms apply there.
+Emails to addresses at voidstation.de are stored by iCloud Mail (Apple Distribution International Ltd., Ireland) on my behalf. If you email me, I only use your details to answer your request (Art. 6 (1) (f) GDPR) and delete them once they are no longer needed for that. Bug reports on GitHub are public – GitHub's terms apply there.
 
 ## Your rights {#rights}
 
