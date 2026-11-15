@@ -852,6 +852,12 @@
   "region.UA": "Ucraina",
   "region.IL": "Israele",
   "region.IS": "Islanda",
+  "region.ID": "Indonesia",
+  "region.MY": "Malaysia",
+  "region.VN": "Vietnam",
+  "region.TH": "Thailandia",
+  "region.SG": "Singapore",
+  "region.LK": "Sri Lanka",
   "region.AE": "Emirati Arabi Uniti",
   "region.ZA": "Sudafrica",
   "region.BY": "Bielorussia",
@@ -1520,5 +1526,10 @@
   "inst.kb.is": "Íslenska",
   "inst.kb.no": "Norsk",
   "inst.kb.fi": "Suomi",
-  "inst.kb.se": "Svenska"
+  "inst.kb.se": "Svenska",
+  "inst.kb.vi": "Tiếng Việt",
+  "inst.kb.hi": "हिन्दी",
+  "inst.kb.ta": "தமிழ்",
+  "inst.kb.ml": "മലയാളം",
+  "inst.kb.th": "ไทย + US"
 }

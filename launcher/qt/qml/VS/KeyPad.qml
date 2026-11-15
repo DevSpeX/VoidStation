@@ -7,6 +7,8 @@
 // Koreanisch (Belegung mit hangul: true): Jamo setzen sich zu Silben zusammen (VS/Hangul.js). Dafuer ersetzt die
 // Tastatur das zuletzt getippte Zeichen ueber erase() + typed(). Wer den Cursor anders bewegt oder echte Tasten
 // tippt, ruft endCompose(); backspace() nimmt beim Zusammensetzen nur den letzten Teil der Silbe weg.
+// Vietnamesisch (tones: true): ein Tonzeichen ersetzt den Vokal davor durch den Vokal mit Ton, auf demselben Weg.
+// Belegungen mit upper fuer jede Taste (Hindi, Malayalam, Thai …): Umschalt ist die zweite Ebene der Tastatur.
 import QtQuick
 import "OskLayouts.js" as OL
 import "Hangul.js" as HG
@@ -79,11 +81,17 @@ Column {
             hprev = r.out.charAt(r.out.length - 1)
             return
         }
-        hprev = ""
+        if (lay.tones && !latin && OL.isTone(ch)) {            // Tiếng Việt: Tonzeichen auf den Vokal davor
+            var t = OL.withTone(hprev, ch)
+            if (!t) return
+            erase(); typed(t); hprev = t
+            return
+        }
+        hprev = lay.tones && !latin && ch !== " " ? ch : ""
         typed(ch)
     }
     function backspace() {
-        if (!hprev) { erase(); return }
+        if (!hprev || !lay.hangul) { hprev = ""; erase(); return }
         var rest = HG.back(hprev)
         erase()
         if (rest) typed(rest)
@@ -150,7 +158,7 @@ Column {
                             anchors.centerIn: parent
                             width: Math.min(implicitWidth, parent.width - 8)
                             horizontalAlignment: Text.AlignHCenter
-                            text: modelData.a === "char" && modelData.w === 1 ? kp.caseOf(modelData.l) : modelData.l
+                            text: modelData.a === "char" && modelData.w === 1 ? OL.label(kp.caseOf(modelData.ch)) : modelData.l
                             font.pixelSize: kp.fitFont ? kp.keyH * (modelData.w === 1 ? 0.44 : 0.36)
                                                        : (modelData.w === 1 ? 18 : 15) * Ui.f
                             fontSizeMode: Text.HorizontalFit

@@ -8,9 +8,10 @@ Starten
   das geht auch, dann installiert VoidStation aber nur auf eine ganze SSD.
 
 Startmenü
-  Zuerst die Sprache wählen: Deutsch, English, Français – alle weiteren (Čeština, Dansk, Eesti, Español,
+  Zuerst die Sprache wählen: Deutsch, English, Français – alle weiteren (Bahasa Indonesia, Bahasa Melayu, Čeština, Dansk, Eesti, Español,
   Íslenska, Italiano, Latviešu, Magyar, Nederlands, Norsk bokmål, Polski, Português (Brasil), Română,
-  Slovenčina, Suomi, Svenska, Türkçe, Ελληνικά, Русский, Українська, 日本語, 한국어, 简体中文, 繁體中文) stehen unter „Other Languages“.
+  Slovenčina, Suomi, Svenska, Tiếng Việt, Türkçe, Ελληνικά, Русский, Українська, Hindi, Tamil, Malayalam, Thai,
+  日本語, 한국어, 简体中文, 繁體中文) stehen unter „Other Languages“.
   Darunter die beiden Einträge:
   VoidStation Live starten                Live-System (nichts wird installiert), freie Grafiktreiber
   VoidStation Live starten (nur NVIDIA)   mit NVIDIA-Treiber – für GeForce GTX 16xx, RTX 20xx und neuer

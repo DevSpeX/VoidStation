@@ -107,10 +107,10 @@ install -d "$PLY"
 install -m 644 "$SRC/art/plymouth/"* "$PLY/"
 
 # Schriften fuer das Startmenue (UEFI) – fehlen sie, nimmt GRUB seine eigene (klein, aber lesbar).
-# Zeichen: Latein mit Akzenten (cs, lv, hu, pl, sk, tr …; ș ț fuer ro), Griechisch und Kyrillisch (el, ru, uk), Striche, Pfeile
+# Zeichen: Latein mit Akzenten (cs, lv, hu, pl, sk, tr …; ș ț fuer ro), Griechisch und Kyrillisch (el, ru, uk), Vietnamesisch (vi), Striche, Pfeile
 mkfont() {  # <ttf> <name> <groesse> <datei>
   [ -f "$1" ] || { warn "Schrift fehlt: $1"; return 0; }
-  grub-mkfont -n "$2" -s "$3" -r 0x20-0x7E,0xA0-0x17F,0x218-0x21B,0x370-0x3FF,0x400-0x4FF,0x2010-0x2027,0x2190-0x2193 -o "$SRC/art/grub/$4" "$1" \
+  grub-mkfont -n "$2" -s "$3" -r 0x20-0x7E,0xA0-0x17F,0x1A0-0x1B0,0x218-0x21B,0x370-0x3FF,0x400-0x4FF,0x1EA0-0x1EFF,0x2010-0x2027,0x2190-0x2193 -o "$SRC/art/grub/$4" "$1" \
     || warn "grub-mkfont: $4 nicht erzeugt"
 }
 NOTO=/usr/share/fonts/noto/NotoSans-Regular.ttf

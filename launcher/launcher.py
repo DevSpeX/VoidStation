@@ -813,7 +813,7 @@ DEFAULTS: dict[str, Any] = {"scale": 1.75, "resolution": None, "cursor_theme": "
             "rate": None, "match_rate": False, "osk_layout": None, "osk_mode": "auto"}
 # Bildschirmtastatur: Belegungen (Qt: VS/OskLayouts.js, gleiche Kennungen) und wann die Tasten zu sehen sind
 OSK_LAYOUTS = ("de", "us", "gb", "fr", "es", "it", "br", "nl", "lv", "hu", "pl", "cz", "sk", "ro", "tr", "dk", "ee", "is", "no",
-               "fi", "se", "gr", "ru", "ua", "ko")
+               "fi", "se", "vi", "gr", "ru", "ua", "hi", "ta", "ml", "th", "ko")
 OSK_MODES = ("auto", "always", "keyboard")      # automatisch / immer / nicht mit angeschlossener Tastatur
 SYSUPD_DAYS = (30, 60, 90)                  # Erinnerung an Systemupdates (ohne VoidStation-Update) nach … Tagen
 # Sprachen der Oberflaeche: Texte in web/i18n/<id>.json, fehlende Texte kommen aus en.json, dann aus de.json.
@@ -823,6 +823,8 @@ SYSUPD_DAYS = (30, 60, 90)                  # Erinnerung an Systemupdates (ohne 
 LANG_TABLE = [  # (id, Name, Locale, Firefox-Sprache)
     ("de", "Deutsch", "de_DE", "de"),
     ("en", "English", "en_US", "en-US"),
+    ("id", "Bahasa Indonesia", "id_ID", "id"),
+    ("ms", "Bahasa Melayu", "ms_MY", "ms"),
     ("cs", "Čeština", "cs_CZ", "cs"),
     ("da", "Dansk", "da_DK", "da"),
     ("et", "Eesti", "et_EE", "et"),
@@ -840,10 +842,15 @@ LANG_TABLE = [  # (id, Name, Locale, Firefox-Sprache)
     ("sk", "Slovenčina", "sk_SK", "sk"),
     ("fi", "Suomi", "fi_FI", "fi"),
     ("sv", "Svenska", "sv_SE", "sv-SE"),
+    ("vi", "Tiếng Việt", "vi_VN", "vi"),
     ("tr", "Türkçe", "tr_TR", "tr"),
     ("el", "Ελληνικά", "el_GR", "el"),
     ("ru", "Русский", "ru_RU", "ru"),
     ("uk", "Українська", "uk_UA", "uk"),
+    ("hi", "हिन्दी", "hi_IN", "hi-IN"),
+    ("ta", "தமிழ்", "ta_IN", "ta"),
+    ("ml", "മലയാളം", "ml_IN", "ml"),
+    ("th", "ไทย", "th_TH", "th"),
     ("ja", "日本語", "ja_JP", "ja"),
     ("ko", "한국어", "ko_KR", "ko"),
     ("zh-CN", "简体中文", "zh_CN", "zh-CN"),
@@ -911,6 +918,7 @@ LANG_REGIONS = {
     "nl": ["NL", "BE"], "pl": ["PL"], "pt-BR": ["BR", "PT"], "el": ["GR", "CY"], "ru": ["RU", "BY", "KZ"], "uk": ["UA"],
     "ja": ["JP"], "ro": ["RO"], "tr": ["TR"], "ko": ["KR"], "zh-CN": ["CN"], "zh-TW": ["TW"],
     "da": ["DK"], "sv": ["SE", "FI"], "nb": ["NO"], "is": ["IS"], "fi": ["FI"], "et": ["EE"],
+    "id": ["ID"], "ms": ["MY", "SG"], "vi": ["VN"], "th": ["TH"], "hi": ["IN"], "ta": ["IN", "LK", "SG", "MY"], "ml": ["IN"],
 }
 # Schnellwahl der Laender im Fernsehen je Sprache (das eigene Land kommt immer zuerst), der Rest unter "Weitere Laender"
 TV_QUICK = {
@@ -922,6 +930,8 @@ TV_QUICK = {
     "zh-TW": ["TW", "JP", "KR"],
     "da": ["DK", "SE", "NO"], "sv": ["SE", "FI", "NO"], "nb": ["NO", "SE", "DK"], "is": ["IS", "DK", "NO"],
     "fi": ["FI", "SE", "EE"], "et": ["EE", "FI", "LV"],
+    "id": ["ID", "MY", "SG"], "ms": ["MY", "ID", "SG"], "vi": ["VN", "TH", "SG"], "th": ["TH", "VN", "JP"],
+    "hi": ["IN", "GB", "US"], "ta": ["IN", "LK", "SG"], "ml": ["IN", "AE", "GB"],
 }
 
 
@@ -7373,7 +7383,7 @@ class Installer:
 
 INSTALL = Installer()
 # Tastaturen im Installer (Reihenfolge der Auswahl) -> setxkbmap; gleiche Kennungen wie voidstation.kb im Startmenue
-# des Sticks und KEYMAPS in voidstation-installer. Griechisch/Russisch/Ukrainisch mit US dazu, Alt+Umschalt wechselt.
+# des Sticks und KEYMAPS in voidstation-installer. Griechisch/Russisch/Ukrainisch/Thai mit US dazu, Alt+Umschalt wechselt.
 _GRP = ["-option", "", "-option", "grp:alt_shift_toggle"]
 KEYMAPS = {"de": ["-layout", "de", "-option", ""], "us": ["-layout", "us", "-option", ""], "gb": ["-layout", "gb", "-option", ""],
            "fr": ["-layout", "fr", "-option", ""], "es": ["-layout", "es", "-option", ""], "it": ["-layout", "it", "-option", ""],
@@ -7383,7 +7393,8 @@ KEYMAPS = {"de": ["-layout", "de", "-option", ""], "us": ["-layout", "us", "-opt
            "jp": ["-layout", "jp", "-option", ""], "ro": ["-layout", "ro", "-option", ""],
            "tr": ["-layout", "tr", "-option", ""], "dk": ["-layout", "dk", "-option", ""],
            "se": ["-layout", "se", "-option", ""], "no": ["-layout", "no", "-option", ""], "fi": ["-layout", "fi", "-option", ""],
-           "is": ["-layout", "is", "-option", ""], "ee": ["-layout", "ee", "-option", ""]}
+           "is": ["-layout", "is", "-option", ""], "ee": ["-layout", "ee", "-option", ""],
+           "th": ["-layout", "us,th"] + _GRP}
 # Vorgaben im Installer je Sprache: Tastatur und Zeitzone (aenderbar)
 INSTALL_DEFAULTS = {"de": ("de", "Europe/Berlin"), "en": ("us", "America/New_York"), "cs": ("cz", "Europe/Prague"),
                     "es": ("es", "Europe/Madrid"), "fr": ("fr", "Europe/Paris"), "it": ("it", "Europe/Rome"),
@@ -7393,7 +7404,10 @@ INSTALL_DEFAULTS = {"de": ("de", "Europe/Berlin"), "en": ("us", "America/New_Yor
                     "ja": ("jp", "Asia/Tokyo"), "ro": ("ro", "Europe/Bucharest"), "tr": ("tr", "Europe/Istanbul"),
                     "ko": ("us", "Asia/Seoul"), "zh-CN": ("us", "Asia/Shanghai"), "zh-TW": ("us", "Asia/Taipei"),
                     "da": ("dk", "Europe/Copenhagen"), "sv": ("se", "Europe/Stockholm"), "nb": ("no", "Europe/Oslo"),
-                    "is": ("is", "Atlantic/Reykjavik"), "fi": ("fi", "Europe/Helsinki"), "et": ("ee", "Europe/Tallinn")}
+                    "is": ("is", "Atlantic/Reykjavik"), "fi": ("fi", "Europe/Helsinki"), "et": ("ee", "Europe/Tallinn"),
+                    "id": ("us", "Asia/Jakarta"), "ms": ("us", "Asia/Kuala_Lumpur"), "vi": ("us", "Asia/Ho_Chi_Minh"),
+                    "th": ("th", "Asia/Bangkok"), "hi": ("us", "Asia/Kolkata"), "ta": ("us", "Asia/Kolkata"),
+                    "ml": ("us", "Asia/Kolkata")}
 
 
 # ---------------------------------------------------------------------------

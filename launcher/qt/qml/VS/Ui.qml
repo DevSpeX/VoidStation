@@ -129,13 +129,15 @@ QtObject {
               TR: "Türkei", HU: "Ungarn", RO: "Rumänien", HR: "Kroatien", SI: "Slowenien", SK: "Slowakei", CA: "Kanada",
               AU: "Australien", BR: "Brasilien", MX: "Mexiko", AR: "Argentinien", IN: "Indien", JP: "Japan", KR: "Südkorea",
               CN: "China", RU: "Russland", UA: "Ukraine", IL: "Israel", AE: "Vereinigte Arabische Emirate", ZA: "Südafrika",
-              BY: "Belarus", CL: "Chile", CO: "Kolumbien", CY: "Zypern", EE: "Estland", KZ: "Kasachstan", LI: "Liechtenstein", LT: "Litauen", LV: "Lettland", MC: "Monaco", MT: "Malta", NZ: "Neuseeland", PE: "Peru", SM: "San Marino", UY: "Uruguay", VE: "Venezuela", TW: "Taiwan", IS: "Island" },
+              BY: "Belarus", CL: "Chile", CO: "Kolumbien", CY: "Zypern", EE: "Estland", KZ: "Kasachstan", LI: "Liechtenstein", LT: "Litauen", LV: "Lettland", MC: "Monaco", MT: "Malta", NZ: "Neuseeland", PE: "Peru", SM: "San Marino", UY: "Uruguay", VE: "Venezuela", TW: "Taiwan", IS: "Island",
+              ID: "Indonesien", MY: "Malaysia", VN: "Vietnam", TH: "Thailand", SG: "Singapur", LK: "Sri Lanka" },
         en: { DE: "Germany", AT: "Austria", CH: "Switzerland", FR: "France", IT: "Italy", GB: "United Kingdom",
               US: "United States", ES: "Spain", NL: "Netherlands", PL: "Poland", BE: "Belgium", LU: "Luxembourg", DK: "Denmark",
               SE: "Sweden", NO: "Norway", FI: "Finland", CZ: "Czechia", PT: "Portugal", IE: "Ireland", GR: "Greece",
               TR: "Türkiye", HU: "Hungary", RO: "Romania", HR: "Croatia", SI: "Slovenia", SK: "Slovakia", CA: "Canada",
               AU: "Australia", BR: "Brazil", MX: "Mexico", AR: "Argentina", IN: "India", JP: "Japan", KR: "South Korea",
               CN: "China", RU: "Russia", UA: "Ukraine", IL: "Israel", AE: "United Arab Emirates", ZA: "South Africa",
-              BY: "Belarus", CL: "Chile", CO: "Colombia", CY: "Cyprus", EE: "Estonia", KZ: "Kazakhstan", LI: "Liechtenstein", LT: "Lithuania", LV: "Latvia", MC: "Monaco", MT: "Malta", NZ: "New Zealand", PE: "Peru", SM: "San Marino", UY: "Uruguay", VE: "Venezuela", TW: "Taiwan", IS: "Iceland" }
+              BY: "Belarus", CL: "Chile", CO: "Colombia", CY: "Cyprus", EE: "Estonia", KZ: "Kazakhstan", LI: "Liechtenstein", LT: "Lithuania", LV: "Latvia", MC: "Monaco", MT: "Malta", NZ: "New Zealand", PE: "Peru", SM: "San Marino", UY: "Uruguay", VE: "Venezuela", TW: "Taiwan", IS: "Iceland",
+              ID: "Indonesia", MY: "Malaysia", VN: "Vietnam", TH: "Thailand", SG: "Singapore", LK: "Sri Lanka" }
     })
 }

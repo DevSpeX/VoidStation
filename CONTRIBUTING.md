@@ -59,8 +59,8 @@ see [RELEASING.md](RELEASING.md).
   with the same `{placeholders}` – `build.sh` refuses to build otherwise. If you only speak one of the two
   languages, write that one and say so in the PR; the other gets filled in during review.
   The other language files may stay behind – missing texts appear in English until someone translates them.
-- **Translations:** the twenty-five extra languages (`cs`, `da`, `et`, `es`, `fr`, `is`, `it`, `lv`, `hu`, `nl`, `nb`, `pl`, `pt-BR`,
-  `ro`, `sk`, `fi`, `sv`, `tr`, `el`, `ru`, `uk`, `ja`, `ko`, `zh-CN`, `zh-TW`)
+- **Translations:** the thirty-two extra languages (`id`, `ms`, `cs`, `da`, `et`, `es`, `fr`, `is`, `it`, `lv`, `hu`, `nl`, `nb`, `pl`, `pt-BR`,
+  `ro`, `sk`, `fi`, `sv`, `vi`, `tr`, `el`, `ru`, `uk`, `hi`, `ta`, `ml`, `th`, `ja`, `ko`, `zh-CN`, `zh-TW`)
   were machine-translated. Fixing wording in your native language is one of the most helpful contributions –
   just edit `launcher/web/i18n/<language>.json`, keep the `{placeholders}` and `<b>` tags as they are.
 - **Changelog:** don't add version headings to `CHANGELOG.md` – the maintainer writes the entry under

@@ -852,6 +852,12 @@
   "region.UA": "Ουκρανία",
   "region.IL": "Ισραήλ",
   "region.IS": "Ισλανδία",
+  "region.ID": "Ινδονησία",
+  "region.MY": "Μαλαισία",
+  "region.VN": "Βιετνάμ",
+  "region.TH": "Ταϊλάνδη",
+  "region.SG": "Σιγκαπούρη",
+  "region.LK": "Σρι Λάνκα",
   "region.AE": "Ηνωμένα Αραβικά Εμιράτα",
   "region.ZA": "Νότια Αφρική",
   "region.BY": "Λευκορωσία",
@@ -1521,5 +1527,10 @@
   "inst.kb.is": "Íslenska",
   "inst.kb.no": "Norsk",
   "inst.kb.fi": "Suomi",
-  "inst.kb.se": "Svenska"
+  "inst.kb.se": "Svenska",
+  "inst.kb.vi": "Tiếng Việt",
+  "inst.kb.hi": "हिन्दी",
+  "inst.kb.ta": "தமிழ்",
+  "inst.kb.ml": "മലയാളം",
+  "inst.kb.th": "ไทย + US"
 }

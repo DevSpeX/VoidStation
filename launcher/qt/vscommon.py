@@ -235,7 +235,10 @@ def pad_glyph_svg(role, style, h):
 # Japanisch, Koreanisch, Chinesisch: Schriftzeichen aus der passenden Fassung von Noto Sans CJK. Noto Sans hat keine
 # CJK-Zeichen; die Ersatzschrift der Systemauswahl ist sonst oft eine andere Fassung (dieselben Zeichen sehen in
 # Japan, Korea, China und Taiwan verschieden aus). Alle Fassungen stecken in noto-fonts-cjk.
-CJK_FONTS = {"ja": "Noto Sans CJK JP", "ko": "Noto Sans CJK KR", "zh-CN": "Noto Sans CJK SC", "zh-TW": "Noto Sans CJK TC"}
+# Hindi, Tamil, Malayalam, Thai: ebenso die Noto-Schrift der jeweiligen Schrift (aus noto-fonts-ttf), damit die Wahl
+# nicht von der Reihenfolge der installierten Schriften abhaengt.
+CJK_FONTS = {"ja": "Noto Sans CJK JP", "ko": "Noto Sans CJK KR", "zh-CN": "Noto Sans CJK SC", "zh-TW": "Noto Sans CJK TC",
+             "hi": "Noto Sans Devanagari", "ta": "Noto Sans Tamil", "ml": "Noto Sans Malayalam", "th": "Noto Sans Thai"}
 
 
 def cjk_font(lang):

@@ -52,7 +52,8 @@ Layer {
                                 "Europe/Prague", "Europe/Bratislava",
                                 "Europe/Warsaw", "Europe/Budapest", "Europe/Helsinki", "Europe/Tallinn", "Europe/Riga", "Europe/Athens", "Europe/Bucharest",
                                 "Europe/Kyiv",
-                                "Europe/Istanbul", "Europe/Moscow", "Asia/Shanghai", "Asia/Taipei", "Asia/Seoul", "Asia/Tokyo",
+                                "Europe/Istanbul", "Europe/Moscow", "Asia/Kolkata", "Asia/Colombo", "Asia/Bangkok", "Asia/Ho_Chi_Minh",
+                                "Asia/Jakarta", "Asia/Kuala_Lumpur", "Asia/Singapore", "Asia/Shanghai", "Asia/Taipei", "Asia/Seoul", "Asia/Tokyo",
                                 "Australia/Sydney", "UTC"]
     readonly property var stepNo: ({ disk: 1, beside: 1, free: 1, manual: 1, account: 2, host: 3, lang: 3, device: 3, confirm: 4, progress: 5, error: 5 })
     // Der Installer ist dichter als die anderen Seiten: drei Reihen muessen zwischen Kopf und Hinweiszeile passen

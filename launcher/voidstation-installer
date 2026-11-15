@@ -66,9 +66,10 @@ SHRINKABLE = {"ntfs", "ext4", "ext3", "ext2", "btrfs"}
 LOCALES = {"de": "de_DE", "en": "en_US", "cs": "cs_CZ", "es": "es_ES", "fr": "fr_FR", "it": "it_IT", "lv": "lv_LV",
            "hu": "hu_HU", "nl": "nl_NL", "pl": "pl_PL", "pt-BR": "pt_BR", "sk": "sk_SK", "el": "el_GR", "ru": "ru_RU",
            "uk": "uk_UA", "ja": "ja_JP", "ro": "ro_RO", "tr": "tr_TR", "ko": "ko_KR", "zh-CN": "zh_CN",
-           "zh-TW": "zh_TW", "da": "da_DK", "sv": "sv_SE", "nb": "nb_NO", "is": "is_IS", "fi": "fi_FI", "et": "et_EE"}
+           "zh-TW": "zh_TW", "da": "da_DK", "sv": "sv_SE", "nb": "nb_NO", "is": "is_IS", "fi": "fi_FI", "et": "et_EE",
+           "id": "id_ID", "ms": "ms_MY", "vi": "vi_VN", "th": "th_TH", "hi": "hi_IN", "ta": "ta_IN", "ml": "ml_IN"}
 # Tastaturen (wie KEYMAPS in launcher.py und voidstation.kb im Startmenue): (Konsole/kbd, X-Belegung, X-Optionen).
-# Griechisch/Russisch/Ukrainisch: X mit US + Landesbelegung (Alt+Umschalt), Konsole US (Anmeldung, Befehle).
+# Griechisch/Russisch/Ukrainisch/Thai: X mit US + Landesbelegung (Alt+Umschalt), Konsole US (Anmeldung, Befehle).
 KEYMAPS = {"de": ("de", "de", ""), "us": ("us", "us", ""), "gb": ("uk", "gb", ""), "fr": ("fr", "fr", ""),
            "es": ("es", "es", ""), "it": ("it", "it", ""), "lv": ("lv", "lv", ""), "hu": ("hu", "hu", ""),
            "pl": ("pl", "pl", ""), "br": ("br-abnt2", "br", ""), "cz": ("cz-qwertz", "cz", ""),
@@ -76,7 +77,8 @@ KEYMAPS = {"de": ("de", "de", ""), "us": ("us", "us", ""), "gb": ("uk", "gb", ""
            "ru": ("us", "us,ru", "grp:alt_shift_toggle"), "ua": ("us", "us,ua", "grp:alt_shift_toggle"),
            "jp": ("jp106", "jp", ""), "ro": ("ro", "ro", ""), "tr": ("trq", "tr", ""),
            "dk": ("dk", "dk", ""), "se": ("sv-latin1", "se", ""), "no": ("no", "no", ""), "fi": ("fi", "fi", ""),
-           "is": ("is-latin1", "is", ""), "ee": ("et", "ee", "")}
+           "is": ("is-latin1", "is", ""), "ee": ("et", "ee", ""),
+           "th": ("us", "us,th", "grp:alt_shift_toggle")}
 TEST = os.environ.get("VS_INSTALLER_TEST") == "1"     # nur fuer Tests mit Abbild-Dateien: Loop-Geraete zulassen
 DISK_TYPES = ("disk", "loop") if TEST else ("disk",)
 

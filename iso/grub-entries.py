@@ -53,16 +53,21 @@ BIOS_EXTRA = "vga=791"
 #   id, Name (wie in den Einstellungen), Locale, Tastatur der Oberflaeche (voidstation.kb, siehe
 #   99-voidstation-live.sh und KEYMAPS im Installer), Konsolen-Tastatur (vconsole.keymap, kbd-Name),
 #   Umschrift fuers BIOS-Menue (nur wenn der Name nicht in Codepage 437 geht), Zurueck, Start, Start nur NVIDIA.
-# Griechisch/Russisch/Ukrainisch: Oberflaeche mit US-Tastatur + Landesbelegung (Alt+Umschalt wechselt),
+# Griechisch/Russisch/Ukrainisch/Thai: Oberflaeche mit US-Tastatur + Landesbelegung (Alt+Umschalt wechselt),
 # Konsole bleibt US (Anmeldename und Befehle sind lateinisch). Niederlaendisch: US-Tastatur wie dort ueblich,
 # ebenso Koreanisch und Chinesisch (ohne Eingabemethode tippt die Landesbelegung ohnehin lateinisch).
 # Japanisch, Koreanisch, Chinesisch: die Schriften des Startmenues haben keine CJK-Zeichen – dort stehen Umschrift
-# und die englischen Starteintraege (grub_text/bios_text).
+# und die englischen Starteintraege (grub_text/bios_text). Ebenso Hindi, Tamil, Malayalam und Thai: GRUB setzt
+# keine Vokalzeichen und Ligaturen, die Schriften blieben unlesbar. Vietnamesisch geht (Zeichen in GRUB_RANGES).
 LANGUAGES = [
     ("de", "Deutsch", "de_DE", "de", "de", None, "Zurück",
      "VoidStation Live starten", "VoidStation Live starten (nur NVIDIA)"),
     ("en", "English", "en_US", "us", "us", None, "Back",
      "Start VoidStation Live", "Start VoidStation Live (NVIDIA only)"),
+    ("id", "Bahasa Indonesia", "id_ID", "us", "us", None, "Kembali",
+     "Mulai VoidStation Live", "Mulai VoidStation Live (khusus NVIDIA)"),
+    ("ms", "Bahasa Melayu", "ms_MY", "us", "us", None, "Kembali",
+     "Mulakan VoidStation Live", "Mulakan VoidStation Live (NVIDIA sahaja)"),
     ("cs", "Čeština", "cs_CZ", "cz", "cz-qwertz", None, "Zpět",
      "Spustit VoidStation Live", "Spustit VoidStation Live (pouze NVIDIA)"),
     ("da", "Dansk", "da_DK", "dk", "dk", None, "Tilbage",
@@ -97,6 +102,8 @@ LANGUAGES = [
      "Käynnistä VoidStation Live", "Käynnistä VoidStation Live (vain NVIDIA)"),
     ("sv", "Svenska", "sv_SE", "se", "sv-latin1", None, "Tillbaka",
      "Starta VoidStation Live", "Starta VoidStation Live (endast NVIDIA)"),
+    ("vi", "Tiếng Việt", "vi_VN", "us", "us", None, "Quay lại",
+     "Khởi động VoidStation Live", "Khởi động VoidStation Live (chỉ NVIDIA)"),
     ("tr", "Türkçe", "tr_TR", "tr", "trq", None, "Geri",
      "VoidStation Live’ı başlat", "VoidStation Live’ı başlat (yalnızca NVIDIA)"),
     ("el", "Ελληνικά", "el_GR", "gr", "us", "Ellinika (Greek)", "Πίσω",
@@ -108,6 +115,14 @@ LANGUAGES = [
     ("uk", "Українська", "uk_UA", "ua", "us", "Ukrainska (Ukrainian)", "Назад",
      "Запустити VoidStation Live",
      "Запустити VoidStation Live (лише NVIDIA)"),
+    ("hi", "हिन्दी", "hi_IN", "us", "us", "Hindi", "वापस",
+     "VoidStation Live शुरू करें", "VoidStation Live शुरू करें (केवल NVIDIA)"),
+    ("ta", "தமிழ்", "ta_IN", "us", "us", "Tamil", "பின்செல்",
+     "VoidStation Live ஐத் தொடங்கு", "VoidStation Live ஐத் தொடங்கு (NVIDIA மட்டும்)"),
+    ("ml", "മലയാളം", "ml_IN", "us", "us", "Malayalam", "മടങ്ങുക",
+     "VoidStation Live തുടങ്ങുക", "VoidStation Live തുടങ്ങുക (NVIDIA മാത്രം)"),
+    ("th", "ไทย", "th_TH", "th", "us", "Thai", "ย้อนกลับ",
+     "เริ่ม VoidStation Live", "เริ่ม VoidStation Live (NVIDIA เท่านั้น)"),
     ("ja", "日本語", "ja_JP", "jp", "jp106", "Nihongo (Japanese)", "戻る",
      "VoidStation Liveを起動", "VoidStation Liveを起動(NVIDIAのみ)"),
     ("ko", "한국어", "ko_KR", "us", "us", "Hangugeo (Korean)", "뒤로",
@@ -299,8 +314,8 @@ def isolinux_boot_lines(cfg):
 
 
 # Zeichen der GRUB-Schriften (grub-mkfont -r in build-iso.sh): Latein mit Akzenten, Griechisch, Kyrillisch, Striche, Pfeile
-GRUB_RANGES = ((0x20, 0x7E), (0xA0, 0x17F), (0x218, 0x21B), (0x370, 0x3FF), (0x400, 0x4FF), (0x2010, 0x2027),
-               (0x2190, 0x2193))
+GRUB_RANGES = ((0x20, 0x7E), (0xA0, 0x17F), (0x1A0, 0x1B0), (0x218, 0x21B), (0x370, 0x3FF), (0x400, 0x4FF),
+               (0x1EA0, 0x1EFF), (0x2010, 0x2027), (0x2190, 0x2193))
 
 
 def grub_text(text, fallback):
@@ -313,7 +328,7 @@ def grub_text(text, fallback):
 
 # Buchstaben ohne zerlegbaren Akzent, die Codepage 437 nicht kennt (Türkçe: "Live’ı başlat" -> "Live'i baslat",
 # Íslenska: "Ræsa … (aðeins NVIDIA)" -> "Ræsa … (adeins NVIDIA)"; æ, å, ä, ö kennt sie)
-BIOS_PLAIN = str.maketrans({"ı": "i", "İ": "I", "’": "'", "ł": "l", "Ł": "L", "ø": "o", "Ø": "O", "ð": "d", "Ð": "D",
+BIOS_PLAIN = str.maketrans({"ı": "i", "İ": "I", "’": "'", "ł": "l", "Ł": "L", "ø": "o", "Ø": "O", "ð": "d", "Ð": "D", "đ": "d", "Đ": "D",
                             "þ": "th", "Þ": "Th"})
 
 

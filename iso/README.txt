@@ -8,9 +8,10 @@ Booting
   works too, but then VoidStation can only be installed on a whole SSD.
 
 Boot menu
-  First pick the language: Deutsch, English, Français – all others (Čeština, Dansk, Eesti, Español,
+  First pick the language: Deutsch, English, Français – all others (Bahasa Indonesia, Bahasa Melayu, Čeština, Dansk, Eesti, Español,
   Íslenska, Italiano, Latviešu, Magyar, Nederlands, Norsk bokmål, Polski, Português (Brasil), Română,
-  Slovenčina, Suomi, Svenska, Türkçe, Ελληνικά, Русский, Українська, 日本語, 한국어, 简体中文, 繁體中文) are under "Other Languages".
+  Slovenčina, Suomi, Svenska, Tiếng Việt, Türkçe, Ελληνικά, Русский, Українська, Hindi, Tamil, Malayalam, Thai,
+  日本語, 한국어, 简体中文, 繁體中文) are under "Other Languages".
   Then one of the two entries below it:
   Start VoidStation Live                 live system (nothing gets installed), open graphics drivers
   Start VoidStation Live (NVIDIA only)   with the NVIDIA driver – for GeForce GTX 16xx, RTX 20xx and newer
