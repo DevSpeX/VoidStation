@@ -376,7 +376,7 @@ Window {
                 clockAp = d.getHours() < 12 ? "AM" : "PM"
             }
             hdrTime = clockAp ? clockMain + " " + clockAp : clockMain
-            clockDate = Ui.loc.toString(d, Ui.t("fmt.date", null, "dddd, d. MMMM"))
+            clockDate = Ui.dateText(d)
         }
         Timer { interval: 5000; running: true; repeat: true; triggeredOnStart: true; onTriggered: app.tick() }
         Connections { target: vs; function onStringsChanged() { app.tick() } }

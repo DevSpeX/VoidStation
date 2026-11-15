@@ -58,6 +58,14 @@ QtObject {
         return { n: n, k: k }
     }
     function pct(n) { return t("fmt.pct", { n: n }, n + "%") }
+    // Datum nach fmt.date. Zusaetzlich zu Qts Formatzeichen gilt "cccc" (wie in CLDR): der Wochentag in der Grundform.
+    // Qts "dddd" liefert die Form im Satz – auf Finnisch "sunnuntaina" (am Sonntag) statt "sunnuntai".
+    function dateText(d) {
+        var f = t("fmt.date", null, "dddd, d. MMMM")
+        if (f.indexOf("cccc") >= 0)
+            f = f.replace("cccc", "'" + loc.standaloneDayName(d.getDay(), Locale.LongFormat).replace(/'/g, "''") + "'")
+        return loc.toString(d, f)
+    }
     // Bild-Adresse wie im Web: "/bild.jpg" kommt vom Launcher, volle Adressen bleiben
     function url(p) {
         if (!p) return ""

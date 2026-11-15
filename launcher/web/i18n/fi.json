@@ -1,6 +1,6 @@
 {
   "fmt.locale": "fi_FI",
-  "fmt.date": "dddd d. MMMM",
+  "fmt.date": "cccc d. MMMM",
   "fmt.dateYear": "d. MMMM yyyy",
   "fmt.clock": "24",
   "fmt.pct": "{n} %",
