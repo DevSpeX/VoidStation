@@ -1302,6 +1302,7 @@
   "region.RU": "러시아",
   "region.UA": "우크라이나",
   "region.IL": "이스라엘",
+  "region.IS": "아이슬란드",
   "region.AE": "아랍에미리트",
   "region.ZA": "남아프리카",
   "region.BY": "벨라루스",
@@ -1512,5 +1513,11 @@
   "hint.vpnOpts": "<b>Del / Y</b> 옵션",
   "hint.vpnConnect": "<b>Enter / A</b> 연결",
   "hint.vpnToggle": "<b>Del / X</b> VPN 켜기/끄기",
-  "app.mullvad.desc": "이메일 없이 계정 번호만으로 쓰는 VPN: 세계 지도, 위치 선택, 킬 스위치와 잠금 모드를 모두 컨트롤러로 조작합니다. VoidStation이 Mullvad 공식 Linux 버전을 내려받아 서명을 확인하고 서비스만 설정하며, 조작은 홈 화면에서 합니다. 계정은 mullvad.net에서 만들 수 있습니다."
+  "app.mullvad.desc": "이메일 없이 계정 번호만으로 쓰는 VPN: 세계 지도, 위치 선택, 킬 스위치와 잠금 모드를 모두 컨트롤러로 조작합니다. VoidStation이 Mullvad 공식 Linux 버전을 내려받아 서명을 확인하고 서비스만 설정하며, 조작은 홈 화면에서 합니다. 계정은 mullvad.net에서 만들 수 있습니다.",
+  "inst.kb.dk": "Dansk",
+  "inst.kb.ee": "Eesti",
+  "inst.kb.is": "Íslenska",
+  "inst.kb.no": "Norsk",
+  "inst.kb.fi": "Suomi",
+  "inst.kb.se": "Svenska"
 }

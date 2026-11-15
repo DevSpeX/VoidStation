@@ -103,7 +103,7 @@ fi
 # (locale.LANG) und der Installer kann jede davon fuer das neue System einstellen (LANG_TABLE in launcher.py).
 if [ -f /etc/default/libc-locales ]; then
   LCH=0
-  for l in de_DE en_US cs_CZ es_ES fr_FR it_IT lv_LV hu_HU nl_NL pl_PL pt_BR sk_SK ro_RO tr_TR el_GR ru_RU uk_UA ja_JP ko_KR zh_CN zh_TW; do
+  for l in de_DE en_US cs_CZ da_DK et_EE es_ES fr_FR is_IS it_IT lv_LV hu_HU nl_NL nb_NO pl_PL pt_BR sk_SK fi_FI sv_SE ro_RO tr_TR el_GR ru_RU uk_UA ja_JP ko_KR zh_CN zh_TW; do
     if ! grep -q "^$l.UTF-8 UTF-8" /etc/default/libc-locales && grep -q "^#[[:space:]]*$l.UTF-8 UTF-8" /etc/default/libc-locales; then
       sed -i "s/^#[[:space:]]*\($l.UTF-8 UTF-8\)/\1/" /etc/default/libc-locales; LCH=1
     fi

@@ -11,7 +11,7 @@ fi
 _xo=""
 case "$_kb" in
   gr|ru|ua) _xk="us,$_kb"; _xo="grp:alt_shift_toggle" ;;
-  de|us|gb|fr|es|it|lv|hu|pl|br|cz|sk|jp|ro|tr) _xk="$_kb" ;;
+  de|us|gb|fr|es|it|lv|hu|pl|br|cz|sk|jp|ro|tr|dk|se|no|fi|is|ee) _xk="$_kb" ;;
   *) _xk=de ;;
 esac
 mkdir -p /etc/X11/xorg.conf.d

@@ -1302,6 +1302,7 @@
   "region.RU": "Rusia",
   "region.UA": "Ucraina",
   "region.IL": "Israel",
+  "region.IS": "Islanda",
   "region.AE": "Emiratele Arabe Unite",
   "region.ZA": "Africa de Sud",
   "region.BY": "Belarus",
@@ -1512,5 +1513,11 @@
   "hint.vpnOpts": "<b>Del / Y</b> opțiuni",
   "hint.vpnConnect": "<b>Enter / A</b> conectează",
   "hint.vpnToggle": "<b>Del / X</b> VPN pornit / oprit",
-  "app.mullvad.desc": "VPN fără e-mail, doar cu numărul contului: hartă a lumii, alegerea locației, kill switch și blocare, totul cu controlerul. VoidStation descarcă versiunea oficială Mullvad pentru Linux, îi verifică semnătura și configurează doar serviciul – restul îl face ecranul principal. Contul se creează pe mullvad.net."
+  "app.mullvad.desc": "VPN fără e-mail, doar cu numărul contului: hartă a lumii, alegerea locației, kill switch și blocare, totul cu controlerul. VoidStation descarcă versiunea oficială Mullvad pentru Linux, îi verifică semnătura și configurează doar serviciul – restul îl face ecranul principal. Contul se creează pe mullvad.net.",
+  "inst.kb.dk": "Dansk",
+  "inst.kb.ee": "Eesti",
+  "inst.kb.is": "Íslenska",
+  "inst.kb.no": "Norsk",
+  "inst.kb.fi": "Suomi",
+  "inst.kb.se": "Svenska"
 }

@@ -40,7 +40,8 @@ d.pop("radio_suggestions", None)            # Radio schlaegt die beliebtesten Se
 d["user"] = {"de": "Gast", "en": "Guest", "cs": "Host", "es": "Invitado", "fr": "Invité", "it": "Ospite", "lv": "Viesis",
              "hu": "Vendég", "nl": "Gast", "pl": "Gość", "pt-BR": "Convidado", "sk": "Hosť", "el": "Επισκέπτης",
              "ru": "Гость", "uk": "Гість", "ja": "ゲスト", "ro": "Invitat", "tr": "Misafir", "ko": "게스트",
-             "zh-CN": "访客", "zh-TW": "訪客"}
+             "zh-CN": "访客", "zh-TW": "訪客", "da": "Gæst", "sv": "Gäst", "nb": "Gjest", "is": "Gestur", "fi": "Vieras",
+             "et": "Külaline"}
 for g in d.get("groups", []):
     g["tiles"] = [t for t in g.get("tiles", []) if t.get("id") != "gba"]      # mGBA gibt es erst nach der Installation
 d["groups"] = [g for g in d["groups"] if g.get("tiles")]
@@ -48,7 +49,8 @@ d["groups"].insert(0, {"name": {
     "de": "Installieren", "en": "Install", "cs": "Instalace", "es": "Instalar", "fr": "Installer", "it": "Installa",
     "lv": "Instalēt", "hu": "Telepítés", "nl": "Installeren", "pl": "Instalacja", "pt-BR": "Instalar", "sk": "Inštalácia",
     "el": "Εγκατάσταση", "ru": "Установка", "uk": "Встановлення", "ja": "インストール", "ro": "Instalare",
-    "tr": "Kurulum", "ko": "설치", "zh-CN": "安装", "zh-TW": "安裝"}, "tiles": [{
+    "tr": "Kurulum", "ko": "설치", "zh-CN": "安装", "zh-TW": "安裝", "da": "Installation", "sv": "Installation",
+    "nb": "Installasjon", "is": "Uppsetning", "fi": "Asennus", "et": "Paigaldamine"}, "tiles": [{
     "id": "install", "type": "install", "size": "large", "color": "#2f6d4f", "icon": "install",
     "label": {"de": "VoidStation installieren", "en": "Install VoidStation", "cs": "Nainstalovat VoidStation",
               "es": "Instalar VoidStation", "fr": "Installer VoidStation", "it": "Installa VoidStation",
@@ -56,12 +58,15 @@ d["groups"].insert(0, {"name": {
               "pl": "Zainstaluj VoidStation", "pt-BR": "Instalar o VoidStation", "sk": "Nainštalovať VoidStation",
               "el": "Εγκατάσταση VoidStation", "ru": "Установить VoidStation", "uk": "Встановити VoidStation",
               "ja": "VoidStationをインストール", "ro": "Instalează VoidStation", "tr": "VoidStation’ı kur",
-              "ko": "VoidStation 설치", "zh-CN": "安装 VoidStation", "zh-TW": "安裝 VoidStation"},
+              "ko": "VoidStation 설치", "zh-CN": "安装 VoidStation", "zh-TW": "安裝 VoidStation",
+              "da": "Installer VoidStation", "sv": "Installera VoidStation", "nb": "Installer VoidStation",
+              "is": "Setja upp VoidStation", "fi": "Asenna VoidStation", "et": "Paigalda VoidStation"},
     "sub": {"de": "auf diesen PC", "en": "on this PC", "cs": "na tento počítač", "es": "en este PC", "fr": "sur ce PC",
             "it": "su questo PC", "lv": "šajā datorā", "hu": "erre a gépre", "nl": "op deze pc", "pl": "na tym komputerze",
             "pt-BR": "neste PC", "sk": "na tento počítač", "el": "σε αυτόν τον υπολογιστή", "ru": "на этот компьютер",
             "uk": "на цей комп’ютер", "ja": "このPCに", "ro": "pe acest PC", "tr": "bu PC’ye", "ko": "이 PC에",
-            "zh-CN": "到这台电脑", "zh-TW": "到這台電腦"}}]})
+            "zh-CN": "到这台电脑", "zh-TW": "到這台電腦", "da": "på denne pc", "sv": "på den här datorn", "nb": "på denne PC-en",
+            "is": "á þessa tölvu", "fi": "tälle tietokoneelle", "et": "sellesse arvutisse"}}]})
 json.dump(d, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
 PYEOF
 ch chown -R tv:tv /home/tv

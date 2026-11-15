@@ -1302,6 +1302,7 @@
   "region.RU": "Rusya",
   "region.UA": "Ukrayna",
   "region.IL": "İsrail",
+  "region.IS": "İzlanda",
   "region.AE": "Birleşik Arap Emirlikleri",
   "region.ZA": "Güney Afrika",
   "region.BY": "Belarus",
@@ -1512,5 +1513,11 @@
   "hint.vpnOpts": "<b>Del / Y</b> seçenekler",
   "hint.vpnConnect": "<b>Enter / A</b> bağlan",
   "hint.vpnToggle": "<b>Del / X</b> VPN aç / kapat",
-  "app.mullvad.desc": "E-posta gerektirmeyen, yalnızca hesap numarasıyla çalışan VPN: dünya haritası, konum seçimi, kill switch ve kilit modu, hepsi kumandayla. VoidStation, Mullvad’ın resmî Linux sürümünü indirir, imzasını doğrular ve yalnızca hizmeti kurar – kullanım ana ekrandan yapılır. Hesap mullvad.net’ten açılır."
+  "app.mullvad.desc": "E-posta gerektirmeyen, yalnızca hesap numarasıyla çalışan VPN: dünya haritası, konum seçimi, kill switch ve kilit modu, hepsi kumandayla. VoidStation, Mullvad’ın resmî Linux sürümünü indirir, imzasını doğrular ve yalnızca hizmeti kurar – kullanım ana ekrandan yapılır. Hesap mullvad.net’ten açılır.",
+  "inst.kb.dk": "Dansk",
+  "inst.kb.ee": "Eesti",
+  "inst.kb.is": "Íslenska",
+  "inst.kb.no": "Norsk",
+  "inst.kb.fi": "Suomi",
+  "inst.kb.se": "Svenska"
 }

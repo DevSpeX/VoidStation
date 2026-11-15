@@ -1302,6 +1302,7 @@
   "region.RU": "俄羅斯",
   "region.UA": "烏克蘭",
   "region.IL": "以色列",
+  "region.IS": "冰島",
   "region.AE": "阿拉伯聯合大公國",
   "region.ZA": "南非",
   "region.BY": "白俄羅斯",
@@ -1512,5 +1513,11 @@
   "hint.vpnOpts": "<b>Del / Y</b> 選項",
   "hint.vpnConnect": "<b>Enter / A</b> 連線",
   "hint.vpnToggle": "<b>Del / X</b> VPN 開 / 關",
-  "app.mullvad.desc": "不需電子郵件、只用帳戶號碼的 VPN：世界地圖、選擇位置、斷網保護和鎖定模式，全部用手把操作。VoidStation 下載 Mullvad 官方 Linux 版本，驗證簽章後只設定背景服務，操作在主畫面完成。帳戶可在 mullvad.net 建立。"
+  "app.mullvad.desc": "不需電子郵件、只用帳戶號碼的 VPN：世界地圖、選擇位置、斷網保護和鎖定模式，全部用手把操作。VoidStation 下載 Mullvad 官方 Linux 版本，驗證簽章後只設定背景服務，操作在主畫面完成。帳戶可在 mullvad.net 建立。",
+  "inst.kb.dk": "Dansk",
+  "inst.kb.ee": "Eesti",
+  "inst.kb.is": "Íslenska",
+  "inst.kb.no": "Norsk",
+  "inst.kb.fi": "Suomi",
+  "inst.kb.se": "Svenska"
 }

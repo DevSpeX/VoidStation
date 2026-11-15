@@ -15,7 +15,7 @@ terminal-width: "80%"
 terminal-height: "70%"
 
 # Platz fuer fuenf Eintraege auf der ersten Seite (Deutsch, English, Français, Other Languages, Reboot)
-# und die 18 Eintraege unter "Other Languages" (+ Back): ab 1080p 14 sichtbar, bei 720p 7 – darunter blaettert das Menue
+# und die 24 Eintraege unter "Other Languages" (+ Back): ab 1080p 14 sichtbar, bei 720p 7 – darunter blaettert das Menue
 + image {
     left = 50%-360
     top = 10%

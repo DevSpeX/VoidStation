@@ -47,9 +47,11 @@ Layer {
     property string langFocus: "lang"         // Seite Sprache & Zeitzone: worauf der Fokus beim Oeffnen steht
     // Zeitzonen zur Auswahl: die Vorgaben aller Sprachen (probe.langs) und ein paar Nachbarn, grob von West nach Ost
     readonly property var tzs: ["America/Los_Angeles", "America/Denver", "America/Chicago", "America/New_York", "America/Sao_Paulo",
-                                "Europe/London", "Europe/Lisbon", "Europe/Madrid", "Europe/Paris", "Europe/Brussels", "Europe/Amsterdam",
-                                "Europe/Berlin", "Europe/Zurich", "Europe/Vienna", "Europe/Rome", "Europe/Prague", "Europe/Bratislava",
-                                "Europe/Warsaw", "Europe/Budapest", "Europe/Riga", "Europe/Athens", "Europe/Bucharest", "Europe/Kyiv",
+                                "Atlantic/Reykjavik", "Europe/London", "Europe/Lisbon", "Europe/Madrid", "Europe/Paris", "Europe/Brussels", "Europe/Amsterdam",
+                                "Europe/Berlin", "Europe/Copenhagen", "Europe/Oslo", "Europe/Stockholm", "Europe/Zurich", "Europe/Vienna", "Europe/Rome",
+                                "Europe/Prague", "Europe/Bratislava",
+                                "Europe/Warsaw", "Europe/Budapest", "Europe/Helsinki", "Europe/Tallinn", "Europe/Riga", "Europe/Athens", "Europe/Bucharest",
+                                "Europe/Kyiv",
                                 "Europe/Istanbul", "Europe/Moscow", "Asia/Shanghai", "Asia/Taipei", "Asia/Seoul", "Asia/Tokyo",
                                 "Australia/Sydney", "UTC"]
     readonly property var stepNo: ({ disk: 1, beside: 1, free: 1, manual: 1, account: 2, host: 3, lang: 3, device: 3, confirm: 4, progress: 5, error: 5 })

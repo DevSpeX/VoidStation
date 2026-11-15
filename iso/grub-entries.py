@@ -65,10 +65,16 @@ LANGUAGES = [
      "Start VoidStation Live", "Start VoidStation Live (NVIDIA only)"),
     ("cs", "Čeština", "cs_CZ", "cz", "cz-qwertz", None, "Zpět",
      "Spustit VoidStation Live", "Spustit VoidStation Live (pouze NVIDIA)"),
+    ("da", "Dansk", "da_DK", "dk", "dk", None, "Tilbage",
+     "Start VoidStation Live", "Start VoidStation Live (kun NVIDIA)"),
+    ("et", "Eesti", "et_EE", "ee", "et", None, "Tagasi",
+     "Käivita VoidStation Live", "Käivita VoidStation Live (ainult NVIDIA)"),
     ("es", "Español", "es_ES", "es", "es", None, "Atrás",
      "Iniciar VoidStation Live", "Iniciar VoidStation Live (solo NVIDIA)"),
     ("fr", "Français", "fr_FR", "fr", "fr", None, "Retour",
      "Démarrer VoidStation Live", "Démarrer VoidStation Live (NVIDIA uniquement)"),
+    ("is", "Íslenska", "is_IS", "is", "is-latin1", None, "Til baka",
+     "Ræsa VoidStation Live", "Ræsa VoidStation Live (aðeins NVIDIA)"),
     ("it", "Italiano", "it_IT", "it", "it", None, "Indietro",
      "Avvia VoidStation Live", "Avvia VoidStation Live (solo NVIDIA)"),
     ("lv", "Latviešu", "lv_LV", "lv", "lv", None, "Atpakaļ",
@@ -77,6 +83,8 @@ LANGUAGES = [
      "VoidStation Live indítása", "VoidStation Live indítása (csak NVIDIA)"),
     ("nl", "Nederlands", "nl_NL", "us", "us", None, "Terug",
      "VoidStation Live starten", "VoidStation Live starten (alleen NVIDIA)"),
+    ("nb", "Norsk bokmål", "nb_NO", "no", "no", None, "Tilbake",
+     "Start VoidStation Live", "Start VoidStation Live (kun NVIDIA)"),
     ("pl", "Polski", "pl_PL", "pl", "pl", None, "Wstecz",
      "Uruchom VoidStation Live", "Uruchom VoidStation Live (tylko NVIDIA)"),
     ("pt-BR", "Português (Brasil)", "pt_BR", "br", "br-abnt2", None, "Voltar",
@@ -85,6 +93,10 @@ LANGUAGES = [
      "Pornește VoidStation Live", "Pornește VoidStation Live (doar NVIDIA)"),
     ("sk", "Slovenčina", "sk_SK", "sk", "sk-qwertz", None, "Späť",
      "Spustiť VoidStation Live", "Spustiť VoidStation Live (iba NVIDIA)"),
+    ("fi", "Suomi", "fi_FI", "fi", "fi", None, "Takaisin",
+     "Käynnistä VoidStation Live", "Käynnistä VoidStation Live (vain NVIDIA)"),
+    ("sv", "Svenska", "sv_SE", "se", "sv-latin1", None, "Tillbaka",
+     "Starta VoidStation Live", "Starta VoidStation Live (endast NVIDIA)"),
     ("tr", "Türkçe", "tr_TR", "tr", "trq", None, "Geri",
      "VoidStation Live’ı başlat", "VoidStation Live’ı başlat (yalnızca NVIDIA)"),
     ("el", "Ελληνικά", "el_GR", "gr", "us", "Ellinika (Greek)", "Πίσω",
@@ -299,8 +311,10 @@ def grub_text(text, fallback):
     return fallback or text
 
 
-# Buchstaben ohne zerlegbaren Akzent, die Codepage 437 nicht kennt (Türkçe: "Live’ı başlat" -> "Live'i baslat")
-BIOS_PLAIN = str.maketrans({"ı": "i", "İ": "I", "’": "'", "ł": "l", "Ł": "L"})
+# Buchstaben ohne zerlegbaren Akzent, die Codepage 437 nicht kennt (Türkçe: "Live’ı başlat" -> "Live'i baslat",
+# Íslenska: "Ræsa … (aðeins NVIDIA)" -> "Ræsa … (adeins NVIDIA)"; æ, å, ä, ö kennt sie)
+BIOS_PLAIN = str.maketrans({"ı": "i", "İ": "I", "’": "'", "ł": "l", "Ł": "L", "ø": "o", "Ø": "O", "ð": "d", "Ð": "D",
+                            "þ": "th", "Þ": "Th"})
 
 
 def bios_text(text, fallback):

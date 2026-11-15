@@ -851,6 +851,7 @@
   "region.RU": "Rusko",
   "region.UA": "Ukrajina",
   "region.IL": "Izrael",
+  "region.IS": "Island",
   "region.AE": "Spojené arabské emiráty",
   "region.ZA": "Južná Afrika",
   "region.BY": "Bielorusko",
@@ -1512,5 +1513,11 @@
   "hint.vpnOpts": "<b>Del / Y</b> možnosti",
   "hint.vpnConnect": "<b>Enter / A</b> pripojiť",
   "hint.vpnToggle": "<b>Del / X</b> VPN zap. / vyp.",
-  "app.mullvad.desc": "VPN bez e-mailu, len s číslom účtu: mapa sveta, výber miesta, kill switch a uzamknutie, všetko ovládačom. VoidStation stiahne oficiálnu linuxovú verziu Mullvadu, overí jej podpis a nastaví len službu – ovládanie zabezpečí úvodná obrazovka. Účet získate na mullvad.net."
+  "app.mullvad.desc": "VPN bez e-mailu, len s číslom účtu: mapa sveta, výber miesta, kill switch a uzamknutie, všetko ovládačom. VoidStation stiahne oficiálnu linuxovú verziu Mullvadu, overí jej podpis a nastaví len službu – ovládanie zabezpečí úvodná obrazovka. Účet získate na mullvad.net.",
+  "inst.kb.dk": "Dansk",
+  "inst.kb.ee": "Eesti",
+  "inst.kb.is": "Íslenska",
+  "inst.kb.no": "Norsk",
+  "inst.kb.fi": "Suomi",
+  "inst.kb.se": "Svenska"
 }

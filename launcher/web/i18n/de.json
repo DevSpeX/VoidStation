@@ -1320,5 +1320,11 @@
   "hint.vpnPlaces": "<b>X</b> Ort wählen",
   "hint.vpnOpts": "<b>Entf / Y</b> Optionen",
   "hint.vpnConnect": "<b>Enter / A</b> verbinden",
-  "hint.vpnToggle": "<b>Entf / X</b> VPN an / aus"
+  "hint.vpnToggle": "<b>Entf / X</b> VPN an / aus",
+  "inst.kb.dk": "Dansk",
+  "inst.kb.ee": "Eesti",
+  "inst.kb.is": "Íslenska",
+  "inst.kb.no": "Norsk",
+  "inst.kb.fi": "Suomi",
+  "inst.kb.se": "Svenska"
 }

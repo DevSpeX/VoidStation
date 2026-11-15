@@ -851,6 +851,7 @@
   "region.RU": "Росія",
   "region.UA": "Україна",
   "region.IL": "Ізраїль",
+  "region.IS": "Ісландія",
   "region.AE": "Обʼєднані Арабські Емірати",
   "region.ZA": "Південно-Африканська Республіка",
   "region.BY": "Білорусь",
@@ -1514,5 +1515,11 @@
   "hint.vpnOpts": "<b>Del / Y</b> параметри",
   "hint.vpnConnect": "<b>Enter / A</b> підключити",
   "hint.vpnToggle": "<b>Del / X</b> VPN увімк. / вимк.",
-  "app.mullvad.desc": "VPN без e-mail, лише з номером облікового запису: мапа світу, вибір місця, kill switch і блокування, усе з геймпада. VoidStation завантажує офіційну версію Mullvad для Linux, перевіряє її підпис і налаштовує лише службу — керування бере на себе головний екран. Обліковий запис створюється на mullvad.net."
+  "app.mullvad.desc": "VPN без e-mail, лише з номером облікового запису: мапа світу, вибір місця, kill switch і блокування, усе з геймпада. VoidStation завантажує офіційну версію Mullvad для Linux, перевіряє її підпис і налаштовує лише службу — керування бере на себе головний екран. Обліковий запис створюється на mullvad.net.",
+  "inst.kb.dk": "Dansk",
+  "inst.kb.ee": "Eesti",
+  "inst.kb.is": "Íslenska",
+  "inst.kb.no": "Norsk",
+  "inst.kb.fi": "Suomi",
+  "inst.kb.se": "Svenska"
 }

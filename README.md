@@ -12,8 +12,8 @@ The installer in the live system is Qt as well. The former web interface (WebKit
 (switch channels in the picture, channel list, program info), **Videos & Music** (library for the share and USB drives with covers,
 continue watching, repeat/shuffle, “Find music” with downloads including tags and cover), emulators, an AppCenter for optional apps (Void packages, unpacked builds from the makers, web), settings (language, scaling, resolution,
 audio output, Wi-Fi, Bluetooth, mouse pointer), a Samba share `\\<hostname>\share`, several apps side by side with switching.
-Interface in **English or German**, plus nineteen machine-translated languages: Čeština, Español, Français, Italiano, Latviešu, Magyar,
-Nederlands, Polski, Português (Brasil), Română, Slovenčina, Türkçe, Ελληνικά, Русский, Українська, 日本語, 한국어, 简体中文, 繁體中文 (Settings → Language). From the 2026.11 live ISO on, the installer and the stick's boot menu speak all languages too (Japanese, Korean, Chinese, Romanian and Turkish from the next live ISO).
+Interface in **English or German**, plus twenty-five machine-translated languages: Čeština, Dansk, Eesti, Español, Français, Íslenska, Italiano,
+Latviešu, Magyar, Nederlands, Norsk bokmål, Polski, Português (Brasil), Română, Slovenčina, Suomi, Svenska, Türkçe, Ελληνικά, Русский, Українська, 日本語, 한국어, 简体中文, 繁體中文 (Settings → Language). From the 2026.11 live ISO on, the installer and the stick's boot menu speak all languages too (those added since the 2026.11 live ISO from the next live ISO).
 The display server is [XLibre](https://github.com/X11Libre/xserver) (templates from [xlibre-void](https://github.com/xlibre-void/xlibre), built and signed in VoidStation's own package repository [voidstation-packages](https://github.com/Panther92/voidstation-packages));
 X.Org is not used. If the interface fails to start twice, VoidStation reinstalls XLibre once;
 after that, a rescue console appears. By hand: `sudo /usr/local/sbin/voidstation-pkg xserver ensure|repair|status`.

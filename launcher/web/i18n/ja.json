@@ -1302,6 +1302,7 @@
   "region.RU": "ロシア",
   "region.UA": "ウクライナ",
   "region.IL": "イスラエル",
+  "region.IS": "アイスランド",
   "region.AE": "アラブ首長国連邦",
   "region.ZA": "南アフリカ",
   "region.BY": "ベラルーシ",
@@ -1512,5 +1513,11 @@
   "hint.vpnOpts": "<b>Del / Y</b> オプション",
   "hint.vpnConnect": "<b>Enter / A</b> 接続",
   "hint.vpnToggle": "<b>Del / X</b> VPN オン／オフ",
-  "app.mullvad.desc": "メール不要、アカウント番号だけで使える VPN。世界地図、場所の選択、キルスイッチとロックダウンをすべてコントローラーで操作できます。VoidStation は Mullvad 公式の Linux 版をダウンロードして署名を確認し、サービスだけを設定します。操作はホーム画面から。アカウントは mullvad.net で作成できます。"
+  "app.mullvad.desc": "メール不要、アカウント番号だけで使える VPN。世界地図、場所の選択、キルスイッチとロックダウンをすべてコントローラーで操作できます。VoidStation は Mullvad 公式の Linux 版をダウンロードして署名を確認し、サービスだけを設定します。操作はホーム画面から。アカウントは mullvad.net で作成できます。",
+  "inst.kb.dk": "Dansk",
+  "inst.kb.ee": "Eesti",
+  "inst.kb.is": "Íslenska",
+  "inst.kb.no": "Norsk",
+  "inst.kb.fi": "Suomi",
+  "inst.kb.se": "Svenska"
 }
