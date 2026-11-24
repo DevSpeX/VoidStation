@@ -983,6 +983,15 @@ class H(S.H):
                 return self.j({"lang": body.get("lang")})
             if p.endswith("/padmouse"):
                 STATE["padmouse"] = bool(body.get("on"))
+            if p.endswith("/sounds"):
+                snd = S.SETTINGS.setdefault("sounds", {"on": True, "volume": 70, "preset": "void",
+                                                      "presets": ["void", "retro", "minimal"], "custom": 0})
+                if "on" in body:
+                    snd["on"] = bool(body["on"])
+                if "volume" in body:
+                    snd["volume"] = max(1, min(100, int(round(float(body["volume"])))))
+                if body.get("preset") in ("void", "retro", "minimal"):
+                    snd["preset"] = body["preset"]
             if p.endswith("/osk"):
                 o = S.SETTINGS.setdefault("osk", {"choice": "auto", "mode": "auto"})
                 if "layout" in body:

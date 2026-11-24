@@ -90,6 +90,7 @@ Layer {
                                 property string key: "eo" + row.o.id + index
                                 property bool inLook: grp.g.id === "look"
                                 property string preview: modelData.p || ""
+                                sound: "toggle"
                                 text: modelData.t || Ui.t(modelData.k)
                                 on: eo.isOn(row.o.id, modelData.v)
                                 maxWidth: eo.colW

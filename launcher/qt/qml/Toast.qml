@@ -29,6 +29,8 @@ Rectangle {
     function show(msg, isErr, ms) {             // ms: feste Anzeigedauer (z. B. Kopplungscode), sonst nach Laenge
         label.text = msg
         err = isErr
+        if (isErr) vs.playSound("error")
+        else if (!ms) vs.playSound("notify")
         inAnim.restart()
         timer.interval = ms ? ms : Math.max(isErr ? 5000 : 2800, msg.length * 55)
         timer.restart()

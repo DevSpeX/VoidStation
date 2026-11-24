@@ -11,6 +11,7 @@ Row {
     property Item cur: Nav.current && track ? track.groupOf(Nav.current) : null
     RoundBtn {
         navigable: false
+        sound: ""
         size: 34 * Ui.f; iconName: "chevleft"
         off: !si.track || si.track.contentX < 2
         anchors.verticalCenter: parent.verticalCenter
@@ -32,6 +33,7 @@ Row {
     }
     RoundBtn {
         navigable: false
+        sound: ""
         size: 34 * Ui.f; iconName: "chevright"
         off: !si.track || si.track.contentX > si.track.maxX - 2
         anchors.verticalCenter: parent.verticalCenter

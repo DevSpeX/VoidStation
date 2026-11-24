@@ -146,28 +146,35 @@ Window {
         // ------------------------------------------------------------ Navigation
         function move(dir) {
             if (splashTile) return
+            var prev = Nav.current
             if (layerName === "adlg" && (dir === "up" || dir === "down")) return adlg.scrollText(dir === "down" ? 1 : -1)
-            if (layerRoot.navMove && layerRoot.navMove(dir)) return
+            if (layerRoot.navMove && layerRoot.navMove(dir)) {
+                if (Nav.current && Nav.current !== prev) vs.playSound("navigate")
+                return
+            }
             var items = navItems()
-            if (!Nav.current || items.indexOf(Nav.current) < 0) { if (items.length) setFocus(items[0]); return }
+            if (!Nav.current || items.indexOf(Nav.current) < 0) { if (items.length) { setFocus(items[0]); vs.playSound("navigate") } return }
             var best = Nav.nearest(Nav.current, items, dir)
-            if (best) setFocus(best)
+            if (best) { setFocus(best); if (best !== prev) vs.playSound("navigate") }
         }
         function activate(el) {
             el = el || Nav.current
             if (!el || splashTile) return
             if (!Nav.alive(el, layerRoot)) return
+            var snd = el.sound !== undefined ? el.sound : "select"
+            if (snd === "toggle") { if (el.on !== true || el.toggleFlip === true) vs.playSound("toggle") }
+            else if (snd) vs.playSound(snd)
             if (el.pressFlash) { el.pressedNow = true; unpress.target = el; unpress.restart() }
             el.activate()
         }
         Timer { id: unpress; interval: 150; property Item target; onTriggered: if (target) target.pressedNow = false }
         function back() {
-            if (splashTile) return splashToBackground()
-            if (layerName === "osk") return osk.close()
-            if (layerName === "adlg") return adlg.close()
-            if (layerName === "dialog") return powerDlg.close()
-            if (layerRoot.handleBack && layerRoot.handleBack()) return
-            if (layerName !== "home") closeLayer()
+            if (splashTile) { vs.playSound("back"); return splashToBackground() }
+            if (layerName === "osk") { vs.playSound("back"); return osk.close() }
+            if (layerName === "adlg") { vs.playSound("back"); return adlg.close() }
+            if (layerName === "dialog") { vs.playSound("back"); return powerDlg.close() }
+            if (layerRoot.handleBack && layerRoot.handleBack()) { vs.playSound("back"); return }
+            if (layerName !== "home") { vs.playSound("back"); closeLayer() }
         }
         function secondary() {
             if (layerName === "osk") return osk.backspace()
@@ -189,7 +196,7 @@ Window {
         // Fokusrahmen, wenn ihre erste Kachel schon zu sehen war, und es sah aus, als taete sich nichts.
         function jumpGroup(dir, byView) {
             if (splashTile) return
-            if (layerRoot.jump) return layerRoot.jump(dir)
+            if (layerRoot.jump) { if (layerRoot.jump(dir)) vs.playSound("group"); return }
             var tr = curTrack()
             if (!tr) return
             var groups = tr.groupList().filter(function (g) { return Nav.collect(g).length > 0 })
@@ -206,6 +213,7 @@ Window {
             var first = Nav.collect(target)
             if (first.length) setFocus(first[0])
             tr.alignGroup(target)
+            vs.playSound("group")
         }
         property real mouseGX: NaN
         property real mouseGY: NaN
@@ -247,7 +255,7 @@ Window {
         Keys.onPressed: function (e) {
             var k = e.key
             if (updScreen.shown) {                // Updates im Vollbild: nur Esc / B (im Hintergrund weiter)
-                if (k === Qt.Key_Escape || k === Qt.Key_Backspace || k === Qt.Key_Back) updScreen.toBackground()
+                if (k === Qt.Key_Escape || k === Qt.Key_Backspace || k === Qt.Key_Back) { vs.playSound("back"); updScreen.toBackground() }
                 e.accepted = true
                 return
             }
@@ -275,7 +283,7 @@ Window {
                 if (music.visible) return music.navKey(k)
                 if (corner.visible) return corner.navKey(k)
                 if (kbd.visible) return kbd.pad(k)
-                if (updScreen.shown) { if (k === "b") updScreen.toBackground(); return }
+                if (updScreen.shown) { if (k === "b") { vs.playSound("back"); updScreen.toBackground() } return }
                 if (app.layerName === "osk") return osk.pad(k)
                 if (app.layerRoot.padFilter && app.layerRoot.padFilter(k)) return
                 if (k === "a") app.activate()
@@ -290,7 +298,7 @@ Window {
                 else app.move(k)
             }
             function onPadConnected(name) { app.toast(Ui.t("pad.connected", { name: name })) }
-            function onPadMouse(on) { mouseHint.show(on) }
+            function onPadMouse(on) { vs.playSound("toggle"); mouseHint.show(on) }
             function onPadKeyboard() {                            // L2 oder L3 in einem Programm
                 if (kbd.visible) kbd.close("L2/L3")
                 else if (!corner.visible && !music.visible) kbd.openFor("pad")
@@ -305,6 +313,7 @@ Window {
         // Immer, Nicht mit Tastatur (sobald eine angeschlossen ist).
         function oskField(st) {
             if (st.ev === "shot") {                               // Bildschirmfoto (Launcher: F12, vsshot, Start + Select)
+                vs.playSound(st.ok ? "notify" : "error")
                 mouseHint.showText("camera", st.ok ? Ui.t("shot.saved") : Ui.t("shot.failed"))
                 return
             }
@@ -335,6 +344,7 @@ Window {
                 live = !!s.live
                 vs.setLang(s.lang || "de")
                 vs.setTheme(s.theme || "default-dark")
+                if (s.sounds) vs.setSounds(!!s.sounds.on, s.sounds.volume || 70, s.sounds.preset || "void")
                 layout()
                 loadFavs()
                 load()
@@ -364,7 +374,7 @@ Window {
                 })
             })
         }
-        Timer { id: showLater; interval: 120; onTriggered: app.shown = true }  // ein paar Bilder Zeit fuer die Kacheln
+        Timer { id: showLater; interval: 120; onTriggered: { app.shown = true; vs.playStartupSound() } }  // ein paar Bilder Zeit fuer die Kacheln
         function loadFavs() { Api.get("/api/radio/favs", function (j) { favs = j || [] }) }
 
         // Uhr
@@ -546,7 +556,12 @@ Window {
             volLevel = v.level
             volText = v.muted ? Ui.t("vol.muted") : Ui.pct(v.level)
         }
-        function volume(action) { Api.post("/api/volume/" + action, null, showVol) }
+        function volume(action) {
+            Api.post("/api/volume/" + action, null, function (v) {
+                showVol(v)
+                if (v && v.level !== undefined && !v.muted) vs.playSound(action === "mute" ? "toggle" : "volume")
+            })
+        }
         function refreshVolume() { Api.get("/api/volume", showVol) }
         function power(action) {
             if (powerDlg.open) powerDlg.close()
@@ -567,6 +582,7 @@ Window {
             return { text: Ui.t("vpn.state.nodaemon"), icon: "shieldoff", color: c.textFaint }
         }
         function vpnToggle() {
+            vs.playSound("toggle")
             var on = vpn && (vpn.state === "connected" || vpn.state === "connecting")
             Api.post(on ? "/api/vpn/disconnect" : "/api/vpn/connect", on ? null : {},
                      function () { poll() }, function (e) { toast(Ui.t("common.failedMsg", { msg: e }), true) })

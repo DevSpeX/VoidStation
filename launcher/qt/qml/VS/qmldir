@@ -19,6 +19,7 @@ Layer 1.0 Layer.qml
 ScrollInd 1.0 ScrollInd.qml
 NowLine 1.0 NowLine.qml
 VolBar 1.0 VolBar.qml
+SliderBar 1.0 SliderBar.qml
 Spinner 1.0 Spinner.qml
 Eq 1.0 Eq.qml
 Col 1.0 Col.qml

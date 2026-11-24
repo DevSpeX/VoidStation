@@ -184,6 +184,7 @@ Layer {
     function go(s) {
         animate = true
         step = s
+        if (s === "error") vs.playSound("error")
         trk.reset()
         Qt.callLater(focusDefault)
     }

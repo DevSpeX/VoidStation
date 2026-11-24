@@ -61,6 +61,7 @@ Layer {
     function toggleFav(st) {
         st = st || station
         if (!st) return app.toast(Ui.t("radio.pickFirst"))
+        vs.playSound("toggle")
         var was = favIndex(st.url) >= 0
         Api.post(was ? "/api/radio/unfav" : "/api/radio/fav", st, function (j) {
             app.favs = j || []
@@ -74,7 +75,7 @@ Layer {
     }
     bar: [
         Pill { iconName: "stop"; text: Ui.t("common.stop"); enabled: !!r.station; onTriggered: r.stop() },
-        Pill { iconName: "star"; text: r.isFav ? Ui.t("radio.favRemove") : Ui.t("radio.fav"); onTriggered: r.toggleFav() },
+        Pill { iconName: "star"; sound: ""; text: r.isFav ? Ui.t("radio.favRemove") : Ui.t("radio.fav"); onTriggered: r.toggleFav() },
         Field { id: search; placeholder: Ui.t("common.searchStations"); onSubmitted: function (t) { r.doSearch(t) } },
         VolBar {}
     ]

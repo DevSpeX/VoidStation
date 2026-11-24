@@ -39,7 +39,10 @@ def log(*a):
 
 
 sys.path.insert(0, str(HERE))
+if str(HERE.parent) not in sys.path:
+    sys.path.append(str(HERE.parent))
 from icons import ICONS  # noqa: E402
+import vssound  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -654,6 +657,7 @@ class VsBase(QObject):
         self._set_lang("de")
         self._icons = {}
         self._glyphs = {}
+        self._sound = vssound.SoundEngine(WEB / "sounds")
         self.pad: Any = None         # Gamepad, sobald die App ihn anlegt
         self._pad_style = ""         # Bauart des zuletzt benutzten Controllers, "" = keiner angeschlossen
         self._force_style = os.environ.get("VS_PAD_STYLE", "")   # Tests: so tun, als steckte dieser Controller
@@ -869,6 +873,19 @@ class VsBase(QObject):
     @Slot(str)
     def log(self, msg):
         log(msg)
+
+    # ---- Oberflaechentoene ----
+    @Slot(str)
+    def playSound(self, event):
+        self._sound.play(str(event))
+
+    @Slot(bool, int, str)
+    def setSounds(self, enabled, volume, preset):
+        self._sound.configure(enabled=bool(enabled), volume=int(volume), preset=str(preset))
+
+    @Slot()
+    def playStartupSound(self):
+        self._sound.play_startup_once()
 
 
 def limit_arenas():

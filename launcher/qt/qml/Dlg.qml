@@ -83,6 +83,7 @@ Rectangle {
                     Btn {
                         text: modelData[0]
                         danger: modelData[2] === "danger"
+                        sound: modelData[1] ? "select" : "back"
                         onTriggered: { var fn = modelData[1]; d.close(); if (fn) fn() }
                     }
                 }

@@ -161,10 +161,10 @@ Rectangle {
         Qt.callLater(refresh)
     }
     function key(k) {
-        if (k === "b" || k === "start") return hide()
-        if (k === "up") return step(-1)
-        if (k === "down") return step(1)
-        if ((k === "a" || k === "play") && rows[sel] && !rows[sel].head) return apply(rows[sel].act)
+        if (k === "b" || k === "start") { vs.playSound("back"); return hide() }
+        if (k === "up") { var prevU = sel; step(-1); if (sel !== prevU) vs.playSound("navigate"); return }
+        if (k === "down") { var prevD = sel; step(1); if (sel !== prevD) vs.playSound("navigate"); return }
+        if ((k === "a" || k === "play") && rows[sel] && !rows[sel].head) { vs.playSound("select"); return apply(rows[sel].act) }
     }
 
     Txt {

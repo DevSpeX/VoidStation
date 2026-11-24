@@ -69,6 +69,7 @@ Rectangle {
             RoundBtn {
                 id: backBtn
                 iconName: "chevleft"
+                sound: ""
                 anchors.verticalCenter: parent.verticalCenter
                 onTriggered: Ui.app.back()
             }

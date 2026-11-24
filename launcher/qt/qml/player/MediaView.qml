@@ -170,6 +170,7 @@ Item {
     }
     function up() {
         if (!path) return app.leave()
+        vs.playSound("back")
         selectAfter = path
         openPath(parentPath)
     }
@@ -439,10 +440,10 @@ Item {
         if (menu.open) return menu.key(k)
         if (phase === "browse") {
             if (k === "b") return up()
-            if (k === "a" || k === "play") { if (Nav.current) Nav.current.activate(); return }
+            if (k === "a" || k === "play") { app.activate(); return }
             if (k === "up" || k === "down" || k === "left" || k === "right") return app.move(k)
-            if (k === "chup" || k === "lt") { for (var i = 0; i < 4; i++) app.move("left"); return }
-            if (k === "chdown" || k === "rt") { for (i = 0; i < 4; i++) app.move("right"); return }
+            if (k === "chup" || k === "lt") { var movedL = false; for (var i = 0; i < 4; i++) if (app.move("left", true)) movedL = true; if (movedL) vs.playSound("group"); return }
+            if (k === "chdown" || k === "rt") { var movedR = false; for (var j = 0; j < 4; j++) if (app.move("right", true)) movedR = true; if (movedR) vs.playSound("group"); return }
             return
         }
         if (k === "b" || k === "stop") return stopPlayback()
@@ -816,7 +817,7 @@ Item {
         }
         function key(k) {
             if (k === "b") return close()
-            if (k === "a" || k === "play") { if (Nav.current) Nav.current.activate(); return }
+            if (k === "a" || k === "play") { app.activate(); return }
             if (k === "left" || k === "right" || k === "up" || k === "down") return app.move(k)
         }
         Rectangle {

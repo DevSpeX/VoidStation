@@ -143,6 +143,10 @@ Column {
                     id: kk
                     property string key: modelData.k
                     property bool pressFlash: true
+                    sound: modelData.a === "go" ? "select"
+                         : (modelData.a === "shift" || modelData.a === "sym" || modelData.a === "acc" || modelData.a === "latin") ? "toggle"
+                         : "navigate"
+                    toggleFlip: true
                     width: modelData.w * kp.keyW + (modelData.w - 1) * kp.gap
                     height: kp.keyH
                     onTriggered: kp.press(modelData)

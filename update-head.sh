@@ -129,7 +129,8 @@ chmod +x "$TV/launcher.py" "$TV/launcher-start.py" "$TV/home.sh" "$TV/vsctl" "$T
 rm -rf "$TV/__pycache__" "$TV/qt/__pycache__"
 # chdman kommt seit 2026.12 als Paket vs-chdman aus der eigenen Paketquelle (s. "Grafik-Server" unten)
 rm -rf "${TV:?}/bin"
-python3 -m compileall -q --invalidation-mode checked-hash "$TV/launcher.py" "$TV/tvindex.py" "$TV/discid.py" "$TV/gameprofiles.py" "$TV/vsx11.py" "$TV/vsreport.py" "$TV/qt" || warn "Bytecode nicht vorbereitet"
+mkdir -p "$TV/sounds"
+python3 -m compileall -q --invalidation-mode checked-hash "$TV/launcher.py" "$TV/tvindex.py" "$TV/discid.py" "$TV/gameprofiles.py" "$TV/vsx11.py" "$TV/vsreport.py" "$TV/vssound.py" "$TV/qt" || warn "Bytecode nicht vorbereitet"
 echo "__VS_VERSION__" > "$TV/VERSION"
 echo '__VS_VERSION_B64__' | base64 -d > "$TV/version.json" 2>/dev/null || true
 cp "$TV/openbox/"{rc.xml,menu.xml,autostart} "$HOMEDIR/.config/openbox/"

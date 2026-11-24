@@ -194,6 +194,12 @@ Nach zwei Fehlstarts installiert VoidStation den Grafik-Server XLibre einmal neu
 
 Unter `~/.local/share/voidstation/logs/`. Das Protokoll des Installers liegt während der Installation unter `/run/voidstation-installer/install.log` und lässt sich direkt auf einen USB-Stick speichern.
 
+### Eigene Oberflächentöne {#eigene-toene}
+
+Unter **Einstellungen → Ton → Oberflächentöne** wählst du einen der drei eingebauten Klangstile (**Void**, **Retro** oder **Minimal**), stellst ihre Lautstärke (1–100 %) ein oder schaltest die Töne ganz ab.
+
+Eigene Tondateien (`.wav`, `.ogg`, `.flac`, `.oga`) im Ordner `~/.local/share/voidstation/sounds/` überschreiben die eingebauten Töne und bleiben bei Updates erhalten. Unterstützte Ereignisnamen sind `navigate`, `select`, `back`, `group`, `toggle`, `volume`, `notify`, `error`, `startup` und `shutdown` (z. B. `~/.local/share/voidstation/sounds/select.ogg`). Dateien in einem Unterordner des jeweiligen Stils (`void/`, `retro/`, `minimal/`) gelten nur für diesen Stil; eine leere 0-Byte-Datei schaltet gezielt ein einzelnes Ereignis stumm.
+
 ### 4K-Fernseher: nur 30 Hz oder kleinere Auflösung
 
 Viele Fernseher stellen ihre HDMI-Anschlüsse ab Werk auf eine schmale Bandbreite. 4K gibt es dann höchstens mit 30 Hz, flüssig läuft es nur in kleinerer Auflösung. Abhilfe schafft eine Einstellung im Fernseher – für genau den Anschluss, an dem der VoidStation-PC hängt:

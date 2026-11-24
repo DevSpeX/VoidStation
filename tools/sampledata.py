@@ -85,6 +85,7 @@ SETTINGS: dict[str, Any] = {
          "formats": [{"id": "a2dp:auto", "key": "audio.fmt.auto", "label": ""}, {"id": "a2dp:aac", "key": "", "label": "AAC"},
                      {"id": "a2dp:sbc", "key": "", "label": "SBC"}], "format": "a2dp:auto", "mic": False, "micAvail": True}]},
     "volume": {"level": 40, "muted": False},
+    "sounds": {"on": True, "volume": 70, "preset": "void", "presets": ["void", "retro", "minimal"], "custom": 0},
     "net": {"hostname": "wohnzimmer", "addresses": [{"iface": "enp1s0", "ip": "192.168.178.42"}],
             "links": [{"dev": "enp1s0", "type": "wired", "connected": True, "name": "Kabelgebundene Verbindung 1",
                        "ip": "192.168.178.42", "internet": True}],

@@ -89,6 +89,7 @@ Item {
     }
     function back() {
         if (!stack.length) return app.leave()
+        vs.playSound("back")
         var s = stack.slice(), last = s.pop()
         stack = s
         page = last.page
@@ -471,13 +472,13 @@ Item {
         if (phase === "browse") {
             var it = Nav.current && Nav.current.it ? Nav.current.it : null
             if (k === "b") return back()
-            if (k === "a" || k === "play") { if (Nav.current) Nav.current.activate(); return }
+            if (k === "a" || k === "play") { app.activate(); return }
             if (k === "up" || k === "down" || k === "left" || k === "right") return app.move(k)
             if (k === "y") { if (it && it.kind === "video") return toggleLater(it); if (it && it.kind === "channel") return toggleSub(it); return }
             if (k === "x") { if (it && it.kind === "video" && page === "history") return removeHistory(it); if (it && it.kind === "video") return openChannelOf(it); return }
             if (k === "start") return openSearch()
-            if (k === "chup" || k === "lt") { for (var i = 0; i < 4; i++) app.move("left"); return }
-            if (k === "chdown" || k === "rt") { for (i = 0; i < 4; i++) app.move("right"); return }
+            if (k === "chup" || k === "lt") { var movedL = false; for (var i = 0; i < 4; i++) if (app.move("left", true)) movedL = true; if (movedL) vs.playSound("group"); return }
+            if (k === "chdown" || k === "rt") { var movedR = false; for (var j = 0; j < 4; j++) if (app.move("right", true)) movedR = true; if (movedR) vs.playSound("group"); return }
             return
         }
         if (k === "b" || k === "stop") return stopPlayback()

@@ -57,6 +57,7 @@ Rectangle {
     }
     function backspace() { value = value.slice(0, -1); if (target) target.value = value }
     function submit() {
+        vs.playSound("select")
         var t = target
         if (t) { t.value = value; }
         close()
@@ -141,12 +142,14 @@ Rectangle {
                 Pill {
                     id: showBtn
                     visible: !!o.target && !!o.target.revealable
+                    sound: "toggle"
+                    toggleFlip: true
                     text: Ui.t(o.target && o.target.password ? "settings.pwShow" : "settings.pwHide")
                     on: !!o.target && !o.target.password
                     anchors.verticalCenter: parent.verticalCenter
                     onTriggered: if (o.target) o.target.password = !o.target.password
                 }
-                RoundBtn { id: closeBtn; iconName: "close"; anchors.verticalCenter: parent.verticalCenter; onTriggered: o.close() }
+                RoundBtn { id: closeBtn; iconName: "close"; sound: ""; anchors.verticalCenter: parent.verticalCenter; onTriggered: { vs.playSound("back"); o.close() } }
             }
             KeyPad {
                 id: kp

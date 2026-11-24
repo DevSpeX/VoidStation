@@ -60,6 +60,7 @@ Window {
                 Ui.scale = s.scale || 1.75
                 vs.setLang(s.lang || "de")
                 vs.setTheme(s.theme || "default-dark")
+                if (s.sounds) vs.setSounds(!!s.sounds.on, s.sounds.volume || 70, s.sounds.preset || "void")
                 layout()
                 started = true
                 view.start(vsArg)
@@ -118,11 +119,16 @@ Window {
         // Maus fuer VS-Bausteine (Kacheln, Knoepfe)
         function setFocus(item, instant) { Nav.setFocus(item, instant, "player") }
         function navItems() { return Nav.collect(layerRoot) }
-        function move(dir) {
+        function move(dir, silent) {
+            var prev = Nav.current
             var items = navItems()
-            if (!Nav.current || items.indexOf(Nav.current) < 0) { if (items.length) setFocus(items[0]); return }
+            if (!Nav.current || items.indexOf(Nav.current) < 0) {
+                if (items.length) { setFocus(items[0]); if (!silent) vs.playSound("navigate"); return true }
+                return false
+            }
             var best = Nav.nearest(Nav.current, items, dir)
-            if (best) setFocus(best)
+            if (best) { setFocus(best); if (!silent && best !== prev) vs.playSound("navigate"); return best !== prev }
+            return false
         }
         function mouseFocus(item, gx, gy) {
             var first = isNaN(mouseGX)
@@ -131,11 +137,18 @@ Window {
             if (!moved || !Nav.alive(item, layerRoot) || Nav.current === item) return
             setFocus(item)
         }
+        function playItemSound(item) {
+            if (!item) return
+            var snd = item.sound !== undefined ? item.sound : "select"
+            if (snd === "toggle") { if (item.on !== true || item.toggleFlip === true) vs.playSound("toggle") }
+            else if (snd) vs.playSound(snd)
+        }
         function mouseClick(item, button) {
             if (button === Qt.RightButton) return key("b")
             if (!Nav.alive(item, layerRoot) && !(item.navigable === false && item.visible)) return
-            if (item.clickActivate) return item.clickActivate()
+            if (item.clickActivate) { playItemSound(item); return item.clickActivate() }
             if (item.navigable !== false) setFocus(item)
+            playItemSound(item)
             item.activate()
         }
         function mousePress(item) { if (item.pressFlash) item.pressedNow = true }
@@ -147,6 +160,7 @@ Window {
         function activate(el) {
             el = el || Nav.current
             if (!el || !Nav.alive(el, layerRoot)) return
+            playItemSound(el)
             el.activate()
         }
         function curTrack() { return view.track || null }
@@ -154,10 +168,16 @@ Window {
         // ------------------------------------------------------------ Gemeinsames
         function toast(msg, err) { toastBox.show(msg, !!err) }
         function volume(dir) {
-            Api.post("/api/volume/" + dir, null, function (v) { if (v) volOsd.show(v.level, v.muted) })
+            Api.post("/api/volume/" + dir, null, function (v) {
+                if (v) {
+                    volOsd.show(v.level, v.muted)
+                    if (!v.muted && (!app.st || app.st.paused || app.st.idle)) vs.playSound(dir === "mute" ? "toggle" : "volume")
+                }
+            })
         }
         // Zurueck zur Startseite und Player beenden
         function leave() {
+            vs.playSound("back")
             if (player) player.stop()
             Api.post("/api/home", null, function () { vs.quit() }, function () { vs.quit() })
         }

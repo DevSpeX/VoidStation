@@ -7,6 +7,8 @@ Item {
     id: f
     property bool navigable: true
     property bool navOnlyUp: false
+    property string sound: "select"
+    property bool toggleFlip: false
     readonly property bool focused: Nav.current === f
     property bool pressedNow: false
     signal triggered()

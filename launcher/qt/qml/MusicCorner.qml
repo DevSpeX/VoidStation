@@ -46,6 +46,8 @@ Window {
     }
     function control(a) {
         awayMs = 0
+        if (a === "toggle") vs.playSound("toggle")
+        else if (a === "prev" || a === "next") vs.playSound("select")
         Api.post("/api/nowplaying/control", { action: a }, function (r) {
             if (r && r.kind) now = r
             else close("nichts mehr da")
@@ -58,7 +60,7 @@ Window {
         else if (k === "up") control("up")
         else if (k === "down") control("down")
         else if (k === "a") control("toggle")
-        else if (k === "b") close("Taste B")
+        else if (k === "b") { vs.playSound("back"); close("Taste B") }
     }
 
     Rectangle {

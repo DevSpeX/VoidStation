@@ -75,6 +75,7 @@ Window {
     function type(ch) { vs.kbdType(ch) }
     function tap(name) { vs.kbdTap(name) }
     function enter() {
+        vs.playSound("select")
         tap("Return")
         if (auto && kind !== "textarea") close("Enter")          // Suche & Co.: abgeschickt; mehrzeilig bleibt offen
     }
@@ -89,7 +90,7 @@ Window {
         if (k === "rb") { kp.endCompose(); return tap("Right") }
         if (k === "rt") { kp.shift = !kp.shift; return }
         if (k === "start") return enter()
-        if (k === "b") return close("Taste B")
+        if (k === "b") { vs.playSound("back"); return close("Taste B") }
     }
 
     Rectangle {                                  // Trennlinie zum Programm

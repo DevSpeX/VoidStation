@@ -173,8 +173,8 @@ Item {
         if (chan.open) return chan.key(k)
         if (k !== "b") { exitArmed = false; exitT.stop() }
         if (k === "b") {
-            if (tech.open) { tech.open = false; return }
-            if (infoOn && phase !== "error") { infoOn = false; return }
+            if (tech.open) { vs.playSound("back"); tech.open = false; return }
+            if (infoOn && phase !== "error") { vs.playSound("back"); infoOn = false; return }
             return armExit()
         }
         if (phase === "error" && (k === "a" || k === "play")) return retry()

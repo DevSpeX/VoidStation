@@ -105,19 +105,19 @@ Item {
 
     function key(k) {
         if (page === "settings") {
-            if (k === "b") return firstRun ? hide() : openSearch()
-            if (k === "a" || k === "play") { if (Nav.current) Nav.current.activate(); return }
+            if (k === "b") { vs.playSound("back"); return firstRun ? hide() : openSearch() }
+            if (k === "a" || k === "play") { app.activate(); return }
             if (["up", "down", "left", "right"].indexOf(k) >= 0) return app.move(k)
             if (k === "start") return saveSettings()
             return
         }
-        if (k === "b") return hide()
+        if (k === "b") { vs.playSound("back"); return hide() }
         if (k === "x") return openSettings()
-        if (k === "a" || k === "play") { if (Nav.current) Nav.current.activate(); return }
+        if (k === "a" || k === "play") { app.activate(); return }
         if (k === "y") return app.setFocus(field, true)
         if (["up", "down", "left", "right"].indexOf(k) >= 0) return app.move(k)
-        if (k === "chdown" || k === "rt") { for (var i = 0; i < 6; i++) app.move("down"); return }
-        if (k === "chup" || k === "lt") { for (i = 0; i < 6; i++) app.move("up"); return }
+        if (k === "chdown" || k === "rt") { var movedD = false; for (var i = 0; i < 6; i++) if (app.move("down", true)) movedD = true; if (movedD) vs.playSound("group"); return }
+        if (k === "chup" || k === "lt") { var movedU = false; for (var j = 0; j < 6; j++) if (app.move("up", true)) movedU = true; if (movedU) vs.playSound("group"); return }
     }
     function fmtDur(s) { return s > 0 ? vs.fmtTime(s, "") : "" }
 

@@ -42,7 +42,10 @@ Layer {
     function firstFocus() { return Nav.collect(trk)[0] || null }
     function load() {
         Api.get("/api/settings", function (j) {
-            update(function () { sett = j; app.sett = j; app.showVol(j.volume) })
+            update(function () {
+                sett = j; app.sett = j; app.showVol(j.volume)
+                if (j && j.sounds) vs.setSounds(!!j.sounds.on, j.sounds.volume || 70, j.sounds.preset || "void")
+            })
             Api.get("/api/bluetooth/status", function (b) { update(function () { bt = b }) }, function () { bt = { available: false } })
         }, function () { app.toast(Ui.t("settings.loadFailed"), true) })
     }
@@ -332,6 +335,20 @@ Layer {
         audioPost("/api/audio/mic", { key: d.key, on: on }, Ui.t(on ? "audio.micOn" : "audio.micOff"))
     }
     function setAudioAuto(on) { audioPost("/api/audio/auto", { on: on }, "") }
+    readonly property var sndConf: sett && sett.sounds ? sett.sounds : ({ on: true, volume: 70, preset: "void", presets: ["void", "retro", "minimal"], custom: 0 })
+    function setSounds(body, sampleEvent) {
+        var nextOn = body.on !== undefined ? !!body.on : !!sndConf.on
+        var nextVol = body.volume !== undefined ? body.volume : (sndConf.volume || 70)
+        var nextPreset = body.preset !== undefined ? body.preset : (sndConf.preset || "void")
+        vs.setSounds(nextOn, nextVol, nextPreset)
+        if (nextOn && sampleEvent) vs.playSound(sampleEvent)
+        Api.post("/api/settings/sounds", body, function (j) {
+            update(function () {
+                sett = j; app.sett = j
+                if (j && j.sounds) vs.setSounds(!!j.sounds.on, j.sounds.volume || 70, j.sounds.preset || "void")
+            })
+        }, fail)
+    }
     // Aufloesungen ab 1024x576, die mindestens ~50 Hz koennen (4K mit nur 30 Hz ruckelt) – dazu immer die aktuelle
     // und die bevorzugte; hoechstens acht, groesste zuerst (Reihenfolge von xrandr)
     function modes(d) {
@@ -592,7 +609,7 @@ Layer {
             SetRow {
                 Repeater {
                     model: s.sett ? (s.sett.langs || [{ id: "de", label: "Deutsch" }, { id: "en", label: "English" }]) : []
-                    Pill { property string key: "lang" + modelData.id; text: modelData.label; on: modelData.id === Ui.lang; maxWidth: Ui.screenW * 0.4; onTriggered: s.setLang(modelData.id) }
+                    Pill { property string key: "lang" + modelData.id; text: modelData.label; on: modelData.id === Ui.lang; sound: "toggle"; maxWidth: Ui.screenW * 0.4; onTriggered: s.setLang(modelData.id) }
                 }
             }
         }
@@ -602,7 +619,7 @@ Layer {
                 label: Ui.t("settings.oskMode")
                 Repeater {
                     model: ["auto", "always", "keyboard"]
-                    Pill { property string key: "oskm" + modelData; text: Ui.t("settings.oskMode." + modelData); on: (s.oskConf.mode || "auto") === modelData
+                    Pill { property string key: "oskm" + modelData; text: Ui.t("settings.oskMode." + modelData); on: (s.oskConf.mode || "auto") === modelData; sound: "toggle"
                            maxWidth: Ui.screenW * 0.4; onTriggered: s.setOsk({ mode: modelData }) }
                 }
             }
@@ -611,12 +628,12 @@ Layer {
                 Pill {
                     property string key: "oskauto"
                     text: Ui.t("settings.oskAuto", { name: Ui.t("inst.kb." + OskLayouts.forLang(Ui.lang), null, OskLayouts.forLang(Ui.lang)) })
-                    on: s.oskConf.choice === "auto"; maxWidth: Ui.screenW * 0.4
+                    on: s.oskConf.choice === "auto"; sound: "toggle"; maxWidth: Ui.screenW * 0.4
                     onTriggered: s.setOsk({ layout: "auto" })
                 }
                 Repeater {
                     model: OskLayouts.LIST
-                    Pill { property string key: "osk" + modelData; text: Ui.t("inst.kb." + modelData, null, modelData); on: s.oskConf.choice === modelData
+                    Pill { property string key: "osk" + modelData; text: Ui.t("inst.kb." + modelData, null, modelData); on: s.oskConf.choice === modelData; sound: "toggle"
                            maxWidth: Ui.screenW * 0.4; onTriggered: s.setOsk({ layout: modelData }) }
                 }
             }
@@ -627,7 +644,7 @@ Layer {
             SetRow {
                 Repeater {
                     model: s.sett ? s.sett.scales : []
-                    Pill { property string key: "scale" + modelData; text: Ui.num(modelData) + "\u00d7"; on: Math.abs(modelData - Ui.scale) < 0.01; onTriggered: s.setScale(modelData) }
+                    Pill { property string key: "scale" + modelData; text: Ui.num(modelData) + "\u00d7"; on: Math.abs(modelData - Ui.scale) < 0.01; sound: "toggle"; onTriggered: s.setScale(modelData) }
                 }
             }
         }
@@ -643,6 +660,7 @@ Layer {
                             property string key: "res" + modelData
                             text: modelData.replace("x", "\u00d7").replace(/i$/, " " + Ui.t("settings.interlaced")) + (modelData === d.current && d.rate ? " · " + Math.round(d.rate) + " Hz" : "")
                             on: modelData === d.current
+                            sound: "toggle"
                             maxWidth: Ui.screenW * 0.4
                             onTriggered: s.setResolution(modelData)
                         }
@@ -661,6 +679,7 @@ Layer {
                         property string key: "rateauto" + d.name
                         text: Ui.t("settings.rateAuto") + (!s.sett.rate && d.rate ? " · " + s.hz(d.rate) + " Hz" : "")
                         on: !s.sett.rate
+                        sound: "toggle"
                         onTriggered: s.setResolution(d.current)
                     }
                     Repeater {
@@ -669,6 +688,7 @@ Layer {
                             property string key: "rate" + d.name + modelData
                             text: s.hz(modelData) + " Hz"
                             on: !!s.sett.rate && Math.abs(modelData - s.sett.rate) < 0.005
+                            sound: "toggle"
                             onTriggered: s.setResolution(d.current, modelData)
                         }
                     }
@@ -680,7 +700,7 @@ Layer {
             SetRow {
                 Repeater {
                     model: [true, false]
-                    Pill { property string key: "mr" + modelData; text: Ui.t(modelData ? "common.on" : "common.off"); on: !!s.sett && !!s.sett.match_rate === modelData; onTriggered: s.setMatchRate(modelData) }
+                    Pill { property string key: "mr" + modelData; text: Ui.t(modelData ? "common.on" : "common.off"); on: !!s.sett && !!s.sett.match_rate === modelData; sound: "toggle"; onTriggered: s.setMatchRate(modelData) }
                 }
             }
             Info { html: Ui.esc(Ui.t("settings.matchRateHint")) }
@@ -694,6 +714,7 @@ Layer {
                         property string key: "gfx" + modelData
                         text: Ui.t(modelData === "off" ? "common.off" : "settings.gameFx." + modelData)
                         on: !!s.sett && !!s.sett.game_fx && s.sett.game_fx.mode === modelData
+                        sound: "toggle"
                         maxWidth: Ui.screenW * 0.4
                         onTriggered: s.setGameFx(modelData)
                     }
@@ -710,7 +731,7 @@ Layer {
             SetRow {
                 Repeater {
                     model: s.sett ? (s.sett.themes || []) : []
-                    Pill { property string key: "th" + modelData; text: Ui.t("theme." + modelData, null, modelData); on: modelData === vs.themeName; maxWidth: Ui.screenW * 0.4; onTriggered: s.setTheme(modelData) }
+                    Pill { property string key: "th" + modelData; text: Ui.t("theme." + modelData, null, modelData); on: modelData === vs.themeName; sound: "toggle"; maxWidth: Ui.screenW * 0.4; onTriggered: s.setTheme(modelData) }
                 }
             }
         }
@@ -720,14 +741,14 @@ Layer {
                 label: Ui.t("settings.cursorStyle")
                 Repeater {
                     model: s.sett && s.sett.cursor ? s.sett.cursor.themes : []
-                    Pill { property string key: "ct" + modelData.id; text: Ui.l(modelData.label); on: modelData.id === s.sett.cursor.theme; onTriggered: s.setCursor({ theme: modelData.id }) }
+                    Pill { property string key: "ct" + modelData.id; text: Ui.l(modelData.label); on: modelData.id === s.sett.cursor.theme; sound: "toggle"; onTriggered: s.setCursor({ theme: modelData.id }) }
                 }
             }
             SetRow {
                 label: Ui.t("settings.cursorSize")
                 Repeater {
                     model: s.sett && s.sett.cursor ? s.sett.cursor.sizes : []
-                    Pill { property string key: "cs" + modelData; text: String(modelData); on: modelData === s.sett.cursor.size; onTriggered: s.setCursor({ size: modelData }) }
+                    Pill { property string key: "cs" + modelData; text: String(modelData); on: modelData === s.sett.cursor.size; sound: "toggle"; onTriggered: s.setCursor({ size: modelData }) }
                 }
             }
         }
@@ -746,6 +767,7 @@ Layer {
                         maxWidth: Ui.screenW * 0.4
                         text: Ui.esc(s.devLabel(modelData)) + (s.devTag(modelData) ? "<font color='" + Ui.c.textFaint + "'> · " + s.devTag(modelData) + "</font>" : "")
                         on: modelData.active
+                        sound: "toggle"
                         onTriggered: s.setDevice(modelData)
                     }
                 }
@@ -755,7 +777,7 @@ Layer {
                 label: Ui.t("audio.format")
                 Repeater {
                     model: s.audioDev ? s.audioDev.formats : []
-                    Pill { property string key: "fmt" + modelData.id; text: s.fmtLabel(modelData); on: s.audioDev.format === modelData.id; onTriggered: s.setFormat(s.audioDev, modelData) }
+                    Pill { property string key: "fmt" + modelData.id; text: s.fmtLabel(modelData); on: s.audioDev.format === modelData.id; sound: "toggle"; onTriggered: s.setFormat(s.audioDev, modelData) }
                 }
             }
             Info { visible: !!s.audioDev && s.audioDev.kind === "hdmi" && s.audioDev.formats.length > 1; html: Ui.esc(Ui.t("audio.fmtHintTv")) }
@@ -764,7 +786,7 @@ Layer {
                 label: Ui.t(s.audioDev && ["hdmi", "analog", "spdif", "other"].indexOf(s.audioDev.kind) >= 0 ? "audio.micJack" : "audio.mic")
                 Repeater {
                     model: [true, false]
-                    Pill { property string key: "mic" + modelData; text: Ui.t(modelData ? "common.on" : "common.off"); on: !!s.audioDev && s.audioDev.mic === modelData; onTriggered: s.setMic(s.audioDev, modelData) }
+                    Pill { property string key: "mic" + modelData; text: Ui.t(modelData ? "common.on" : "common.off"); on: !!s.audioDev && s.audioDev.mic === modelData; sound: "toggle"; onTriggered: s.setMic(s.audioDev, modelData) }
                 }
             }
             Info { visible: !!s.audioDev && s.audioDev.kind === "bt" && s.audioDev.micAvail; html: Ui.esc(Ui.t("audio.micBt")) }
@@ -777,10 +799,57 @@ Layer {
                 label: Ui.t("audio.auto")
                 Repeater {
                     model: [true, false]
-                    Pill { property string key: "aa" + modelData; text: Ui.t(modelData ? "common.on" : "common.off"); on: !!s.sett && !!s.sett.audio && !!s.sett.audio.auto === modelData; onTriggered: s.setAudioAuto(modelData) }
+                    Pill { property string key: "aa" + modelData; text: Ui.t(modelData ? "common.on" : "common.off"); on: !!s.sett && !!s.sett.audio && !!s.sett.audio.auto === modelData; sound: "toggle"; onTriggered: s.setAudioAuto(modelData) }
                 }
             }
             Info { visible: !!s.sett && !!s.sett.audio && s.sett.audio.ok; html: Ui.esc(Ui.t("audio.autoHint")) }
+        }
+        SetGroup {
+            visible: s.cat === "audio"; availH: s.colH; title: Ui.t("audio.sounds")
+            SetRow {
+                Repeater {
+                    model: [true, false]
+                    Pill {
+                        property string key: "snd" + modelData
+                        text: Ui.t(modelData ? "common.on" : "common.off")
+                        on: !!s.sndConf.on === modelData
+                        sound: ""
+                        onTriggered: if (!!s.sndConf.on !== modelData) s.setSounds({ on: modelData }, modelData ? "toggle" : "")
+                    }
+                }
+            }
+            SetRow {
+                visible: !!s.sndConf.on
+                label: Ui.t("audio.soundsPreset")
+                Repeater {
+                    model: s.sndConf.presets || ["void", "retro", "minimal"]
+                    Pill {
+                        property string key: "sndp" + modelData
+                        text: Ui.t("audio.soundsPreset." + modelData, null, modelData)
+                        on: s.sndConf.preset === modelData
+                        sound: ""
+                        onTriggered: s.setSounds({ preset: modelData }, "select")
+                    }
+                }
+            }
+            SetRow {
+                visible: !!s.sndConf.on
+                label: Ui.t("audio.soundsVol")
+                SliderBar {
+                    minusKey: "sndm"
+                    plusKey: "sndpl"
+                    value: s.sndConf.volume || 70
+                    minVal: 1
+                    maxVal: 100
+                    step: 5
+                    onPreview: function (v) { vs.setSounds(true, v, s.sndConf.preset || "void"); vs.playSound("volume") }
+                    onCommitted: function (v) { s.setSounds({ volume: v }, "volume") }
+                }
+            }
+            Info {
+                visible: s.sndConf.custom > 0
+                html: Ui.esc(Ui.t(s.sndConf.custom === 1 ? "audio.soundsCustomOne" : "audio.soundsCustomMany", { n: Ui.num(s.sndConf.custom) }))
+            }
         }
         // Netzwerk
         SetGroup {
@@ -793,7 +862,7 @@ Layer {
                 Repeater {
                     model: ["wired", "wifi", "both"]
                     Pill { property string key: "np" + modelData; text: s.netModeLabel(modelData)
-                           on: !!s.sett && s.sett.net.mode === modelData; onTriggered: s.netPrefer(modelData) }
+                           on: !!s.sett && s.sett.net.mode === modelData; sound: "toggle"; onTriggered: s.netPrefer(modelData) }
                 }
             }
             // Kabel per Klick trennen und wieder verbinden (ohne eingestecktes Kabel keine Anzeige)
@@ -819,7 +888,7 @@ Layer {
                 }
                 // Passwort im Klartext zeigen (Feld und Bildschirmtastatur), beim naechsten Netz wieder verdeckt
                 Pill { property string key: "pwshow"; text: Ui.t(wifiPw.password ? "settings.pwShow" : "settings.pwHide"); on: !wifiPw.password
-                       onTriggered: wifiPw.password = !wifiPw.password }
+                       sound: "toggle"; toggleFlip: true; onTriggered: wifiPw.password = !wifiPw.password }
                 Pill { property string key: "go"; text: Ui.t("settings.connect"); onTriggered: s.wifiConnect(s.wifiPick.ssid, wifiPw.value) }
                 Pill { property string key: "cancel"; text: Ui.t("common.cancel"); onTriggered: { s.wifiPick = null; Qt.callLater(function () { s.refocus("scan") }) } }
             }
@@ -873,7 +942,7 @@ Layer {
             SetRow {
                 visible: !!s.bt && s.bt.available && s.bt.service
                 Pill { property string key: "btpwr"; text: Ui.t(s.bt && s.bt.powered ? "bt.powerOff" : "bt.powerOn"); on: !!s.bt && s.bt.powered
-                       onTriggered: s.btCall("/api/bluetooth/power", { powered: !s.bt.powered }, Ui.t(s.bt.powered ? "bt.poweringOff" : "bt.poweringOn")) }
+                       sound: "toggle"; toggleFlip: true; onTriggered: s.btCall("/api/bluetooth/power", { powered: !s.bt.powered }, Ui.t(s.bt.powered ? "bt.poweringOff" : "bt.poweringOn")) }
                 Pill { property string key: "btscan"; visible: !!s.bt && s.bt.powered; text: s.btScanning ? Ui.t("bt.scanning") : Ui.t("bt.scan"); onTriggered: s.btScan() }
             }
             Info { visible: !!s.bt && s.bt.available && s.bt.service && !!s.bt.blocked; html: Ui.esc(Ui.t("bt.blocked")) }
@@ -967,7 +1036,7 @@ Layer {
                 label: Ui.t("settings.sysRemind")
                 Repeater {
                     model: s.sett ? (s.sett.sysupd_choices || [30, 60, 90]) : []
-                    Pill { property string key: "sd" + modelData; text: Ui.t("settings.days", { n: modelData }); on: (s.sett.sysupd_days || 90) === modelData; onTriggered: s.setSysDays(modelData) }
+                    Pill { property string key: "sd" + modelData; text: Ui.t("settings.days", { n: modelData }); on: (s.sett.sysupd_days || 90) === modelData; sound: "toggle"; onTriggered: s.setSysDays(modelData) }
                 }
             }
             Info { html: Ui.esc(Ui.t("settings.sysRemindHint")) }
@@ -988,7 +1057,7 @@ Layer {
             SetRow {
                 Repeater {
                     model: [true, false]
-                    Pill { property string key: "pm" + modelData; text: Ui.t(modelData ? "common.on" : "common.off"); on: !!s.sett && !!s.sett.padmouse === modelData; onTriggered: s.setPadMouse(modelData) }
+                    Pill { property string key: "pm" + modelData; text: Ui.t(modelData ? "common.on" : "common.off"); on: !!s.sett && !!s.sett.padmouse === modelData; sound: "toggle"; onTriggered: s.setPadMouse(modelData) }
                 }
             }
             Info { html: Ui.keys(Ui.t("settings.padMouseHint"), Ui.c.textPrimary, 16 * Ui.f) }
@@ -998,7 +1067,7 @@ Layer {
             SetRow {
                 Repeater {
                     model: [true, false]
-                    Pill { property string key: "ssh" + modelData; text: Ui.t(modelData ? "common.on" : "common.off"); on: !!s.sett && !!s.sett.ssh === modelData; onTriggered: s.setSsh(modelData) }
+                    Pill { property string key: "ssh" + modelData; text: Ui.t(modelData ? "common.on" : "common.off"); on: !!s.sett && !!s.sett.ssh === modelData; sound: "toggle"; onTriggered: s.setSsh(modelData) }
                 }
             }
         }

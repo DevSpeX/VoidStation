@@ -45,6 +45,7 @@ from typing import Any
 
 import tvindex
 import vsreport
+import vssound
 import vsx11
 from tvindex import TV_LETTERS, TV_PAGE, tv_fold, tv_letter  # noqa: F401
 
@@ -810,7 +811,25 @@ SETTINGS = BASE / "settings.json"
 DEFAULTS: dict[str, Any] = {"scale": 1.75, "resolution": None, "cursor_theme": "Bibata-Modern-Ice", "cursor_size": 48, "lang": None, "theme": "default-dark",
             "sysupd_days": 90, "padmouse": True, "covers_auto": True, "covers_embed": False, "audio_auto": True,
             "emu_fullscreen": True, "save_backup": True, "rom_covers": True,
-            "rate": None, "match_rate": False, "osk_layout": None, "osk_mode": "auto"}
+            "rate": None, "match_rate": False, "osk_layout": None, "osk_mode": "auto",
+            "ui_sounds": True, "ui_sounds_volume": vssound.DEFAULT_VOLUME, "ui_sounds_preset": "void"}
+SOUND = vssound.SoundEngine(WEB / "sounds")
+
+
+def sound_sync(s=None):
+    if s is None:
+        s = settings_load()
+    on = bool(s.get("ui_sounds", True))
+    vol = vssound.clamp_volume(s.get("ui_sounds_volume", vssound.DEFAULT_VOLUME))
+    preset = vssound.normalize_preset(s.get("ui_sounds_preset", "void"))
+    SOUND.configure(enabled=on, volume=vol, preset=preset)
+    return {
+        "on": on,
+        "volume": vol,
+        "preset": preset,
+        "presets": list(vssound.PRESETS),
+        "custom": len(SOUND.custom_events(preset)),
+    }
 # Bildschirmtastatur: Belegungen (Qt: VS/OskLayouts.js, gleiche Kennungen) und wann die Tasten zu sehen sind
 OSK_LAYOUTS = ("de", "us", "gb", "fr", "es", "it", "br", "nl", "lv", "hu", "pl", "cz", "sk", "ro", "tr", "dk", "ee", "is", "no",
                "fi", "se", "vi", "gr", "ru", "ua", "hi", "ta", "ml", "th", "ko")
@@ -7209,6 +7228,7 @@ def settings_payload():
             "audio": audio_info(), "volume": volume_get(), "net": net_info(), "share": share_info(),
             "sysupd_days": sysupd_days(s), "sysupd_choices": SYSUPD_DAYS, "music_volume": music_volume(),
             "padmouse": bool(s.get("padmouse", True)),
+            "sounds": sound_sync(s),
             "rate": s.get("rate"), "match_rate": bool(s.get("match_rate")), "region": region(s),
             "game_fx": game_fx_state(s),
             "osk": {"choice": s.get("osk_layout") if s.get("osk_layout") in OSK_LAYOUTS else "auto",
@@ -16129,6 +16149,29 @@ class Handler(BaseHTTPRequestHandler):
                 s = settings_load(); s["padmouse"] = on; settings_save(s)
                 log("Controller-Maus:", "an" if on else "aus")
                 return self._json(200, settings_payload())
+            if parts == ["api", "settings", "sounds"]:
+                b = self._body()
+                s = settings_load()
+                if "on" in b:
+                    s["ui_sounds"] = bool(b["on"])
+                if "volume" in b:
+                    try:
+                        vol = int(round(float(b["volume"])))
+                    except (TypeError, ValueError):
+                        return self._json(400, {"error": "ungueltige Lautstaerke"})
+                    if vol < 1 or vol > 100:
+                        return self._json(400, {"error": "Lautstaerke 1..100"})
+                    s["ui_sounds_volume"] = vol
+                if "preset" in b:
+                    pr = str(b.get("preset") or "").strip().lower()
+                    if pr not in vssound.PRESETS:
+                        return self._json(400, {"error": "unbekannter Klangstil"})
+                    s["ui_sounds_preset"] = pr
+                settings_save(s)
+                sound_sync(s)
+                log("Oberflaechentoene:", "an" if s.get("ui_sounds", True) else "aus",
+                    s.get("ui_sounds_preset"), f"{s.get('ui_sounds_volume')}%")
+                return self._json(200, settings_payload())
             if parts == ["api", "settings", "cursor"]:
                 b = self._body()
                 s = settings_load()
@@ -16304,9 +16347,14 @@ class Handler(BaseHTTPRequestHandler):
                 threading.Timer(0.8, lambda: subprocess.Popen(POWER["suspend"])).start()
                 return self._json(200, {"ok": True})
             if parts[:2] == ["api", "power"] and len(parts) == 3 and parts[2] in POWER:
-                RADIO.stop()
-                APPS.close_all()
-                subprocess.Popen(POWER[parts[2]])
+                act = parts[2]
+                def _do_power() -> None:
+                    RADIO.stop()
+                    APPS.close_all()
+                    sound_sync()
+                    SOUND.play_sync("shutdown", timeout=1.4)
+                    subprocess.Popen(POWER[act])
+                threading.Thread(target=_do_power, daemon=True).start()
                 return self._json(200, {"ok": True})
         except YtError as e:
             return self._json(502, {"error": e.reason, "msg": str(e)})
@@ -16593,6 +16641,7 @@ def main():
     signal.signal(signal.SIGTERM, on_term)
     app_prefs()
     s = settings_load()
+    sound_sync(s)
     apply_appearance(s)
     apply_display(s)
     openbox_rc_sync()

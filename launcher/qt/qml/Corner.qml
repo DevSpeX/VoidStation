@@ -36,6 +36,7 @@ Window {
     property int sel: -1                      // mit Steuerkreuz/Pfeiltasten gewaehlter Knopf (-1: noch keiner)
     readonly property var buttons: front ? ["home", "close"] : ["home"]
     function act(name) {
+        vs.playSound("select")
         // erst ausloesen, dann zu: Schliessen baut sonst diesen Knopf ab, solange der Klick noch laeuft
         if (name === "home") goHome()
         else closeFront(front)
@@ -43,10 +44,12 @@ Window {
     }
     function navKey(k) {
         awayMs = 0
+        var prev = sel
         if (k === "left") sel = 0
         else if (k === "right") sel = buttons.length - 1
         else if (k === "a") act(buttons[Math.max(0, sel)])
-        else if (k === "b") close("Taste B")
+        else if (k === "b") { vs.playSound("back"); close("Taste B") }
+        if ((k === "left" || k === "right") && sel !== prev) vs.playSound("navigate")
     }
 
     // right / bottom: rechte und untere Kante (letztes Pixel) des Bildschirms, auf dem der Zeiger steht

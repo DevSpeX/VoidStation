@@ -131,6 +131,7 @@ Layer {
     }
     function stopTv() { Api.post("/api/tv/stop", null, function () { app.setTvNow(null) }) }
     function fav(ch) {
+        vs.playSound("toggle")
         var was = isFav(ch.key)
         Api.post(was ? "/api/tv/unfav" : "/api/tv/fav", { key: ch.key }, function (j) {
             favs = j || []

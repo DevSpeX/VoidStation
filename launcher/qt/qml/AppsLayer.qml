@@ -65,13 +65,14 @@ Layer {
         pane.contentY = 0
     }
     function jump(dir) {                         // LT / RT, Bild auf / ab: vorige / naechste Kategorie
-        if (!data_) return
+        if (!data_) return false
         var i = cats.indexOf(cat) + dir
-        if (i < 0 || i >= cats.length) return
+        if (i < 0 || i >= cats.length) return false
         var inGrid = Nav.current && Nav.current.appInfo
         if (inGrid) last[cat] = Nav.current.appInfo.id
         select(cats[i])
         Qt.callLater(function () { app.setFocus((inGrid && firstCard()) || curCatItem()) })
+        return true
     }
     function navMove(dir) {
         var f = Nav.current
@@ -99,6 +100,7 @@ Layer {
         return true
     }
     function localTile(a, on) {
+        vs.playSound("toggle")
         Api.post("/api/apps/localtile", { id: a.id, on: on }, function (j) {
             data_ = j
             app.toast(on ? Ui.t("apps.tileAdded", { name: a.name }) : Ui.t("apps.tileRemoved", { name: a.name }))

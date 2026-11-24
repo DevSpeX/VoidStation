@@ -194,6 +194,12 @@ After two failed starts, VoidStation reinstalls the XLibre display server once. 
 
 In `~/.local/share/voidstation/logs/`. During installation, the installer's log is at `/run/voidstation-installer/install.log` and can be saved straight to a USB stick.
 
+### Custom interface sounds {#custom-sounds}
+
+Under **Settings → Sound → Interface sounds** you can choose between the three built-in sound styles (**Void**, **Retro**, or **Minimal**), adjust their volume (1–100%), or turn them off altogether.
+
+Custom sound files (`.wav`, `.ogg`, `.flac`, `.oga`) placed in `~/.local/share/voidstation/sounds/` override the built-in sounds and survive updates. Supported event names are `navigate`, `select`, `back`, `group`, `toggle`, `volume`, `notify`, `error`, `startup`, and `shutdown` (e.g. `~/.local/share/voidstation/sounds/select.ogg`). Files inside a style subfolder (`void/`, `retro/`, `minimal/`) override only that style; an empty 0-byte file silences a single event.
+
 ### 4K TV: only 30 Hz or a lower resolution
 
 Many TVs ship with their HDMI inputs set to a narrow bandwidth. 4K then tops out at 30 Hz, and only lower resolutions run smoothly. The fix is a setting on the TV – for exactly the input the VoidStation PC is plugged into:

@@ -44,17 +44,17 @@ Rectangle {
         Qt.callLater(focusCurrent)
     }
     function key(k) {
-        if (k === "b" || k === "x") return hide()
-        if (k === "left" || k === "lb") return setTab(tab - 1)
-        if (k === "right" || k === "rb") return setTab(tab + 1)
-        if (k === "up") { if (list.currentIndex > 0) list.currentIndex--; return }
-        if (k === "down") { if (list.currentIndex < items.length - 1) list.currentIndex++; return }
-        if (k === "chup") { list.currentIndex = Math.max(0, list.currentIndex - 8); return }
-        if (k === "chdown") { list.currentIndex = Math.min(items.length - 1, list.currentIndex + 8); return }
+        if (k === "b" || k === "x") { vs.playSound("back"); return hide() }
+        if (k === "left" || k === "lb") { vs.playSound("group"); return setTab(tab - 1) }
+        if (k === "right" || k === "rb") { vs.playSound("group"); return setTab(tab + 1) }
+        if (k === "up") { if (list.currentIndex > 0) { list.currentIndex--; vs.playSound("navigate") } return }
+        if (k === "down") { if (list.currentIndex < items.length - 1) { list.currentIndex++; vs.playSound("navigate") } return }
+        if (k === "chup") { var prevU = list.currentIndex; list.currentIndex = Math.max(0, list.currentIndex - 8); if (list.currentIndex !== prevU) vs.playSound("group"); return }
+        if (k === "chdown") { var prevD = list.currentIndex; list.currentIndex = Math.min(items.length - 1, list.currentIndex + 8); if (list.currentIndex !== prevD) vs.playSound("group"); return }
         var ch = items[list.currentIndex]
         if (!ch) return
-        if (k === "a" || k === "play") { chosen(ch); hide() }
-        else if (k === "y") favToggle(ch)
+        if (k === "a" || k === "play") { vs.playSound("select"); chosen(ch); hide() }
+        else if (k === "y") { vs.playSound("toggle"); favToggle(ch) }
     }
 
     Row {
