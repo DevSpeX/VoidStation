@@ -803,10 +803,8 @@ Layer {
                 }
             }
             Info { visible: !!s.sett && !!s.sett.audio && s.sett.audio.ok; html: Ui.esc(Ui.t("audio.autoHint")) }
-        }
-        SetGroup {
-            visible: s.cat === "audio"; availH: s.colH; title: Ui.t("audio.sounds")
             SetRow {
+                label: Ui.t("audio.sounds")
                 Repeater {
                     model: [true, false]
                     Pill {

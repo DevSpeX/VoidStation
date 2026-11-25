@@ -9,7 +9,7 @@ Row {
     property int minVal: 1
     property int maxVal: 100
     property int step: 5
-    property real meterW: Math.min(180 * Ui.f, Ui.screenW * 0.24)
+    property real meterW: Math.min(120 * Ui.f, Ui.screenW * 0.18)
     property string minusKey: ""
     property string plusKey: ""
     property int dragVal: value

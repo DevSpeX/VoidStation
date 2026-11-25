@@ -80,6 +80,13 @@ def _boot_id() -> str:
         return ""
 
 
+def _subproc_env() -> dict[str, str]:
+    """Erzwingt C-Dezimalpunkt fuer pw-play --volume=... unter nicht-englischen Locales."""
+    env = dict(os.environ)
+    env["LC_NUMERIC"] = "C"
+    return env
+
+
 class SoundEngine:
     """Thread-sicherer Event-Audioplayer mit mtime-Cache, Rate-Limiting und Backoff."""
 
@@ -91,8 +98,10 @@ class SoundEngine:
         self.preset = "void"
 
         self._lock = threading.Lock()
-        self._backend: str | None = None
-        self._backend_checked = False
+        self._backends: list[str] = []
+        self._backend_idx: int = 0
+        self._backends_checked = False
+        self._logged_err: set[tuple[str, int]] = set()
         self._dir_cache: dict[Path, tuple[int | None, dict[str, tuple[Path, int]]]] = {}
         self._last_played: dict[str, float] = {}
         self._last_toggle: float | None = None
@@ -175,19 +184,16 @@ class SoundEngine:
             over = set(self._scan_dir(self.user_dir)) | set(self._scan_dir(self.user_dir / pr))
             return [ev for ev in EVENTS if ev in over]
 
-    def _detect_backend(self) -> str | None:
-        if not self._backend_checked:
-            self._backend_checked = True
-            for cmd in ("pw-play", "paplay", "aplay", "afplay"):
-                if shutil.which(cmd):
-                    self._backend = cmd
-                    break
-        return self._backend
+    def _detect_backends(self) -> list[str]:
+        if not self._backends_checked:
+            self._backends_checked = True
+            self._backends = [cmd for cmd in ("pw-play", "paplay", "aplay", "afplay") if shutil.which(cmd)]
+        return self._backends
 
     def _build_cmd(self, backend: str, path: Path, volume: int) -> list[str] | None:
         gain = max(0.01, min(1.0, (volume / 100.0) ** 1.5))
         if backend == "pw-play":
-            return ["pw-play", "--volume", f"{gain:.3f}", "--properties", "media.role=event", str(path)]
+            return ["pw-play", f"--volume={gain:.3f}", "--media-role=event", str(path)]
         if backend == "paplay":
             pa_vol = max(1, min(65536, int(round(gain * 65536))))
             return [
@@ -205,6 +211,33 @@ class SoundEngine:
             return ["afplay", "-v", f"{gain:.3f}", str(path)]
         return None
 
+    def _pick_cmd_locked(self, path: Path, volume: int) -> tuple[str, list[str]] | None:
+        backends = self._detect_backends()
+        if not backends:
+            return None
+        n = len(backends)
+        for offset in range(n):
+            idx = (self._backend_idx + offset) % n
+            b = backends[idx]
+            cmd = self._build_cmd(b, path, volume)
+            if cmd is not None:
+                self._backend_idx = idx
+                return b, cmd
+        return None
+
+    def _on_backend_failure(self, backend: str, rc: int, err_text: str) -> None:
+        with self._lock:
+            key = (backend, rc)
+            if key not in self._logged_err:
+                self._logged_err.add(key)
+                detail = f": {err_text}" if err_text else ""
+                print(f"[vssound] {backend} fehlgeschlagen (rc={rc}){detail}", file=sys.stderr, flush=True)
+            if self._backends and self._backend_idx + 1 < len(self._backends):
+                self._backend_idx += 1
+            else:
+                self._backend_idx = 0
+                self._backoff_until = time.monotonic() + AUDIO_BACKOFF_S
+
     def _reap_locked(self) -> None:
         alive: list[tuple[str, subprocess.Popen[bytes]]] = []
         for ev, p in self._active:
@@ -212,14 +245,19 @@ class SoundEngine:
                 alive.append((ev, p))
         self._active = alive
 
-    def _reap_proc(self, ev: str, proc: subprocess.Popen[bytes]) -> None:
-        rc = proc.wait()
+    def _reap_proc(self, backend: str, proc: subprocess.Popen[bytes]) -> None:
+        try:
+            _, err_bytes = proc.communicate()
+        except OSError:
+            err_bytes = b""
+        rc = proc.returncode if proc.returncode is not None else -1
         with self._lock:
             self._active = [(e, p) for e, p in self._active if p is not proc]
-            if rc not in (0, -15, -9):  # SIGTERM/SIGKILL durch Replace ist kein Audiofehler
-                self._backoff_until = time.monotonic() + AUDIO_BACKOFF_S
+        if rc not in (0, -15, -9):  # SIGTERM/SIGKILL durch Replace ist kein Audiofehler
+            err_text = " ".join((err_bytes or b"").decode("utf-8", "replace").split())[:200]
+            self._on_backend_failure(backend, rc, err_text)
 
-    def _prepare(self, event: str, *, force: bool = False) -> tuple[list[str], list[subprocess.Popen[bytes]]] | None:
+    def _prepare(self, event: str, *, force: bool = False) -> tuple[str, list[str], list[subprocess.Popen[bytes]]] | None:
         if event not in EVENTS or _headless_muted():
             return None
         now = time.monotonic()
@@ -235,15 +273,13 @@ class SoundEngine:
                 last = self._last_played.get(event)
                 if last is not None and (now - last) < cd:
                     return None
-            backend = self._detect_backend()
-            if not backend:
-                return None
             path = self.resolve(event)
             if path is None:
                 return None
-            cmd = self._build_cmd(backend, path, self.volume)
-            if not cmd:
+            picked = self._pick_cmd_locked(path, self.volume)
+            if picked is None:
                 return None
+            backend, cmd = picked
 
             self._reap_locked()
             to_kill: list[subprocess.Popen[bytes]] = []
@@ -267,14 +303,14 @@ class SoundEngine:
             self._last_played[event] = now
             if event == "toggle":
                 self._last_toggle = now
-            return cmd, to_kill
+            return backend, cmd, to_kill
 
     def play(self, event: str, *, force: bool = False) -> bool:
         """Spielt ein Sound-Ereignis asynchron ab. Rueckgabe: ob ein Abspielvorgang gestartet wurde."""
         prep = self._prepare(event, force=force)
         if prep is None:
             return False
-        cmd, to_kill = prep
+        backend, cmd, to_kill = prep
         for p in to_kill:
             try:
                 p.terminate()
@@ -285,45 +321,59 @@ class SoundEngine:
                 cmd,
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                env=_subproc_env(),
             )
-        except OSError:
-            with self._lock:
-                self._backoff_until = time.monotonic() + AUDIO_BACKOFF_S
+        except OSError as e:
+            self._on_backend_failure(backend, -1, str(e)[:200])
             return False
         with self._lock:
             self._active.append((event, proc))
-        threading.Thread(target=self._reap_proc, args=(event, proc), daemon=True).start()
+        threading.Thread(target=self._reap_proc, args=(backend, proc), daemon=True).start()
         return True
 
     def play_sync(self, event: str, timeout: float = 1.4) -> bool:
         """Spielt ein Sound-Ereignis synchron ab (z. B. shutdown vor poweroff)."""
-        prep = self._prepare(event, force=True)
-        if prep is None:
-            return False
-        cmd, to_kill = prep
-        for p in to_kill:
+        deadline = time.monotonic() + timeout
+        with self._lock:
+            attempts = max(1, len(self._detect_backends()))
+        for _ in range(attempts):
+            rem = deadline - time.monotonic()
+            if rem <= 0.05:
+                return False
+            prep = self._prepare(event, force=True)
+            if prep is None:
+                return False
+            backend, cmd, to_kill = prep
+            for p in to_kill:
+                try:
+                    p.terminate()
+                except OSError:
+                    pass
             try:
-                p.terminate()
-            except OSError:
-                pass
-        try:
-            proc = subprocess.Popen(
-                cmd,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            proc.wait(timeout=timeout)
-            return proc.returncode == 0
-        except subprocess.TimeoutExpired:
-            try:
-                proc.terminate()
-            except OSError:
-                pass
-            return False
-        except OSError:
-            return False
+                proc = subprocess.Popen(
+                    cmd,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE,
+                    env=_subproc_env(),
+                )
+                _, err_bytes = proc.communicate(timeout=rem)
+                rc = proc.returncode if proc.returncode is not None else -1
+                if rc == 0:
+                    return True
+                err_text = " ".join((err_bytes or b"").decode("utf-8", "replace").split())[:200]
+                self._on_backend_failure(backend, rc, err_text)
+            except subprocess.TimeoutExpired:
+                try:
+                    proc.terminate()
+                    proc.wait(timeout=0.1)
+                except (OSError, subprocess.SubprocessError):
+                    pass
+                return False
+            except OSError as e:
+                self._on_backend_failure(backend, -1, str(e)[:200])
+        return False
 
     def play_startup_once(
         self,
@@ -363,8 +413,12 @@ class SoundEngine:
             if sys.platform.startswith("linux"):
                 sock = rt / "pipewire-0"
                 deadline = time.monotonic() + wait_pipewire
+                waited = False
                 while not sock.exists() and time.monotonic() < deadline:
+                    waited = True
                     time.sleep(0.15)
+                if waited and sock.exists():
+                    time.sleep(0.4)
             self.play("startup", force=True)
 
         threading.Thread(target=_worker, daemon=True).start()
