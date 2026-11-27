@@ -62,12 +62,12 @@ case ";${PROMPT_COMMAND:-};" in
   *) PROMPT_COMMAND="__vs_prompt${PROMPT_COMMAND:+;$PROMPT_COMMAND}" ;;
 esac
 
-# --- vsctl: Befehle und Kachel-IDs vervollstaendigen (vsctl launch <Tab>)
+# --- vsctl: Befehle, Kachel-IDs und Konten vervollstaendigen
 _vsctl() {
-  local cur=${COMP_WORDS[COMP_CWORD]} ids
+  local cur=${COMP_WORDS[COMP_CWORD]} ids accounts_db accts
   COMPREPLY=()
   if [ "$COMP_CWORD" = 1 ]; then
-    mapfile -t COMPREPLY < <(compgen -W "home launch status update version channel report help" -- "$cur")
+    mapfile -t COMPREPLY < <(compgen -W "home launch status update version channel report account help" -- "$cur")
   elif [ "$COMP_CWORD" = 2 ] && [ "${COMP_WORDS[1]}" = channel ]; then
     mapfile -t COMPREPLY < <(compgen -W "stable testing" -- "$cur")
   elif [ "$COMP_CWORD" = 2 ] && [ "${COMP_WORDS[1]}" = report ]; then
@@ -75,6 +75,59 @@ _vsctl() {
   elif [ "$COMP_CWORD" = 2 ] && [ "${COMP_WORDS[1]}" = launch ]; then
     ids="$(sed -n 's/^ *"id": *"\([^"]*\)".*/\1/p' "$HOME/.local/share/voidstation/tiles.json" 2>/dev/null)"
     mapfile -t COMPREPLY < <(compgen -W "$ids" -- "$cur")
+  elif [ "${COMP_WORDS[1]}" = account ]; then
+    if [ "$COMP_CWORD" = 2 ]; then
+      mapfile -t COMPREPLY < <(compgen -W "status list switch lock unlock reset-pin help" -- "$cur")
+    else
+      accounts_db="$HOME/.local/share/voidstation/accounts/accounts.db"
+      accts=""
+      if [ -r "$accounts_db" ] && command -v python3 >/dev/null 2>&1; then
+        accts="$(python3 - "$accounts_db" <<'PYEOF' 2>/dev/null
+import sqlite3, sys
+from pathlib import Path
+uri = Path(sys.argv[1]).resolve().as_uri() + "?mode=ro"
+con = sqlite3.connect(uri, uri=True, timeout=0.5)
+for row in con.execute("SELECT id, display_name FROM accounts WHERE active = 1"):
+    for val in row:
+        if val:
+            print(val)
+con.close()
+PYEOF
+)"
+      fi
+      case "${COMP_WORDS[2]}" in
+        status|list|lock)
+          mapfile -t COMPREPLY < <(compgen -W "--json" -- "$cur")
+          ;;
+        switch)
+          if [[ "$cur" == -* ]]; then
+            mapfile -t COMPREPLY < <(compgen -W "--guest --password --json" -- "$cur")
+          elif [ "$COMP_CWORD" = 3 ]; then
+            mapfile -t COMPREPLY < <(compgen -W "$accts --guest" -- "$cur")
+          else
+            mapfile -t COMPREPLY < <(compgen -W "--password --guest --json" -- "$cur")
+          fi
+          ;;
+        unlock)
+          if [[ "$cur" == -* ]]; then
+            mapfile -t COMPREPLY < <(compgen -W "--json" -- "$cur")
+          elif [ "$COMP_CWORD" = 3 ]; then
+            mapfile -t COMPREPLY < <(compgen -W "$accts" -- "$cur")
+          else
+            mapfile -t COMPREPLY < <(compgen -W "--json" -- "$cur")
+          fi
+          ;;
+        reset-pin)
+          if [[ "$cur" == -* ]]; then
+            mapfile -t COMPREPLY < <(compgen -W "--remove --json" -- "$cur")
+          elif [ "$COMP_CWORD" = 3 ]; then
+            mapfile -t COMPREPLY < <(compgen -W "$accts" -- "$cur")
+          else
+            mapfile -t COMPREPLY < <(compgen -W "--remove --json" -- "$cur")
+          fi
+          ;;
+      esac
+    fi
   fi
 }
 complete -F _vsctl vsctl

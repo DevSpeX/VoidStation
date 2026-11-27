@@ -12,7 +12,7 @@ Der Launcher ruft create() fuer Einstellungen → System → Fehlerbericht auf.
 Entfernt wird, bevor etwas in die Datei kommt (Scrub, Platzhalter wie [removed], [Wi-Fi]): Passwoerter und Schluessel (key=wert, Tokens, Mullvad-
 Kontonummern), WLAN-Namen (alle bekannten und sichtbaren Netze, ssid=…), die hintere Haelfte jeder MAC-Adresse,
 oeffentliche IP-Adressen, E-Mail-Adressen und der Benutzerordner (-> ~). Gelesen werden nur die Dateien unten –
-nie NetworkManager-Profile, wpa_supplicant, ~/.ssh oder Zugangsdaten. Seriennummern (DMI) bleiben draussen.
+nie NetworkManager-Profile, wpa_supplicant, ~/.ssh, accounts/accounts.db oder Zugangsdaten. Seriennummern (DMI) bleiben draussen.
 """
 from __future__ import annotations
 
@@ -47,9 +47,11 @@ PKGS = ("linux", "linux-firmware", "mesa", "mesa-dri", "xlibre-xserver", "xorg-s
 # ---------------------------------------------------------------------------
 #  Entfernen, was nicht in einen Bericht gehoert
 # ---------------------------------------------------------------------------
-_KEY = r"\w*(?:pass(?:word|wd|phrase)?|passwort|kennwort|psk|secret|token|api[-_]?key|private[-_]?key|" \
+_KEY = r"\w*(?:pass(?:word|wd|phrase)?|password[-_]?hash|passwort|kennwort|pin(?:[-_]?hash)?|psk|secret|token|" \
+       r"(?:refresh|access|session|elevation)[-_]?token|x[-_]vs[-_]token|api[-_]?key|private[-_]?key|" \
        r"account(?:[-_ ]?(?:number|nr|id))?|kontonummer|wep[-_]?key\d?)\w*"
 SECRET_KV = re.compile(r"(?i)(\b" + _KEY + r"[\"']?)(\s*[=:]\s*)(?!\[)(\"[^\"]*\"|'[^']*'|[^\s,;}\]]+)")
+PHC_HASH = re.compile(r"\$vs-(?:scrypt|pbkdf2-sha256)\$[A-Za-z0-9$,=._+/-]+(?<![,.])")
 BEARER = re.compile(r"(?i)\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]{8,}")
 TOKENS = re.compile(r"\b(?:github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}|glpat-[A-Za-z0-9_-]{20,})")
 URL_CRED = re.compile(r"(\b[a-z][a-z0-9+.-]*://)[^/\s:@]+:[^/\s@]+@")          # https://user:pass@host
@@ -102,6 +104,7 @@ class Scrub:
         t = TOKENS.sub("[token]", t)
         t = BEARER.sub(r"\1 [removed]", t)
         t = ACCOUNT.sub("[number]", t)                  # vor SECRET_KV: "account: 1234 5678 …" ganz erfassen
+        t = PHC_HASH.sub("[hash]", t)
         t = SECRET_KV.sub(r"\1\2[removed]", t)
         t = SSID_KV.sub(r"\1\2[Wi-Fi]", t)
         t = WLAN_LOG.sub(r"\1[Wi-Fi]\3", t)

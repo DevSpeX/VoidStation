@@ -18,11 +18,14 @@ Item {
     }
     function hintsFor(l) {
         var T = Ui.t, h
-        Nav.serial; inst.step; keymap.mode; vpnLayer.view
+        Nav.serial; inst.step; keymap.mode; vpnLayer.view; accountPicker.lockedMode; authDlg.mode; acctEdit.subView
         if (l === "home") h = Nav.current && (Nav.current.isVpnIcon || (Nav.current.t && Nav.current.t.type === "vpn"))
                               ? [T("hint.open"), T("hint.vpnToggle"), T("hint.home")] : [T("hint.open"), T("hint.close"), T("hint.home")]
         else if (l === "radio") h = [T("hint.play"), T("hint.fav"), T("hint.volume"), T("hint.back")]
         else if (l === "settings") h = [settings.cat ? T("hint.select") : T("hint.open"), T("hint.back")]
+        else if (l === "accounts") h = accountPicker.lockedMode ? [T("hint.select")] : [T("hint.select"), T("hint.back")]
+        else if (l === "authDlg") h = authDlg.mode === "pin" ? [T("hint.pinDigit"), T("hint.pinDel"), T("hint.cancel")] : [T("hint.select"), T("hint.cancel")]
+        else if (l === "acctEdit") h = acctEdit.subView === "pin" ? [T("hint.pinDigit"), T("hint.pinDel"), T("hint.cancel")] : [T("hint.select"), T("hint.cancel")]
         else if (l === "roms") h = roms.gameOpts && Nav.current && Nav.current.rom && !Nav.current.rom.noOpts ? [T("hint.romLaunch"), T("hint.romOpts"), T("hint.back")] : [T("hint.romLaunch"), T("hint.back")]
         else if (l === "emuopts") h = [T("hint.select"), T("hint.back")]
         else if (l === "vpn") h = vpnLayer.hints().slice()

@@ -77,7 +77,8 @@
       "start_hint": "Beim ersten Start lädt Steam Updates herunter und richtet sich ein – das kann einige Minuten dauern. Danach geht es deutlich schneller.",
       "arch": [
         "x86_64"
-      ]
+      ],
+      "age_rating": 16
     },
     {
       "id": "heroic",
@@ -101,7 +102,8 @@
       },
       "arch": [
         "x86_64"
-      ]
+      ],
+      "age_rating": 16
     },
     {
       "id": "lutris",
@@ -121,7 +123,8 @@
         "color": "#4a3320",
         "icon": "gamepad",
         "sub": "Spiele-Verwaltung"
-      }
+      },
+      "age_rating": 16
     },
     {
       "id": "itch",
@@ -279,7 +282,8 @@
         "color": "#3c4380",
         "icon": "chat",
         "sub": "Chat"
-      }
+      },
+      "age_rating": 16
     },
     {
       "id": "retroarch",
@@ -730,7 +734,8 @@
         "color": "#2a4a5c",
         "icon": "gamepad",
         "sub": "Kart-Rennen"
-      }
+      },
+      "age_rating": 0
     },
     {
       "id": "supertux",
@@ -750,7 +755,8 @@
         "color": "#2a3f5c",
         "icon": "gamepad",
         "sub": "Jump ’n’ Run"
-      }
+      },
+      "age_rating": 0
     },
     {
       "id": "neverball",
@@ -1117,7 +1123,8 @@
         "color": "#1f3a5a",
         "icon": "globe",
         "sub": "Mediathek"
-      }
+      },
+      "age_rating": 6
     },
     {
       "id": "zdf",
@@ -1134,7 +1141,8 @@
         "color": "#4a3a1f",
         "icon": "globe",
         "sub": "Mediathek"
-      }
+      },
+      "age_rating": 6
     },
     {
       "id": "arte",
@@ -1187,7 +1195,8 @@
         "icon": "play",
         "sub": "Abo"
       },
-      "note": "Beim ersten Video lädt Firefox das Kopierschutz-Modul (Widevine) nach. Startet ein Video nicht, kurz warten und die Seite mit F5 neu laden."
+      "note": "Beim ersten Video lädt Firefox das Kopierschutz-Modul (Widevine) nach. Startet ein Video nicht, kurz warten und die Seite mit F5 neu laden.",
+      "age_rating": 12
     },
     {
       "id": "primevideo",
@@ -1298,7 +1307,8 @@
         "color": "#5a3a1f",
         "icon": "globe",
         "sub": "Browser"
-      }
+      },
+      "age_rating": 16
     },
     {
       "id": "chromium",
@@ -1342,7 +1352,8 @@
       },
       "arch": [
         "x86_64"
-      ]
+      ],
+      "age_rating": 16
     },
     {
       "id": "braveorigin",
@@ -1426,7 +1437,8 @@
         "icon": "chart",
         "sub": "htop",
         "label": "Systemmonitor"
-      }
+      },
+      "age_rating": 16
     },
     {
       "id": "missioncenter",

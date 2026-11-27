@@ -19,6 +19,7 @@ Item {
 
     property string phase: "browse"               // browse | loading | video
     property var ystate: null                     // /api/yt/state
+    readonly property bool searchAllowed: !(ystate && ystate.allow_search === false)
     property string page: "home"                  // home | feed | search | channel | playlist | later | history | subs
     property var args: ({})                       // Angaben der Seite (Kanal-ID, Suchbegriff …)
     property var stack: []                        // vorige Seiten fuer B
@@ -127,8 +128,9 @@ Item {
                     if (feed.length >= 60) feed.push(action("feed", "list", Ui.t("yt.more"), Ui.t("yt.feed.all")))
                     g.push({ title: Ui.t("yt.feed"), items: feed.length ? feed : [action("feed", "update", Ui.t("yt.feed.loading"), "")] })
                 } else {
-                    g.push({ title: Ui.t("yt.start"), items: [action("search", "search", Ui.t("yt.search"), Ui.t("yt.search.sub"), "#6e2b2b"),
-                                                               action("import", "download", Ui.t("yt.import"), Ui.t("yt.import.sub"))] })
+                    var startItems = yv.searchAllowed ? [action("search", "search", Ui.t("yt.search"), Ui.t("yt.search.sub"), "#6e2b2b")] : []
+                    startItems.push(action("import", "download", Ui.t("yt.import"), Ui.t("yt.import.sub")))
+                    g.push({ title: Ui.t("yt.start"), items: startItems })
                 }
                 if (r.laterCount) {
                     var later = r.later.slice()
@@ -136,7 +138,7 @@ Item {
                     g.push({ title: Ui.t("yt.later"), items: later })
                 }
                 if (r.subs.length) g.push({ title: Ui.t("yt.channels"), items: r.subs.concat([action("import", "download", Ui.t("yt.import"), Ui.t("yt.import.sub"))]) })
-                g.push({ title: Ui.t("yt.more.group"), items: (r.subs.length ? [action("search", "search", Ui.t("yt.search"), Ui.t("yt.search.sub"), "#6e2b2b")] : []).concat([
+                g.push({ title: Ui.t("yt.more.group"), items: (r.subs.length && yv.searchAllowed ? [action("search", "search", Ui.t("yt.search"), Ui.t("yt.search.sub"), "#6e2b2b")] : []).concat([
                     action("history", "restart", Ui.t("yt.history"), r.historyCount ? Ui.t("yt.n", { n: r.historyCount }) : ""),
                     action("later", "clock", Ui.t("yt.later"), r.laterCount ? Ui.t("yt.n", { n: r.laterCount }) : ""),
                     action("settings", "gear", Ui.t("yt.settings"), "")]) })
@@ -220,6 +222,10 @@ Item {
         load(true)
     }
     function openSearch() {
+        if (!searchAllowed) {
+            app.toast(Ui.t("parental.reason.yt_search_blocked"), true)
+            return
+        }
         if (page !== "search") go("search", { q: "", kind: "video" })
         Qt.callLater(function () { app.setFocus(field, true); field.activate() })
     }
@@ -512,7 +518,7 @@ Item {
                : yv.page === "channel" && yv.cur.sub ? Ui.t("yt.subscribed") : ""
         }
         bar: [
-            Field { id: field; visible: yv.page === "home" || yv.page === "search"; placeholder: Ui.t("yt.search.placeholder")
+            Field { id: field; visible: yv.searchAllowed && (yv.page === "home" || yv.page === "search"); placeholder: Ui.t("yt.search.placeholder")
                     implicitWidth: Math.min(420 * Ui.f, Ui.screenW * 0.4); onSubmitted: function (t) { yv.search(t) } },
             Pill { visible: yv.page === "search"; text: Ui.t("yt.kind.video"); on: yv.args.kind === "video"; onTriggered: yv.setKind("video") },
             Pill { visible: yv.page === "search"; text: Ui.t("yt.kind.channel"); on: yv.args.kind === "channel"; onTriggered: yv.setKind("channel") },

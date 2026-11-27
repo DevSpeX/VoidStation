@@ -52,6 +52,20 @@ Window {
         property string hdrTime: ""
         property bool started: false
         property bool shown: false                // Kacheln gezeichnet: Ladebild weg
+        property var session: null
+        property var parentalStatus: null
+        property var devicePolicy: null
+        property var accountsList: []
+        property int accountsCount: 0
+        property bool migratedNoticeShown: false
+        property string lastAccountId: ""
+        readonly property bool sessionLocked: !!(session && (session.locked || session.picker_required))
+        readonly property bool sessionHasAuth: {
+            if (!session || session.is_guest || !accountsList) return false
+            for (var i = 0; i < accountsList.length; i++)
+                if (accountsList[i].id === session.account_id) return !!accountsList[i].auth_configured
+            return false
+        }
 
         Component.onCompleted: {
             Ui.app = app
@@ -86,15 +100,18 @@ Window {
         Connections { target: hint; function onHeightChanged() { Qt.callLater(app.layout) } }
 
         // ------------------------------------------------------------ Ebenen
-        readonly property var layerOrder: [osk, adlg, powerDlg, keymap, emuopts, roms, tv, vpnLayer, apps, radio, settings, inst]
+        readonly property var layerOrder: [osk, authDlg, acctEdit, adlg, powerDlg, accountPicker, keymap, emuopts, roms, tv, vpnLayer, apps, radio, settings, inst]
         property string layerName: "home"
         property Item layerRoot: homeView
         function updateLayer() {
             var n = "home", r = homeView
             if (kbd.visible) { n = "kbd"; r = kbd.root }          // Tastatur ueber einem Programm (eigenes Fenster)
             else if (osk.open) { n = "osk"; r = osk }
+            else if (authDlg.open) { n = "authDlg"; r = authDlg }
+            else if (acctEdit.open) { n = "acctEdit"; r = acctEdit }
             else if (adlg.open) { n = "adlg"; r = adlg }
             else if (powerDlg.open) { n = "dialog"; r = powerDlg }
+            else if (accountPicker.open) { n = "accounts"; r = accountPicker }
             else if (chd.open) { n = "chd"; r = chd }               // Karte "in CHD umwandeln" ueber der Spieleliste
             else if (keymap.open) { n = "keymap"; r = keymap }
             else if (emuopts.open) { n = "emuopts"; r = emuopts }
@@ -110,7 +127,7 @@ Window {
             if (relayout) layout()
         }
         function curTrack() {
-            return ({ home: homeTrack, radio: radio.track, tv: tv.track, apps: null, settings: settings.track, roms: roms.track, keymap: keymap.track, emuopts: emuopts.track, vpn: vpnLayer.track, inst: inst.track })[layerName] || null
+            return ({ home: homeTrack, radio: radio.track, tv: tv.track, apps: null, settings: settings.track, accounts: accountPicker.track, roms: roms.track, keymap: keymap.track, emuopts: emuopts.track, vpn: vpnLayer.track, inst: inst.track })[layerName] || null
         }
         function navItems() { return Nav.collect(layerRoot) }
         function setFocus(item, instant) { Nav.setFocus(item, instant, layerName) }
@@ -171,8 +188,11 @@ Window {
         function back() {
             if (splashTile) { vs.playSound("back"); return splashToBackground() }
             if (layerName === "osk") { vs.playSound("back"); return osk.close() }
+            if (layerName === "authDlg") { if (authDlg.handleBack()) vs.playSound("back"); return }
+            if (layerName === "acctEdit") { if (acctEdit.handleBack()) vs.playSound("back"); return }
             if (layerName === "adlg") { vs.playSound("back"); return adlg.close() }
             if (layerName === "dialog") { vs.playSound("back"); return powerDlg.close() }
+            if (layerName === "accounts") { if (accountPicker.handleBack()) return; vs.playSound("back"); return closeLayer() }
             if (layerRoot.handleBack && layerRoot.handleBack()) { vs.playSound("back"); return }
             if (layerName !== "home") { vs.playSound("back"); closeLayer() }
         }
@@ -294,7 +314,10 @@ Window {
                 else if (k === "lt") app.jumpGroup(-1)
                 else if (k === "rt") app.jumpGroup(1)
                 else if (k === "select") app.openUpdate()
-                else if (k === "start") { if (app.layerName === "dialog") powerDlg.close(); else powerDlg.openDlg() }
+                else if (k === "start") {
+                    if (app.layerName === "dialog") powerDlg.close()
+                    else if (!app.sessionLocked && app.layerName !== "authDlg" && app.layerName !== "acctEdit") powerDlg.openDlg()
+                }
                 else app.move(k)
             }
             function onPadConnected(name) { app.toast(Ui.t("pad.connected", { name: name })) }
@@ -315,6 +338,30 @@ Window {
             if (st.ev === "shot") {                               // Bildschirmfoto (Launcher: F12, vsshot, Start + Select)
                 vs.playSound(st.ok ? "notify" : "error")
                 mouseHint.showText("camera", st.ok ? Ui.t("shot.saved") : Ui.t("shot.failed"))
+                return
+            }
+            if (st.ev === "account_warn") {
+                vs.playSound("notify")
+                var mins = st.minutes || Math.max(1, Math.ceil((st.remaining_seconds || 60) / 60))
+                var wmsg = Ui.t(st.reason === "bedtime" ? "parental.warnBedtime" : "parental.warnLimit", { minutes: mins })
+                mouseHint.showText("lock", wmsg)
+                toast(wmsg)
+                return
+            }
+            if (st.ev === "account_locked") {
+                vs.playSound("error")
+                closeProfileOverlays()
+                poll()
+                authDlg.openForOverride({
+                    reason: st.reason || "daily_limit",
+                    allowSwitchProfile: true,
+                    onSuccess: function (res) {
+                        if (res && res.parental) app.parentalStatus = res.parental
+                        app.poll()
+                        app.load()
+                        app.toast(Ui.t("parental.extraMinutesGranted"))
+                    }
+                })
                 return
             }
             var mode = sett && sett.osk ? sett.osk.mode : "auto"
@@ -348,6 +395,7 @@ Window {
                 layout()
                 loadFavs()
                 load()
+                loadSession(true)
                 poll()
                 started = true
                 if (live) liveStart()
@@ -405,10 +453,129 @@ Window {
                     tvFailedT = s.tvFailed.t
                 } else if (!s.tvFailed && !tvFailedT) tvFailedT = -1
                 showUpdBadge(s.update)
+                if (s.account && !live) syncAccountStatus(s.account)
                 if (splashTile) splashCheck(s)
             })
         }
         Timer { interval: 1500; running: app.started; repeat: true; onTriggered: app.poll() }
+
+        // ------------------------------------------------------------ Konten & Profile
+        function loadSession(initial) {
+            if (live) return
+            Api.get("/api/session", function (r) {
+                if (r.session) {
+                    session = r.session
+                    lastAccountId = (r.session.is_guest ? "guest" : r.session.account_id) || ""
+                }
+                if (r.parental !== undefined) parentalStatus = r.parental
+                if (r.device_policy) devicePolicy = r.device_policy
+                if (r.accounts_count !== undefined) accountsCount = r.accounts_count
+                if (initial && r.migrated && !migratedNoticeShown) {
+                    migratedNoticeShown = true
+                    toast(Ui.t("account.migratedNotice"))
+                }
+                if (r.session && (r.session.locked || r.session.picker_required)) accountPicker.openPicker(true)
+            }, function () {})
+            Api.get("/api/accounts", function (r) {
+                if (r.accounts) {
+                    accountsList = r.accounts
+                    accountsCount = r.accounts.length
+                }
+                if (r.session) session = r.session
+                if (r.device_policy) devicePolicy = r.device_policy
+            }, function () {})
+        }
+        function syncAccountStatus(a) {
+            if (!a) return
+            var extLocked = !!(a.locked || a.picker_required)
+            var nextKey = (a.is_guest ? "guest" : a.id) || ""
+            var changed = (lastAccountId !== "" && nextKey !== lastAccountId)
+                       || (session && (session.display_name !== a.name || session.avatar !== a.avatar || session.color !== a.color || session.role !== a.role))
+            lastAccountId = nextKey
+            if (a.count !== undefined) accountsCount = a.count
+            if (a.parental !== undefined) parentalStatus = a.parental
+            if (!session) {
+                session = {
+                    account_id: a.id, display_name: a.name, role: a.role,
+                    avatar: a.avatar, color: a.color, is_guest: !!a.is_guest,
+                    locked: !!a.locked, picker_required: !!a.picker_required
+                }
+            } else if (changed || session.locked !== !!a.locked || session.picker_required !== !!a.picker_required) {
+                session = Object.assign({}, session, {
+                    account_id: a.id, display_name: a.name, role: a.role,
+                    avatar: a.avatar, color: a.color, is_guest: !!a.is_guest,
+                    locked: !!a.locked, picker_required: !!a.picker_required
+                })
+            }
+            if (extLocked && !accountPicker.open) {
+                closeProfileOverlays()
+                accountPicker.openPicker(true)
+            } else if (changed && !extLocked) {
+                reloadProfileData()
+            }
+        }
+        function closeProfileOverlays() {
+            if (adlg.open) adlg.close()
+            if (powerDlg.open) powerDlg.close()
+            if (acctEdit.open) acctEdit.close()
+            if (authDlg.open) authDlg.close()
+            for (var i = 0; i < layerOrder.length; i++) {
+                var ly = layerOrder[i]
+                if (ly && ly !== accountPicker && ly !== inst && ly.open) ly.hide()
+            }
+            updateLayer()
+        }
+        function reloadProfileData() {
+            Api.get("/api/settings", function (s) {
+                sett = s
+                Ui.scale = s.scale || 1.75
+                vs.setLang(s.lang || "de")
+                vs.setTheme(s.theme || "default-dark")
+                if (s.sounds) vs.setSounds(!!s.sounds.on, s.sounds.volume || 70, s.sounds.preset || "void")
+                layout()
+                if (settings.open) { settings.sett = s; settings.loadAccounts() }
+            })
+            loadFavs()
+            load()
+            loadSession(false)
+        }
+        function applySessionSwitch(res) {
+            if (res && res.session) {
+                session = res.session
+                lastAccountId = (res.session.is_guest ? "guest" : res.session.account_id) || ""
+            }
+            if (res && res.parental !== undefined) parentalStatus = res.parental
+            if (res && res.prefs) {
+                var p = res.prefs
+                if (p.scale) Ui.scale = p.scale
+                if (p.lang) vs.setLang(p.lang)
+                if (p.theme) vs.setTheme(p.theme)
+                if (p.ui_sounds !== undefined) vs.setSounds(!!p.ui_sounds, p.ui_sounds_volume || 70, p.ui_sounds_preset || "void")
+                layout()
+            }
+            reloadProfileData()
+            if (res && res.session) toast(Ui.t("account.switchedToast", { name: res.session.display_name }))
+        }
+        function lockProfile() {
+            if (live) return
+            Api.post("/api/session/lock", {}, function (res) {
+                if (res && res.session) session = res.session
+                closeProfileOverlays()
+                accountPicker.openPicker(true)
+                toast(Ui.t("account.lockedToast"))
+            }, function () {
+                toast(Ui.t("common.failed"), true)
+            })
+        }
+        function openAccountPicker() {
+            if (!live) accountPicker.openPicker(sessionLocked)
+        }
+        function openAccountEdit(acc, onSaved) {
+            acctEdit.openFor(acc || null, onSaved || null)
+        }
+        function openAuthDialog(acc, opts) {
+            authDlg.openFor(acc, opts || {})
+        }
 
         function setRadio(s) { radioState = { station: s.station || null, title: s.title || null } }
         function setTvNow(n) {
@@ -419,7 +586,45 @@ Window {
 
         // ------------------------------------------------------------ Programme
         readonly property var emuSystems: ["gba", "snes", "snes9x", "nes", "nestopia", "psx", "duckstation", "psp", "ppsspp", "nds", "melonds", "dreamcast", "flycast", "gamecube", "wii", "dolphin", "c64", "vice", "atari2600", "stella", "ps2", "pcsx2", "n64", "rmg", "xbox", "xemu", "3ds", "azahar", "wiiu", "cemu", "mame", "dos", "dosbox", "scummvm", "retroarch", "mednafen", "megadrive", "mastersystem", "gamegear", "saturn", "pcengine"]
+        function handleBlockedError(err, data, status, tile, retryFn) {
+            if (status !== 403 || err !== "account.blocked") return false
+            var reason = (data && data.reason) ? String(data.reason) : "tile_blocked"
+            var tName = tile ? (Ui.l(tile.label) || tile.id) : ((data && data.tile_id) ? String(data.tile_id) : "")
+            if (data && data.override_allowed) {
+                var isTime = reason === "daily_limit" || reason === "bedtime"
+                authDlg.openForOverride({
+                    reason: reason,
+                    tileId: tile ? tile.id : ((data && data.tile_id) ? String(data.tile_id) : ""),
+                    tileName: tName,
+                    allowSwitchProfile: true,
+                    onSuccess: function (res) {
+                        if (res && res.parental) app.parentalStatus = res.parental
+                        app.poll()
+                        app.toast(Ui.t(isTime ? "parental.extraMinutesGranted" : "parental.overrideGranted"))
+                        if (retryFn) retryFn()
+                    }
+                })
+            } else {
+                toast(Ui.t("parental.reason." + reason, { name: tName }, Ui.t("account.err.blocked")), true)
+            }
+            return true
+        }
         function tileActivate(t, el) {
+            if (parentalStatus && parentalStatus.locked && t.type !== "settings" && t.type !== "clock") {
+                authDlg.openForOverride({
+                    reason: parentalStatus.reason || "daily_limit",
+                    tileId: t.id,
+                    tileName: Ui.l(t.label) || t.id,
+                    allowSwitchProfile: true,
+                    onSuccess: function (res) {
+                        if (res && res.parental) app.parentalStatus = res.parental
+                        app.poll()
+                        app.toast(Ui.t("parental.extraMinutesGranted"))
+                        app.tileActivate(t, el)
+                    }
+                })
+                return
+            }
             if (t.type === "radio") return openLayer(radio)
             if (t.type === "settings") return openLayer(settings)
             if (t.type === "tv") return openLayer(tv)
@@ -443,9 +648,10 @@ Window {
             launching = true
             Api.post("/api/launch/" + encodeURIComponent(t.id), null, function (r) {
                 if (r && r.running) running = r.running
-            }, function () {
-                toast(Ui.t("home.launchFailed", { name: Ui.l(t.label) || Ui.t("common.program") }), true)
+            }, function (err, data, status) {
                 hideSplash()
+                if (!handleBlockedError(err, data, status, t, function () { launch(t) }))
+                    toast(Ui.t("home.launchFailed", { name: Ui.l(t.label) || Ui.t("common.program") }), true)
             })
             unlaunch.restart()
         }
@@ -679,9 +885,67 @@ Window {
                             NumberAnimation { to: 1; duration: 700; easing.type: Easing.InOutQuad }
                         }
                     }
+                    Focusable {
+                        id: accountChip
+                        visible: !app.live && !!app.session
+                        navOnlyUp: true
+                        width: chipRow.implicitWidth + 20 * Ui.f
+                        height: 44 * Ui.f
+                        anchors.verticalCenter: parent.verticalCenter
+                        onTriggered: app.openAccountPicker()
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: height / 2
+                            color: accountChip.focused ? Ui.c.surfaceCardHover : Ui.c.surfaceCard
+                            border.width: accountChip.focused ? 2 : 1
+                            border.color: accountChip.focused ? Ui.c.borderFocus : Ui.c.borderSubtle
+                        }
+                        Row {
+                            id: chipRow
+                            anchors.centerIn: parent
+                            spacing: 10 * Ui.f
+                            Rectangle {
+                                width: 30 * Ui.f
+                                height: width
+                                radius: width / 2
+                                color: app.session && app.session.color ? app.session.color : Ui.c.tileDefaultC
+                                anchors.verticalCenter: parent.verticalCenter
+                                Glyph {
+                                    anchors.centerIn: parent
+                                    width: parent.width * 0.56
+                                    height: width
+                                    name: app.session && app.session.avatar ? app.session.avatar : "user"
+                                    color: Ui.c.tileText
+                                }
+                            }
+                            Column {
+                                anchors.verticalCenter: parent.verticalCenter
+                                Txt {
+                                    text: app.session ? app.session.display_name : ""
+                                    font.pixelSize: 17 * Ui.f
+                                    font.weight: Font.Light
+                                    elide: Text.ElideNone
+                                }
+                                Txt {
+                                    visible: !!app.session && (app.session.is_guest || app.session.role === "child")
+                                    text: {
+                                        if (!app.session) return ""
+                                        if (app.session.role === "child" && app.parentalStatus && app.parentalStatus.remaining_seconds !== null && app.parentalStatus.remaining_seconds !== undefined) {
+                                            var mins = Math.max(0, Math.ceil(app.parentalStatus.remaining_seconds / 60))
+                                            return Ui.t("parental.chipRemaining", { role: Ui.t("account.role.child"), minutes: mins })
+                                        }
+                                        return Ui.t("account.role." + app.session.role)
+                                    }
+                                    font.pixelSize: 12 * Ui.f
+                                    color: Ui.c.textDim
+                                    elide: Text.ElideNone
+                                }
+                            }
+                        }
+                    }
                     Column {
                         anchors.verticalCenter: parent.verticalCenter
-                        Txt { anchors.right: parent.right; text: app.cfg ? Ui.l(app.cfg.user) : ""; font.pixelSize: 21 * Ui.f; font.weight: Font.Light }
+                        Txt { visible: app.live || !app.session; anchors.right: parent.right; text: app.cfg ? Ui.l(app.cfg.user) : ""; font.pixelSize: 21 * Ui.f; font.weight: Font.Light }
                         Txt { anchors.right: parent.right; text: app.hdrTime; font.pixelSize: 15 * Ui.f; color: Ui.c.textDim }
                     }
                     RoundBtn {
@@ -749,11 +1013,14 @@ Window {
         ChdCard { id: chd; anchors.fill: parent; onFinished: roms.reload(); onOpenChanged: if (!open) roms.chdUpdate(chd.st) }
         KeymapLayer { id: keymap; anchors.fill: parent }
         EmuOptsLayer { id: emuopts; anchors.fill: parent }
+        AccountPickerLayer { id: accountPicker; anchors.fill: parent }
 
         JobBand { id: jobBand }
         HintBar { id: hint }
         AppDialog { id: adlg; anchors.fill: parent }
         PowerDialog { id: powerDlg; anchors.fill: parent }
+        AccountEditDialog { id: acctEdit; anchors.fill: parent }
+        AuthDialog { id: authDlg; anchors.fill: parent }
         Corner {
             id: corner
             onGoHome: Api.post("/api/home", null, function (r) { app.running = r.running || [] })

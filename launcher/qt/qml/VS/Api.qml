@@ -27,7 +27,7 @@ QtObject {
             var j = null
             try { j = txt ? JSON.parse(txt) : null } catch (e) { j = null }
             if (ok) { if (cb.ok) cb.ok(j) }
-            else if (cb.err) cb.err((j && j.error) ? String(j.error) : (status ? String(status) : "offline"))
+            else if (cb.err) cb.err((j && j.error) ? String(j.error) : (status ? String(status) : "offline"), j, status)
         }
     }
 }

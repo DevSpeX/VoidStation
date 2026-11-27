@@ -93,6 +93,121 @@ SETTINGS: dict[str, Any] = {
     "share": {"path": "/home/paul/share", "exists": True, "samba": True, "name": "share", "user": "paul"},
 }
 
+ACCOUNTS: list[dict[str, Any]] = [
+    {
+        "id": "acc-paul",
+        "display_name": "Paul",
+        "role": "admin",
+        "parent_id": None,
+        "avatar": "user",
+        "color": "#2d4a6b",
+        "active": True,
+        "auto_login": True,
+        "created_at": 1760000000,
+        "last_login_at": 1760003600,
+        "has_password": True,
+        "has_pin": True,
+        "auth_configured": True,
+    },
+    {
+        "id": "acc-anna",
+        "display_name": "Anna",
+        "role": "standard",
+        "parent_id": None,
+        "avatar": "music",
+        "color": "#553a6e",
+        "active": True,
+        "auto_login": False,
+        "created_at": 1760000100,
+        "last_login_at": 1760001800,
+        "has_password": False,
+        "has_pin": True,
+        "auth_configured": True,
+    },
+    {
+        "id": "acc-leo",
+        "display_name": "Leo",
+        "role": "child",
+        "parent_id": "acc-paul",
+        "avatar": "gamepad",
+        "color": "#2f6d4f",
+        "active": True,
+        "auto_login": False,
+        "created_at": 1760000200,
+        "last_login_at": 1760001200,
+        "has_password": False,
+        "has_pin": False,
+        "auth_configured": False,
+    },
+]
+
+ACCOUNT_POLICY: dict[str, Any] = {
+    "ask_on_boot": False,
+    "guest_enabled": True,
+    "default_account_id": "acc-paul",
+    "guest_allowed_tiles": [],
+}
+
+ACCOUNT_SESSION: dict[str, Any] = {
+    "account_id": "acc-paul",
+    "display_name": "Paul",
+    "role": "admin",
+    "avatar": "user",
+    "color": "#2d4a6b",
+    "is_guest": False,
+    "locked": False,
+    "picker_required": False,
+    "elevated_until": 0,
+}
+
+PARENTAL_POLICIES: dict[str, dict[str, Any]] = {
+    "acc-leo": {
+        "account_id": "acc-leo",
+        "mode": "allowlist",
+        "allowed_tiles": ["tv", "radio", "media", "gba"],
+        "blocked_tiles": ["terminal", "files"],
+        "blocked_cats": ["Werkzeuge"],
+        "max_age_rating": 12,
+        "daily_limit_min": 60,
+        "bedtime_start": "20:00",
+        "bedtime_end": "07:00",
+        "allow_yt_search": False,
+        "allow_browser": False,
+        "allow_power_menu": False,
+        "updated_at": 1760000300,
+    }
+}
+
+
+def account_summary(session: dict[str, Any] | None = None,
+                    policy: dict[str, Any] | None = None,
+                    accounts: list[dict[str, Any]] | None = None,
+                    parental: dict[str, Any] | None = None) -> dict[str, Any]:
+    sess = session or ACCOUNT_SESSION
+    pol = policy or ACCOUNT_POLICY
+    accs = ACCOUNTS if accounts is None else accounts
+    p_sum = parental or {
+        "restricted": False,
+        "locked": False,
+        "reason": "",
+        "remaining_seconds": None,
+        "allow_power_menu": True,
+        "allow_yt_search": True,
+    }
+    return {
+        "id": sess["account_id"],
+        "name": sess["display_name"],
+        "role": sess["role"],
+        "avatar": sess["avatar"],
+        "color": sess["color"],
+        "is_guest": bool(sess["is_guest"]),
+        "locked": bool(sess["locked"]),
+        "picker_required": bool(sess["picker_required"]),
+        "guest_enabled": bool(pol["guest_enabled"]),
+        "count": len(accs),
+        "parental": p_sum,
+    }
+
 
 def apps():
     out = []
@@ -122,7 +237,12 @@ class H(BaseHTTPRequestHandler):
         p, q = u.path, parse_qs(u.query)
         routes = {
             "/tiles.json": lambda: TILES,
-            "/api/status": lambda: {"running": ["youtube"], "radio": RADIO_NOW, "tv": None},
+            "/api/status": lambda: {"running": ["youtube"], "radio": RADIO_NOW, "tv": None,
+                                    "account": account_summary()},
+            "/api/session": lambda: {"session": ACCOUNT_SESSION, "device_policy": ACCOUNT_POLICY,
+                                     "accounts_count": len(ACCOUNTS), "migrated": False},
+            "/api/accounts": lambda: {"accounts": ACCOUNTS, "session": ACCOUNT_SESSION,
+                                      "device_policy": ACCOUNT_POLICY},
             "/api/volume": lambda: SETTINGS["volume"],
             "/api/settings": lambda: SETTINGS,
             "/api/radio/favs": lambda: RADIO_FAVS,

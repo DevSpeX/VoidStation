@@ -18,10 +18,19 @@ Layer {
     property var vsState: null
     property var wifiList: null
     property var wifiPick: null
+    property var acctList: []
+    property var acctSession: null
+    property var acctPolicy: null
+    property string parentalChildId: ""
+    property var parentalPolicies: ({})
+    property var parentalStatuses: ({})
+    property var parentalTiles: []
+    property var parentalCats: []
     // Ton: Geraete (Fernseher, USB-/Bluetooth-Kopfhoerer …) statt PipeWire-Profilen; aktives Geraet zeigt Format + Mikro
     readonly property var audioDevs: sett && sett.audio && sett.audio.ok ? (sett.audio.devices || []) : []
     readonly property var audioDev: { for (var i = 0; i < audioDevs.length; i++) if (audioDevs[i].active) return audioDevs[i]; return null }
     readonly property var catDefs: [
+        { id: "accounts", icon: "user", color: "#2d526b", title: "settings.accounts" },
         { id: "lang", icon: "speech", color: "#2d4a6b", title: "settings.language" },
         { id: "display", icon: "monitor", color: "#2b5b66", title: "settings.catDisplay" },
         { id: "design", icon: "palette", color: "#553a6e", title: "settings.catDesign" },
@@ -31,14 +40,21 @@ Layer {
         { id: "share", icon: "folder", color: "#284843", title: "settings.share" },
         { id: "updates", icon: "update", color: "#6e2b3c", title: "settings.catUpdates" },
         { id: "system", icon: "power", color: "#3a3f46", title: "settings.system" }]
-    readonly property var cats: catDefs.filter(function (c) { return c.id !== "share" || (sett && sett.share) })
+    readonly property bool isChildAccount: !(sett && sett.live) && !!(acctSession ? acctSession.role === "child" && !acctSession.is_guest : (app.session && app.session.role === "child" && !app.session.is_guest))
+    readonly property bool isRestrictedAccount: !(sett && sett.live) && !!((acctSession || app.session) && ((acctSession || app.session).role === "child" || (acctSession || app.session).is_guest))
+    readonly property var cats: catDefs.filter(function (c) {
+        if (c.id === "share") return !!(sett && sett.share) && !isRestrictedAccount
+        if (c.id === "accounts") return !(sett && sett.live)
+        if (isRestrictedAccount && ["accounts", "lang", "display", "design", "audio"].indexOf(c.id) < 0) return false
+        return true
+    })
     readonly property var catNow: { for (var i = 0; i < cats.length; i++) if (cats[i].id === cat) return cats[i]; return null }
     title: catNow ? Ui.t(catNow.title) : Ui.t("settings.title")
     readonly property real colH: stage.height
     readonly property var fit: Ui.fitRows(stage.height - 12 * Ui.f - Ui.u * 0.03 - (12 * Ui.f + 0.03 * Ui.u), Ui.u * 0.74, Ui.gap, 3)
     readonly property string ip: sett && sett.net && sett.net.addresses.length ? sett.net.addresses[0].ip : ""
 
-    onOpened: { cat = ""; wifiPick = null; btRename = null; load(); refreshVs(false) }
+    onOpened: { cat = ""; wifiPick = null; btRename = null; load(); refreshVs(false); loadAccounts() }
     function firstFocus() { return Nav.collect(trk)[0] || null }
     function load() {
         Api.get("/api/settings", function (j) {
@@ -80,6 +96,7 @@ Layer {
         cat = id
         wifiPick = null
         btRename = null
+        if (id === "accounts") loadAccounts()
         trk.reset()
         wantFocus = id ? (id === "updates" ? "selfupd" : "") : "cat" + prev
         Qt.callLater(settle)
@@ -96,6 +113,9 @@ Layer {
     function catSub(id) {
         if (!sett) return ""
         switch (id) {
+        case "accounts":
+            var sess = acctSession || app.session
+            return sess ? (sess.display_name + " · " + Ui.t("account.role." + sess.role)) : Ui.t("account.title")
         case "lang":
             var l = (sett.langs || []).filter(function (x) { return x.id === Ui.lang })[0]
             return l ? l.label : (Ui.lang === "de" ? "Deutsch" : "English")
@@ -556,6 +576,115 @@ Layer {
         app.dialog(Ui.t("report.contentTitle"), r.overview + (logs ? "\n\n" + Ui.t("report.logs") + "\n" + logs : ""), [[Ui.t("common.close")]])
     }
 
+    // ---- Konten & Profile
+    readonly property bool isAdminAccount: !!(acctSession && acctSession.role === "admin" && !acctSession.is_guest)
+    readonly property var childAccounts: (acctList || []).filter(function (a) { return a.role === "child" && a.active !== false })
+    readonly property var curParentalPolicy: parentalChildId && parentalPolicies[parentalChildId] ? parentalPolicies[parentalChildId] : null
+    readonly property var curParentalStatus: parentalChildId && parentalStatuses[parentalChildId] ? parentalStatuses[parentalChildId] : null
+    readonly property var bedtimePresets: [
+        { start: "", end: "", label: "" },
+        { start: "19:00", end: "07:00", label: "19:00–07:00" },
+        { start: "20:00", end: "07:00", label: "20:00–07:00" },
+        { start: "21:00", end: "07:00", label: "21:00–07:00" },
+        { start: "22:00", end: "08:00", label: "22:00–08:00" }
+    ]
+    readonly property var activeAccountObj: {
+        if (!acctSession || acctSession.is_guest) return null
+        for (var i = 0; i < (acctList || []).length; i++)
+            if (acctList[i].id === acctSession.account_id) return acctList[i]
+        return null
+    }
+    function loadAccounts() {
+        if (sett && sett.live) return
+        Api.get("/api/accounts", function (r) {
+            update(function () {
+                acctList = r.accounts || []
+                acctSession = r.session || null
+                acctPolicy = r.device_policy || null
+                if (r.session) app.session = r.session
+                if (r.device_policy) app.devicePolicy = r.device_policy
+                app.accountsList = acctList
+                app.accountsCount = acctList.length
+            })
+            if (r.session && r.session.role === "admin" && !r.session.is_guest) loadParental()
+        }, function () {})
+    }
+    function loadParental() {
+        Api.get("/api/accounts/parental", function (r) {
+            update(function () {
+                parentalPolicies = r.policies || ({})
+                parentalStatuses = r.statuses || ({})
+                parentalTiles = r.tiles || []
+                parentalCats = r.categories || []
+                var children = childAccounts
+                var hasCur = children.some(function (c) { return c.id === parentalChildId })
+                if (!hasCur) parentalChildId = children.length ? children[0].id : ""
+            })
+        }, function () {})
+    }
+    function saveParental(patch) {
+        if (!curParentalPolicy || !parentalChildId) return
+        var nextPol = Object.assign({}, curParentalPolicy, patch)
+        Api.post("/api/accounts/parental", { account_id: parentalChildId, policy: nextPol }, function (r) {
+            update(function () {
+                var pm = Object.assign({}, parentalPolicies)
+                if (r.policy) pm[parentalChildId] = r.policy
+                parentalPolicies = pm
+                var sm = Object.assign({}, parentalStatuses)
+                if (r.status) sm[parentalChildId] = r.status
+                parentalStatuses = sm
+            })
+            app.toast(Ui.t("parental.saved"))
+        }, fail)
+    }
+    function toggleParentalList(field, item) {
+        if (!curParentalPolicy) return
+        var cur = (curParentalPolicy[field] || []).slice()
+        var idx = cur.indexOf(item)
+        if (idx >= 0) cur.splice(idx, 1)
+        else cur.push(item)
+        var patch = {}
+        patch[field] = cur
+        saveParental(patch)
+    }
+    function parentalHas(field, item) {
+        if (!curParentalPolicy) return false
+        var arr = curParentalPolicy[field] || []
+        return arr.indexOf(item) >= 0
+    }
+    function parentalUsageText(st, pol) {
+        if (!pol) return ""
+        var u = st && st.usage ? st.usage : ({ used_seconds: 0, bonus_seconds: 0, remaining_seconds: null, in_bedtime: false })
+        var usedMin = Math.floor((u.used_seconds || 0) / 60)
+        var parts = []
+        if (pol.daily_limit_min > 0) {
+            var limMin = pol.daily_limit_min + Math.floor((u.bonus_seconds || 0) / 60)
+            parts.push(Ui.t("parental.usageLine", { used: usedMin, limit: limMin }))
+            if (u.remaining_seconds !== null && u.remaining_seconds !== undefined)
+                parts.push(Ui.t("parental.usageRemaining", { remaining: Math.max(0, Math.ceil(u.remaining_seconds / 60)) }))
+        } else {
+            parts.push(Ui.t("parental.usageNoLimit", { used: usedMin }))
+        }
+        if (u.in_bedtime) parts.push("<b>" + Ui.esc(Ui.t("parental.usageBedtimeActive")) + "</b>")
+        return parts.join(" · ")
+    }
+    function acctAuthText(a) {
+        if (!a) return Ui.t("account.noAuth")
+        var p = []
+        if (a.has_pin) p.push(Ui.t("account.pin"))
+        if (a.has_password) p.push(Ui.t("account.password"))
+        return p.length ? p.join(" + ") : Ui.t("account.noAuth")
+    }
+    function setDevicePolicy(patch) {
+        Api.post("/api/accounts/device-policy", patch, function (r) {
+            update(function () {
+                if (r.device_policy) { acctPolicy = r.device_policy; app.devicePolicy = r.device_policy }
+                if (r.session) { acctSession = r.session; app.session = r.session }
+            })
+            app.toast(Ui.t("account.policySaved"))
+        }, fail)
+    }
+
     headRight: NowLine {
         main: s.sett ? (s.ip || Ui.t("settings.offline")) : ""
         sub: s.sett && s.ip ? s.sett.net.hostname : ""
@@ -593,12 +722,238 @@ Layer {
                             Glyph { visible: sub.warn; name: "updwarn"; width: uu * 0.09; height: width; anchors.verticalCenter: parent.verticalCenter }
                             Txt {
                                 width: parent.width - (sub.warn ? uu * 0.12 : 0)
-                                text: { app.volText; app.updInfo; s.vsState; s.bt; Ui.lang; vs.themeName; return s.catSub(modelData.id) }
+                                text: { app.volText; app.updInfo; s.vsState; s.bt; Ui.lang; vs.themeName; s.acctSession; app.session; return s.catSub(modelData.id) }
                                 font.pixelSize: uu * 0.085
                                 font.weight: sub.warn ? Font.DemiBold : Font.Normal
                                 color: sub.warn ? Ui.c.tileText : Ui.c.tileSub
                             }
                         }
+                    }
+                }
+            }
+        }
+        // Konten & Profile
+        SetGroup {
+            visible: s.cat === "accounts"; availH: s.colH; title: Ui.t("account.currentProfile")
+            Info {
+                html: !s.acctSession ? ""
+                    : "<b>" + Ui.esc(s.acctSession.display_name) + "</b> · " + Ui.esc(Ui.t("account.role." + s.acctSession.role))
+                      + (s.acctSession.is_guest ? "" : "<br>" + Ui.esc(s.acctAuthText(s.activeAccountObj)))
+            }
+            SetRow {
+                Pill { property string key: "accsw"; iconName: "user"; text: Ui.t("account.switch"); onTriggered: app.openAccountPicker() }
+                Pill { property string key: "acclk"; iconName: "lock"; text: Ui.t("account.lock"); onTriggered: app.lockProfile() }
+                Pill {
+                    property string key: "acced"
+                    visible: !!s.activeAccountObj && !!s.acctSession && !s.acctSession.is_guest && s.acctSession.role !== "child"
+                    text: Ui.t("account.editOwn")
+                    onTriggered: app.openAccountEdit(s.activeAccountObj, function () { s.loadAccounts() })
+                }
+            }
+            Info { visible: !!s.acctSession && !s.isAdminAccount; html: Ui.esc(Ui.t("account.adminOnlyHint")) }
+        }
+        SetGroup {
+            visible: s.cat === "accounts" && s.isAdminAccount; availH: s.colH; title: Ui.t("account.manageList")
+            SetRow {
+                Pill {
+                    property string key: "accnew"
+                    iconName: "plus"
+                    text: Ui.t("account.add")
+                    onTriggered: app.openAccountEdit(null, function () { s.loadAccounts() })
+                }
+            }
+            SetRow {
+                Repeater {
+                    model: s.acctList || []
+                    Pill {
+                        property string key: "acc_" + modelData.id
+                        iconName: modelData.avatar || "user"
+                        rich: true
+                        maxWidth: Ui.screenW * 0.4
+                        on: !!s.acctSession && !s.acctSession.is_guest && s.acctSession.account_id === modelData.id
+                        text: Ui.esc(modelData.display_name) + " <font color='" + Ui.c.textFaint + "'>· "
+                            + Ui.esc(Ui.t("account.role." + modelData.role)) + " · "
+                            + Ui.esc(s.acctAuthText(modelData)) + "</font>"
+                        onTriggered: app.openAccountEdit(modelData, function () { s.loadAccounts() })
+                    }
+                }
+            }
+        }
+        SetGroup {
+            visible: s.cat === "accounts" && s.isAdminAccount && !!s.acctPolicy; availH: s.colH; title: Ui.t("account.deviceSettings")
+            SetRow {
+                label: Ui.t("account.askOnBoot")
+                Repeater {
+                    model: [true, false]
+                    Pill {
+                        property string key: "accboot" + modelData
+                        text: Ui.t(modelData ? "common.on" : "common.off")
+                        on: !!s.acctPolicy && !!s.acctPolicy.ask_on_boot === modelData
+                        sound: "toggle"
+                        onTriggered: s.setDevicePolicy({ ask_on_boot: modelData })
+                    }
+                }
+            }
+            Info { html: Ui.esc(Ui.t("account.askOnBootHint")) }
+            SetRow {
+                label: Ui.t("account.guestMode")
+                Repeater {
+                    model: [true, false]
+                    Pill {
+                        property string key: "accguest" + modelData
+                        text: Ui.t(modelData ? "common.on" : "common.off")
+                        on: !!s.acctPolicy && !!s.acctPolicy.guest_enabled === modelData
+                        sound: "toggle"
+                        onTriggered: s.setDevicePolicy({ guest_enabled: modelData })
+                    }
+                }
+            }
+            Info { html: Ui.esc(Ui.t("account.guestModeHint")) }
+            SetRow {
+                visible: (s.acctList || []).length > 1
+                label: Ui.t("account.defaultAccount")
+                Repeater {
+                    model: s.acctList || []
+                    Pill {
+                        property string key: "accdef_" + modelData.id
+                        text: modelData.display_name
+                        on: !!s.acctPolicy && s.acctPolicy.default_account_id === modelData.id
+                        sound: "toggle"
+                        onTriggered: s.setDevicePolicy({ default_account_id: modelData.id })
+                    }
+                }
+            }
+        }
+        SetGroup {
+            visible: s.cat === "accounts" && s.isAdminAccount; availH: s.colH; title: Ui.t("parental.title")
+            Info { visible: s.childAccounts.length === 0; html: Ui.esc(Ui.t("parental.noChildHint")) }
+            SetRow {
+                visible: s.childAccounts.length > 0
+                label: Ui.t("parental.child")
+                Repeater {
+                    model: s.childAccounts
+                    Pill {
+                        property string key: "pchild_" + modelData.id
+                        iconName: modelData.avatar || "user"
+                        text: modelData.display_name
+                        on: s.parentalChildId === modelData.id
+                        sound: "toggle"
+                        onTriggered: s.parentalChildId = modelData.id
+                    }
+                }
+            }
+            Info {
+                visible: s.childAccounts.length > 0 && !!s.curParentalPolicy
+                html: s.parentalUsageText(s.curParentalStatus, s.curParentalPolicy)
+            }
+            SetRow {
+                visible: !!s.curParentalPolicy
+                label: Ui.t("parental.mode")
+                Repeater {
+                    model: ["allowlist", "denylist"]
+                    Pill {
+                        property string key: "pmode_" + modelData
+                        text: Ui.t("parental.mode." + modelData)
+                        on: !!s.curParentalPolicy && s.curParentalPolicy.mode === modelData
+                        sound: "toggle"
+                        onTriggered: s.saveParental({ mode: modelData })
+                    }
+                }
+            }
+            SetRow {
+                visible: !!s.curParentalPolicy
+                label: Ui.t("parental.maxAge")
+                Repeater {
+                    model: [0, 6, 12, 16, 18]
+                    Pill {
+                        property string key: "page_" + modelData
+                        text: Ui.t("parental.ageVal", { age: modelData })
+                        on: !!s.curParentalPolicy && s.curParentalPolicy.max_age_rating === modelData
+                        sound: "toggle"
+                        onTriggered: s.saveParental({ max_age_rating: modelData })
+                    }
+                }
+            }
+            SetRow {
+                visible: !!s.curParentalPolicy
+                label: Ui.t("parental.dailyLimit")
+                Repeater {
+                    model: [0, 30, 60, 90, 120, 180]
+                    Pill {
+                        property string key: "plim_" + modelData
+                        text: modelData === 0 ? Ui.t("parental.limitOff") : Ui.t("parental.minutesVal", { min: modelData })
+                        on: !!s.curParentalPolicy && s.curParentalPolicy.daily_limit_min === modelData
+                        sound: "toggle"
+                        onTriggered: s.saveParental({ daily_limit_min: modelData })
+                    }
+                }
+            }
+            SetRow {
+                visible: !!s.curParentalPolicy
+                label: Ui.t("parental.bedtime")
+                Repeater {
+                    model: s.bedtimePresets
+                    Pill {
+                        property string key: "pbed_" + (modelData.start || "off")
+                        text: modelData.start ? modelData.label : Ui.t("parental.bedtimeOff")
+                        on: !!s.curParentalPolicy && (s.curParentalPolicy.bedtime_start || "") === modelData.start && (s.curParentalPolicy.bedtime_end || "") === modelData.end
+                        sound: "toggle"
+                        onTriggered: s.saveParental({ bedtime_start: modelData.start, bedtime_end: modelData.end })
+                    }
+                }
+            }
+            SetRow {
+                visible: !!s.curParentalPolicy
+                label: Ui.t("parental.options")
+                Pill {
+                    property string key: "pbrowser"
+                    text: Ui.t("parental.allowBrowser")
+                    on: !!s.curParentalPolicy && !!s.curParentalPolicy.allow_browser
+                    sound: "toggle"
+                    onTriggered: s.saveParental({ allow_browser: !s.curParentalPolicy.allow_browser })
+                }
+                Pill {
+                    property string key: "pytsearch"
+                    text: Ui.t("parental.allowYtSearch")
+                    on: !!s.curParentalPolicy && !!s.curParentalPolicy.allow_yt_search
+                    sound: "toggle"
+                    onTriggered: s.saveParental({ allow_yt_search: !s.curParentalPolicy.allow_yt_search })
+                }
+                Pill {
+                    property string key: "ppower"
+                    text: Ui.t("parental.allowPowerMenu")
+                    on: !!s.curParentalPolicy && !!s.curParentalPolicy.allow_power_menu
+                    sound: "toggle"
+                    onTriggered: s.saveParental({ allow_power_menu: !s.curParentalPolicy.allow_power_menu })
+                }
+            }
+        }
+        SetGroup {
+            visible: s.cat === "accounts" && s.isAdminAccount && s.childAccounts.length > 0 && !!s.curParentalPolicy; availH: s.colH; title: Ui.t("parental.appsTitle")
+            SetRow {
+                label: Ui.t("parental.blockedCats")
+                Repeater {
+                    model: s.parentalCats || []
+                    Pill {
+                        property string key: "pcat_" + modelData
+                        text: Ui.l(modelData)
+                        on: s.parentalHas("blocked_cats", modelData)
+                        sound: "toggle"
+                        onTriggered: s.toggleParentalList("blocked_cats", modelData)
+                    }
+                }
+            }
+            SetRow {
+                label: Ui.t(s.curParentalPolicy && s.curParentalPolicy.mode === "allowlist" ? "parental.allowedTiles" : "parental.blockedTiles")
+                Repeater {
+                    model: s.parentalTiles || []
+                    Pill {
+                        property string key: "ptile_" + modelData.id
+                        property string listField: s.curParentalPolicy && s.curParentalPolicy.mode === "allowlist" ? "allowed_tiles" : "blocked_tiles"
+                        text: Ui.l(modelData.label)
+                        on: s.parentalHas(listField, modelData.id)
+                        sound: "toggle"
+                        onTriggered: s.toggleParentalList(listField, modelData.id)
                     }
                 }
             }

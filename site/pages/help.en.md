@@ -135,6 +135,14 @@ The current and next show appear when you switch channels and with <kbd>A</kbd>.
 echo 'https://…/epg.xml.gz' | sudo tee /usr/local/share/voidstation/epg-url
 ```
 
+## Accounts and parental controls {#accounts}
+
+Under **Settings → Accounts & Profiles** you can create multiple local profiles (**Parent / Admin**, **Standard**, **Child**, and an optional temporary **Guest**). Favorites, watch history, resume positions, browser profiles, language, and appearance are kept separate per profile; on first start after updating, VoidStation automatically copies existing data into the first admin profile.
+
+- **Parental controls:** Child profiles block the terminal, file manager, web browsers, AppCenter, and system settings by default – both in the interface and in the API. For each child account you can configure an age rating, allowed/blocked apps and categories, a daily time limit, and bedtime; parents can enter their PIN to allow an app once or grant extra time.
+- **Parent PIN required:** A child account can only be created once the parent/admin account has a PIN or password set, so children cannot simply switch back to the admin profile.
+- **Limits of parental controls:** Parental controls are designed for living-room TV usage. Anyone with direct access to a terminal, a text console (`Ctrl`+`Alt`+`F2`), or SSH acts as administrator on the device and can reset a forgotten PIN without signing in (`vsctl account reset-pin`, `vsctl account unlock`). They do not replace OS-level isolation against local shell or SSH access.
+
 ## Frequently asked questions {#faq}
 
 ### Do I need an account?

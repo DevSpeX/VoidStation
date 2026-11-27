@@ -25,7 +25,7 @@ tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 
 (cd launcher && tar --owner=0 --group=0 --sort=name --mtime='2026-01-01' \
    --exclude='*.pyc' --exclude=__pycache__ -czf "$tmp/payload.tgz" \
-   launcher.py launcher-start.py tvindex.py discid.py gameprofiles.py vsx11.py vsreport.py vssound.py crxpack.py tiles.json catalog.json voidstation-pkg voidstation-efistub voidstation-splash voidstation-zram voidstation-tune voidstation-mullvad voidstation-issue \
+   launcher.py launcher-start.py tvindex.py discid.py gameprofiles.py vsx11.py vsreport.py vssound.py crxpack.py vsaccount tiles.json catalog.json voidstation-pkg voidstation-efistub voidstation-splash voidstation-zram voidstation-tune voidstation-mullvad voidstation-issue \
    dracut-voidstation.conf home.sh vsctl vsshot xstart sysfix.sh web qt openbox firefox shell gamedb \
    shaders \
    -C ../iso/art plymouth)                         # Startbild (Theme) fuer installierte Geraete, s. voidstation-splash

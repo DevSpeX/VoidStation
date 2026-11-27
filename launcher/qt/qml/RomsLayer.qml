@@ -71,7 +71,11 @@ Layer {
         app.showSplash(t)
         Api.post("/api/roms/launch", r.disc ? { system: t.id, disc: r.dev } : { system: t.id, file: r.filename, folder: r.folder || r.system || "" },
                  function (res) { if (res && res.running) app.running = res.running },
-                 function () { app.hideSplash(); app.toast(Ui.t("home.launchFailed", { name: r.title || r.name }), true) })
+                 function (err, data, status) {
+                     app.hideSplash()
+                     if (!app.handleBlockedError(err, data, status, t, function () { rl.launchRom(r) }))
+                         app.toast(Ui.t("home.launchFailed", { name: r.title || r.name }), true)
+                 })
     }
 
     // Laufwerk beobachten, solange die Liste offen ist (fragt nur den Zustand ab, die Disc laeuft dabei nicht an)

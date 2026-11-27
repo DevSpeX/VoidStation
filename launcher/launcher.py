@@ -44,23 +44,117 @@ from pathlib import Path
 from typing import Any
 
 import tvindex
+import vsaccount
 import vsreport
 import vssound
 import vsx11
 from tvindex import TV_LETTERS, TV_PAGE, tv_fold, tv_letter  # noqa: F401
+from vsaccount.models import PROFILE_PREF_KEYS, AccountError
 
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("VOIDSTATION_PORT", "8765"))
 BASE = Path(__file__).resolve().parent
 WEB = BASE / "web"                                     # Texte (i18n/), Themes (themes/), Logo – kein HTML mehr
 CONFIG = Path(os.environ.get("VOIDSTATION_CONFIG", BASE / "tiles.json"))
-FAVS = BASE / "radio.json"
 MPV_SOCK = str(BASE / "mpv.sock")
 PLAYER_BIN = BASE / "qt" / "voidstation-player.py"    # eigener Player: Fernsehen, Videos & Musik
 HOME_TITLE = "VoidStation"                      # <title> der Startseite
 PAUSED_FILE = BASE / "paused.json"              # im Hintergrund angehaltene Prozesse (beim Launcher-Start fortsetzen)
 RADIO_SERVERS = ["de1.api.radio-browser.info", "de2.api.radio-browser.info",
                  "fi1.api.radio-browser.info", "at1.api.radio-browser.info"]
+
+_ACCOUNTS_LOCK = threading.RLock()
+_ACCOUNTS: vsaccount.AccountService | None = None
+_API_TOKEN_LOCK = threading.RLock()
+_API_TOKEN = ""
+_RUNTIME_DIR_OVERRIDE: Path | None = None
+
+
+def data_dir() -> Path:
+    env = os.environ.get("VOIDSTATION_BASE", "").strip()
+    return Path(env) if env else BASE
+
+
+def init_api_token(runtime_dir: Path | None = None) -> str:
+    global _API_TOKEN, _RUNTIME_DIR_OVERRIDE
+    with _API_TOKEN_LOCK:
+        if runtime_dir is not None:
+            _RUNTIME_DIR_OVERRIDE = Path(runtime_dir)
+        _API_TOKEN = vsaccount.ensure_api_token(_RUNTIME_DIR_OVERRIDE)
+        return _API_TOKEN
+
+
+def get_api_token() -> str:
+    with _API_TOKEN_LOCK:
+        if _API_TOKEN:
+            return _API_TOKEN
+    return init_api_token()
+
+
+def check_api_token(provided: str) -> bool:
+    return vsaccount.verify_api_token(provided, get_api_token())
+
+
+def init_accounts(
+    base_dir: Path | None = None,
+    runtime_dir: Path | None = None,
+    clock: Any = None,
+) -> vsaccount.AccountService:
+    global _ACCOUNTS, _RUNTIME_DIR_OVERRIDE
+    with _ACCOUNTS_LOCK:
+        if runtime_dir is not None:
+            with _API_TOKEN_LOCK:
+                _RUNTIME_DIR_OVERRIDE = Path(runtime_dir)
+        if _ACCOUNTS is not None:
+            _ACCOUNTS.close()
+            _ACCOUNTS = None
+        rt = runtime_dir if runtime_dir is not None else _RUNTIME_DIR_OVERRIDE
+        _ACCOUNTS = vsaccount.AccountService(
+            base_dir or data_dir(),
+            runtime_dir=rt,
+            clock=clock,
+        )
+        return _ACCOUNTS
+
+
+def accounts() -> vsaccount.AccountService:
+    with _ACCOUNTS_LOCK:
+        if _ACCOUNTS is not None:
+            return _ACCOUNTS
+        return init_accounts()
+
+
+def close_accounts() -> None:
+    global _ACCOUNTS
+    with _ACCOUNTS_LOCK:
+        if _ACCOUNTS is not None:
+            _ACCOUNTS.close()
+            _ACCOUNTS = None
+
+
+def profile_file(filename: str) -> Path:
+    return accounts().profile_path(filename)
+
+
+def _atomic_write_json_private(path: Path, data: Any, indent: int = 2) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        os.chmod(path.parent, 0o700)
+    except OSError:
+        pass
+    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, ensure_ascii=False, indent=indent)
+            fh.write("\n")
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, path)
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        raise
 
 MIME = {
     ".html": "text/html; charset=utf-8", ".json": "application/json; charset=utf-8",
@@ -343,6 +437,7 @@ class AppManager:
         return self.start(tid, args)
 
     def start(self, tid, args, env=None):
+        args = prepare_browser_args(tid, list(args))
         log("starte", tid, args)
         logdir = BASE / "logs"
         logdir.mkdir(exist_ok=True)
@@ -767,15 +862,13 @@ def radio_popular(cc, limit=24):
 
 def favs_load():
     try:
-        return json.loads(FAVS.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+        return json.loads(profile_file("radio.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError, AccountError):
         return []
 
 
 def favs_save(items):
-    tmp = FAVS.with_suffix(".tmp")
-    tmp.write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
-    tmp.replace(FAVS)
+    _atomic_write_json_private(profile_file("radio.json"), items, indent=2)
 
 
 # ---------------------------------------------------------------------------
@@ -890,13 +983,30 @@ def available_themes():
     return ["default-dark", "default-light", "high-contrast", "nord"]
 
 
+def _global_settings_raw() -> dict[str, Any]:
+    try:
+        raw = json.loads(SETTINGS.read_text(encoding="utf-8"))
+        return raw if isinstance(raw, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
 def settings_load():
     s = dict(DEFAULTS)
+    s.update(_global_settings_raw())
     try:
-        s.update(json.loads(SETTINGS.read_text(encoding="utf-8")))
-    except (OSError, ValueError):
+        prefs = accounts().load_profile_prefs(global_defaults=s)
+        s.update(prefs)
+    except AccountError:
         pass
     return s
+
+
+def profile_prefs_save(updates: dict[str, Any]) -> dict[str, Any]:
+    clean = {k: v for k, v in updates.items() if k in PROFILE_PREF_KEYS}
+    if clean:
+        accounts().save_profile_prefs(clean)
+    return settings_load()
 
 
 def cmdline_value(name):
@@ -1511,9 +1621,40 @@ def dosbox_game_lines(game, root):
 
 
 def settings_save(s):
-    tmp = SETTINGS.with_suffix(".tmp")
-    tmp.write_text(json.dumps(s, indent=2), encoding="utf-8")
-    tmp.replace(SETTINGS)
+    raw_global = _global_settings_raw()
+    global_defaults = dict(DEFAULTS)
+    global_defaults.update(raw_global)
+
+    svc = accounts()
+    sess = svc.get_session()
+    if sess.account_id:
+        raw_prefs = svc.storage.load_raw_prefs(sess.account_id, is_guest=sess.is_guest)
+        pref_updates = {
+            k: s[k]
+            for k in PROFILE_PREF_KEYS
+            if k in s and (k in raw_prefs or s[k] != global_defaults.get(k))
+        }
+        if pref_updates:
+            svc.save_profile_prefs(pref_updates)
+
+    new_global = dict(raw_global)
+    changed = False
+    for k, v in s.items():
+        if k in PROFILE_PREF_KEYS:
+            continue
+        if (k in raw_global and raw_global[k] != v) or (k not in raw_global and v != global_defaults.get(k)):
+            new_global[k] = v
+            changed = True
+    for k in list(new_global):
+        if k not in PROFILE_PREF_KEYS and k not in s:
+            del new_global[k]
+            changed = True
+
+    if changed or (not SETTINGS.exists() and new_global):
+        SETTINGS.parent.mkdir(parents=True, exist_ok=True)
+        tmp = SETTINGS.with_suffix(".tmp")
+        tmp.write_text(json.dumps(new_global, indent=2), encoding="utf-8")
+        tmp.replace(SETTINGS)
 
 
 def cursor_themes():
@@ -1619,6 +1760,8 @@ def xterm_resources(dark):
 def apply_appearance(s):
     """Skalierung (Xft.dpi), Mauszeiger und Farbschema (hell/dunkel nach dem Theme) fuer neu gestartete
     Programme setzen."""
+    if os.environ.get("VS_NO_DESKTOP_SYNC"):
+        return
     home = Path.home()
     dpi = round(96 * float(s["scale"]))
     theme = s.get("cursor_theme") or DEFAULTS["cursor_theme"]
@@ -1807,6 +1950,8 @@ def openbox_rc_sync():
 
 def restart_home_later(delay=0.8):
     """Startseite neu starten, z. B. fuer den neuen Mauszeiger (home.sh startet sie neu)."""
+    if os.environ.get("VS_NO_DESKTOP_SYNC"):
+        return
     def _go():
         time.sleep(delay)
         run(["pkill", "-f", "voidstation-home.py"])
@@ -2630,8 +2775,6 @@ def share_info():
 IPTV_API = tvindex.IPTV_API
 CACHE = BASE / "cache"
 TV_DB = CACHE / tvindex.DB_NAME              # Senderverzeichnis, gebaut von tvindex.py (eigener, kurzlebiger Prozess)
-TVFAVS = BASE / "tvfavs.json"
-TVRECENT = BASE / "tvrecent.json"           # zuletzt gesehene Sender (Player: Reiter „Zuletzt“)
 UA = tvindex.UA
 
 
@@ -2650,10 +2793,24 @@ class IPTV:
         self.building = False
         self.now = None
         self.zap_keys = []          # Liste, in der der Player mit ▲▼ umschaltet (aus der heraus gestartet wurde)
-        self.recent = tvrecent_load()
+        self._recent: list[dict[str, Any]] | None = None
         self.broken = {}            # Sender -> Zeitpunkt, an dem er zuletzt nicht erreichbar war
         self.failed = None          # Rueckfall (nacktes mpv): zuletzt gescheiterter Sender, fuer die Meldung
         self.raw = False            # "tv" laeuft gerade als nacktes mpv (Stufe 3)
+
+    @property
+    def recent(self) -> list[dict[str, Any]]:
+        if self._recent is None:
+            self._recent = tvrecent_load()
+        return self._recent
+
+    @recent.setter
+    def recent(self, value: list[dict[str, Any]]) -> None:
+        self._recent = value
+
+    def reset_profile_cache(self) -> None:
+        with self.lock:
+            self._recent = None
 
     def _take(self, got):
         self.count, self.countries, self.loaded_at = got
@@ -2853,32 +3010,28 @@ class IPTV:
 
 def tvfavs_load():
     try:
-        return json.loads(TVFAVS.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+        return json.loads(profile_file("tvfavs.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError, AccountError):
         return []
 
 
 def tvrecent_load():
     try:
-        d = json.loads(TVRECENT.read_text(encoding="utf-8"))
+        d = json.loads(profile_file("tvrecent.json").read_text(encoding="utf-8"))
         return [x for x in d if isinstance(x, dict) and x.get("key") and x.get("url")]
-    except (OSError, ValueError):
+    except (OSError, ValueError, AccountError):
         return []
 
 
 def tvrecent_save(items):
     try:
-        tmp = TVRECENT.with_suffix(".tmp")
-        tmp.write_text(json.dumps(items, ensure_ascii=False, indent=1), encoding="utf-8")
-        tmp.replace(TVRECENT)
-    except OSError as e:
+        _atomic_write_json_private(profile_file("tvrecent.json"), items, indent=1)
+    except (OSError, AccountError) as e:
         log("tvrecent.json:", e)
 
 
 def tvfavs_save(items):
-    tmp = TVFAVS.with_suffix(".tmp")
-    tmp.write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
-    tmp.replace(TVFAVS)
+    _atomic_write_json_private(profile_file("tvfavs.json"), items, indent=2)
 
 
 TV = IPTV()
@@ -3109,9 +3262,6 @@ VIDEO_EXT = {".mp4", ".mkv", ".avi", ".mov", ".m4v", ".webm", ".ts", ".m2ts", ".
 EMBED_EXT = {".mp3", ".m4a", ".flac"}             # Cover/Tags in die Datei schreiben (ffmpeg, ohne Neukodierung)
 AUDIO_EXT = {".mp3", ".flac", ".ogg", ".oga", ".opus", ".m4a", ".aac", ".wav", ".wma", ".ape", ".mka", ".wv", ".aiff", ".alac"}
 COVER_NAMES = ("cover.jpg", "cover.png", "folder.jpg", "folder.png", "front.jpg", "front.png", "albumart.jpg", "album.jpg")
-RESUME = BASE / "resume.json"
-
-
 def natural_key(name):
     """„Folge 2“ vor „Folge 10“: Zahlen als Zahlen sortieren, ohne Gross-/Kleinschreibung."""
     return [int(t) if t.isdigit() else t for t in re.split(r"(\d+)", tv_fold(name))]
@@ -3782,9 +3932,9 @@ class MediaLib:
 
     def resume_load(self):
         try:
-            d = json.loads(RESUME.read_text(encoding="utf-8"))
+            d = json.loads(profile_file("resume.json").read_text(encoding="utf-8"))
             return d if isinstance(d, dict) else {}
-        except (OSError, ValueError):
+        except (OSError, ValueError, AccountError):
             return {}
 
     def resume_set(self, path, pos, dur):
@@ -3804,9 +3954,7 @@ class MediaLib:
             if len(d) > 300:
                 for k in sorted(d, key=lambda k: d[k].get("t", 0))[:len(d) - 300]:
                     del d[k]
-            tmp = RESUME.with_suffix(".tmp")
-            tmp.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
-            tmp.replace(RESUME)
+            _atomic_write_json_private(profile_file("resume.json"), d, indent=1)
 
     def entry(self, p, res=None):
         try:
@@ -7094,6 +7242,9 @@ def apps_payload():
         item["tile"] = a["id"] in tiles
         item["icon"] = a.get("tile", {}).get("icon", "globe")
         item["color"] = a.get("tile", {}).get("color", "#2f3238")
+        raw_age = a.get("age_rating")
+        exp_age = max(0, min(18, int(raw_age))) if isinstance(raw_age, (int, float)) and not isinstance(raw_age, bool) else None
+        item["age_rating"] = vsaccount.parental.effective_age_rating(a["id"], a["cat"], exp_age)
         apps.append(item)
     cats = list(cat["categories"])
     try:
@@ -7374,7 +7525,8 @@ class Installer:
             "error": None if state != "error" else dict(err or {"code": "internal", "msg": "abgebrochen", "phase": st.get("current")},
                                                         done=done, log=[], alt=(err or {}).get("phase") == "boot"),
             "result": {"user": cfg.get("user", {}).get("name"), "login": cfg.get("user", {}).get("login"),
-                       "hostname": cfg.get("hostname"), "seconds": int(st["finished"] - (st.get("started") or st["finished"]))}
+                       "hostname": cfg.get("hostname"), "auto_login": bool(cfg.get("user", {}).get("auto_login", True)),
+                       "seconds": int(st["finished"] - (st.get("started") or st["finished"]))}
             if st.get("finished") else None}
 
     def gparted(self):
@@ -14384,9 +14536,6 @@ def yt_classify(text):
 
 
 class YtLight:
-    SUBS = BASE / "yt-subs.json"
-    HIST = BASE / "yt-history.json"
-    LATER = BASE / "yt-later.json"
     LOCAL = BASE / "bin" / "yt-dlp"                     # eigene, aktuelle yt-dlp-Kopie (Knopf "yt-dlp aktualisieren")
     CACHE = Path.home() / ".cache" / "voidstation" / "yt"
     RSS = "https://www.youtube.com/feeds/videos.xml?"
@@ -14399,6 +14548,18 @@ class YtLight:
     MAX_HIST = 500
     MAX_LATER = 500
 
+    @property
+    def SUBS(self) -> Path:
+        return profile_file("yt-subs.json")
+
+    @property
+    def HIST(self) -> Path:
+        return profile_file("yt-history.json")
+
+    @property
+    def LATER(self) -> Path:
+        return profile_file("yt-later.json")
+
     def __init__(self):
         self.lock = threading.Lock()
         self.cache = {}                                  # (art, schluessel) -> (zeit, daten)
@@ -14406,6 +14567,11 @@ class YtLight:
         self.upd: dict[str, Any] = {"state": "idle", "msg": "", "t": 0}
         self.ver = ("", 0.0)
         self.avatar_busy = False
+
+    def reset_profile_cache(self) -> None:
+        with self.lock:
+            self.cache.clear()
+            self.feed = {"items": [], "t": 0, "refreshing": False, "errors": 0}
 
     # ---- Dateien ----
     @staticmethod
@@ -14419,11 +14585,8 @@ class YtLight:
     @staticmethod
     def _save(path, data):
         try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = path.with_suffix(".tmp")
-            tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
-            tmp.replace(path)
-        except OSError as e:
+            _atomic_write_json_private(path, data, indent=1)
+        except (OSError, AccountError) as e:
             log("YouTube Light:", path.name, e)
 
     # ---- Einstellungen und Werkzeuge ----
@@ -15589,6 +15752,183 @@ VPN = Vpn()
 CRX_DIR = Path("/usr/local/share/voidstation/chromium")     # Tastatur-Erweiterung fuer Chromium/Brave, s. crxpack.py
 
 
+def _tile_meta(tile_id: str, tile: dict[str, Any] | None = None) -> tuple[str, int | None, bool, list[str] | None]:
+    try:
+        app = catalog_app(tile_id)
+    except (OSError, ValueError):
+        app = None
+    cat = str((tile or {}).get("cat") or (app or {}).get("cat") or "")
+    raw_age = (tile or {}).get("age_rating")
+    if raw_age is None and app:
+        raw_age = app.get("age_rating")
+    age_rating = (
+        max(0, min(18, int(raw_age)))
+        if isinstance(raw_age, (int, float)) and not isinstance(raw_age, bool)
+        else None
+    )
+    raw_cmd = (tile or {}).get("cmd") if (tile or {}).get("cmd") is not None else (app or {}).get("cmd")
+    cmd = [str(x) for x in raw_cmd] if isinstance(raw_cmd, list) else None
+    is_browser = vsaccount.parental.is_browser_tile(tile_id, cat, cmd)
+    return cat, age_rating, is_browser, cmd
+
+
+def parental_catalog_meta() -> tuple[list[str], list[dict[str, Any]]]:
+    try:
+        cat_data = catalog()
+        cats = [str(c) for c in (cat_data.get("categories") or []) if str(c)]
+    except (OSError, ValueError):
+        cats = []
+    tiles_out: list[dict[str, Any]] = []
+    try:
+        cfg = load_config()
+    except (OSError, ValueError):
+        cfg = {"groups": []}
+    for grp in cfg.get("groups", []):
+        for t in grp.get("tiles", []):
+            tid = str(t.get("id") or "").strip()
+            if not tid or tid in vsaccount.parental.ALWAYS_VISIBLE_TILES or tid in vsaccount.parental.ADMIN_ONLY_TILES:
+                continue
+            cat, age_rating, is_browser, _cmd = _tile_meta(tid, t)
+            tiles_out.append({
+                "id": tid,
+                "label": t.get("label") or tid,
+                "cat": cat,
+                "is_browser": is_browser,
+                "age_rating": vsaccount.parental.effective_age_rating(tid, cat, age_rating),
+            })
+    return cats, tiles_out
+
+
+def prepare_browser_args(tid: str, args: list[str], svc: vsaccount.AccountService | None = None) -> list[str]:
+    """Isoliert Browser-Profile fuer Kinder- und Gast-Sitzungen unter accounts/data/<id>/browser/<app>."""
+    if not args:
+        return args
+    svc = svc or accounts()
+    sess = svc.get_session()
+    if sess.locked or not (sess.role == "child" or sess.is_guest):
+        return args
+    exe = Path(str(args[0])).name.lower()
+    if exe in ("firefox", "librewolf"):
+        pdir = svc.browser_profile_dir(tid)
+        uj = pdir / "user.js"
+        if not uj.exists():
+            chunks: list[str] = []
+            files = ("user-common.js", "user-youtube.js") if tid == "youtube" else ("user-common.js",)
+            for name in files:
+                src = BASE / "firefox" / name
+                if src.is_file():
+                    try:
+                        chunks.append(src.read_text(encoding="utf-8"))
+                    except OSError:
+                        pass
+            uj.write_text("\n".join(chunks) + ("\n" if chunks else ""), encoding="utf-8")
+        rest: list[str] = []
+        i = 1
+        while i < len(args):
+            if args[i] == "--profile":
+                i += 2
+                continue
+            if args[i].startswith("--profile=") or args[i] == "--no-remote":
+                i += 1
+                continue
+            rest.append(args[i])
+            i += 1
+        return [args[0], "--no-remote", "--profile", str(pdir), *rest]
+    if exe in ("chromium", "brave", "brave-browser", "google-chrome") or tid == "braveorigin":
+        pdir = svc.browser_profile_dir(tid)
+        rest = []
+        i = 1
+        while i < len(args):
+            if args[i] == "--user-data-dir":
+                i += 2
+                continue
+            if args[i].startswith("--user-data-dir="):
+                i += 1
+                continue
+            rest.append(args[i])
+            i += 1
+        return [args[0], f"--user-data-dir={pdir}", *rest]
+    return args
+
+
+def gentle_pause_for_lock() -> None:
+    """Pausiert laufende Player/Radio/Emulatoren ohne Datenverlust und holt die Startseite nach vorn."""
+    try:
+        if "tv" in APPS.running():
+            threading.Thread(target=PLAYERS.send, args=("tv", {"cmd": "pause"}), daemon=True).start()
+    except NameError:
+        pass
+    try:
+        if RADIO.status().get("station") and not RADIO.paused():
+            RADIO.toggle()
+    except Exception:
+        pass
+    try:
+        media_notify("pause")
+    except Exception:
+        pass
+    try:
+        raise_home()
+    except Exception:
+        pass
+
+
+def _handle_parental_event(ev: dict[str, Any]) -> None:
+    kind = str(ev.get("ev") or "")
+    payload = {k: v for k, v in ev.items() if k != "ev"}
+    if kind == "account_locked":
+        gentle_pause_for_lock()
+        OSK_FIELD.notice("account_locked", **payload)
+    elif kind == "account_warn":
+        OSK_FIELD.notice("account_warn", **payload)
+
+
+def account_status_summary() -> dict[str, Any]:
+    svc = accounts()
+    sess = svc.get_session()
+    policy = svc.get_device_policy()
+    p_status = svc.parental.status_for_session()
+    return {
+        "id": sess.account_id,
+        "name": sess.display_name,
+        "role": sess.role,
+        "avatar": sess.avatar,
+        "color": sess.color,
+        "is_guest": sess.is_guest,
+        "locked": sess.locked,
+        "picker_required": sess.picker_required,
+        "guest_enabled": policy.guest_enabled,
+        "count": len(svc.list_accounts()),
+        "parental": {
+            "restricted": p_status["restricted"],
+            "locked": p_status["locked"],
+            "reason": p_status["reason"],
+            "remaining_seconds": p_status["remaining_seconds"],
+            "allow_power_menu": p_status["allow_power_menu"],
+            "allow_yt_search": p_status["allow_yt_search"],
+        },
+    }
+
+
+def _on_session_changed(prev_session: vsaccount.SessionState, new_session: vsaccount.SessionState) -> None:
+    switched = (
+        prev_session.account_id != new_session.account_id
+        or prev_session.is_guest != new_session.is_guest
+    )
+    if switched or new_session.locked:
+        YT.reset_profile_cache()
+        TV.reset_profile_cache()
+        RADIO.stop()
+    if not new_session.locked:
+        s = settings_load()
+        sound_sync(s)
+        if os.environ.get("DISPLAY") and not os.environ.get("VS_NO_DESKTOP_SYNC"):
+            try:
+                apply_appearance(s)
+            except OSError as e:
+                log("Erscheinungsbild nach Profilwechsel:", e)
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "voidstation"
 
@@ -15610,7 +15950,41 @@ class Handler(BaseHTTPRequestHandler):
         self._send(code, json.dumps(obj, ensure_ascii=False).encode())
 
     def _host_ok(self):
-        return self.headers.get("Host", "") in (f"{HOST}:{PORT}", f"localhost:{PORT}")
+        port = getattr(self.server, "server_port", PORT)
+        return self.headers.get("Host", "") in (f"{HOST}:{port}", f"localhost:{port}")
+
+    def _api_token_ok(self) -> bool:
+        return (
+            self._host_ok()
+            and self.headers.get("X-TV") == "1"
+            and check_api_token(self.headers.get(vsaccount.API_TOKEN_HEADER, ""))
+        )
+
+    def _send_parental_denied(self, dec: vsaccount.ParentalDecision) -> None:
+        code, payload = vsaccount.api.parental_denied_response(dec)
+        self._json(code, payload)
+
+    def _check_action(self, action: str) -> bool:
+        dec = accounts().parental.check_action(action)
+        if not dec.allowed:
+            self._send_parental_denied(dec)
+            return False
+        return True
+
+    def _account_post(self, parts: list[str], b: dict[str, Any]) -> None:
+        if not self._api_token_ok():
+            return self._json(403, {"error": "forbidden"})
+        res = vsaccount.api.handle_post(
+            accounts(),
+            parts,
+            b,
+            defaults=DEFAULTS,
+            on_session_changed=_on_session_changed,
+        )
+        if res is None:
+            return self._send(404)
+        code, payload = res
+        return self._json(code, payload)
 
     def _body(self):
         n = int(self.headers.get("Content-Length") or 0)
@@ -15651,7 +16025,13 @@ class Handler(BaseHTTPRequestHandler):
             if what == "img":
                 data = YT.img(vid=g("v"), url=g("u"))
                 return self._send(200, data, "image/jpeg") if data else self._send(404)
-            res = {"state": YT.state, "home": YT.home, "history": YT.history, "later": YT.later,
+            if what == "search" and not self._check_action("yt_search"):
+                return
+            if what == "state":
+                st = dict(YT.state())
+                st["allow_search"] = accounts().parental.check_action("yt_search").allowed
+                return self._json(200, st)
+            res = {"home": YT.home, "history": YT.history, "later": YT.later,
                    "subs": lambda: {"items": YT.subs()},
                    "feed": lambda: YT.feed_get(300, force=g("force") == "1"),
                    "search": lambda: YT.search(g("q"), g("kind") or "video"),
@@ -15691,6 +16071,19 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(200, OSK_FIELD.wait(seq))
         if path == "/api/nowplaying":              # heisse Ecke oben links
             return self._json(200, now_playing())
+        if path in ("/api/session", "/api/accounts", "/api/accounts/parental"):
+            if not self._api_token_ok():
+                return self._json(403, {"error": "forbidden"})
+            res = vsaccount.api.handle_get(
+                accounts(),
+                path,
+                urllib.parse.parse_qs(url.query),
+                catalog_meta=parental_catalog_meta,
+            )
+            if res is None:
+                return self._send(404)
+            code, payload = res
+            return self._json(code, payload)
         if path == "/api/status":
             running = APPS.running()
             return self._json(200, {"running": running, "starting": APPS.starting(), "radio": RADIO.status(),
@@ -15698,7 +16091,8 @@ class Handler(BaseHTTPRequestHandler):
                                     "tv": TV.now if "tv" in running else None, "tvFailed": TV.failed, "live": LIVE,
                                     "media": (MEDIA_NOW or None) if "media" in running else None,
                                     "install": INSTALL.state.get("state") if INSTALL.state else None,
-                                    "vpn": VPN.summary()})
+                                    "vpn": VPN.summary(),
+                                    "account": account_status_summary()})
         if path == "/api/tv/status":
             TV.ensure()
             return self._json(200, TV.status())
@@ -15872,10 +16266,38 @@ class Handler(BaseHTTPRequestHandler):
             except (OSError, ValueError):
                 return self._send(404)
             hints = {a["id"]: a["start_hint"] for a in catalog()["apps"] if a.get("start_hint")}
+            svc = accounts()
+            sess = svc.get_session()
+            p_status = svc.parental.status_for_session()
+            filter_tiles = not sess.locked and (sess.role == "child" or (sess.is_guest and p_status["restricted"]))
+            filtered_groups = []
             for g in c.get("groups", []):
+                kept = []
                 for t in g.get("tiles", []):
-                    if t.get("id") in hints and not t.get("start_hint"):
-                        t["start_hint"] = hints[t["id"]]
+                    tid = str(t.get("id") or "")
+                    if tid in hints and not t.get("start_hint"):
+                        t["start_hint"] = hints[tid]
+                    if filter_tiles:
+                        cat, age_rating, is_browser, cmd = _tile_meta(tid, t)
+                        dec = svc.parental.check_tile(
+                            tid,
+                            cat=cat,
+                            age_rating=age_rating,
+                            is_browser=is_browser,
+                            cmd=cmd,
+                            ignore_time=True,
+                        )
+                        if not dec.allowed:
+                            continue
+                    kept.append(t)
+                if kept:
+                    g2 = dict(g)
+                    g2["tiles"] = kept
+                    filtered_groups.append(g2)
+            c["groups"] = filtered_groups
+            if sess.display_name:
+                c["user"] = sess.display_name
+            c["parental_locked"] = bool(p_status["locked"])
             return self._json(200, c)
         self._send(404)
 
@@ -15890,6 +16312,19 @@ class Handler(BaseHTTPRequestHandler):
                 tile = find_tile(parts[2])
                 if not tile:
                     return self._json(404, {"error": "unbekannte Kachel"})
+                tid = str(tile.get("id") or parts[2])
+                cat, age_rating, is_browser, cmd = _tile_meta(tid, tile)
+                dec = accounts().parental.check_tile(
+                    tid,
+                    cat=cat,
+                    age_rating=age_rating,
+                    is_browser=is_browser,
+                    cmd=cmd,
+                    consume_once=True,
+                    already_running=bool(APPS._get(tid)),
+                )
+                if not dec.allowed:
+                    return self._send_parental_denied(dec)
                 return self._json(200, {"result": APPS.launch(tile), "running": APPS.running()})
             if parts[:2] == ["api", "close"] and len(parts) == 3:
                 APPS.close(parts[2])
@@ -15899,6 +16334,8 @@ class Handler(BaseHTTPRequestHandler):
                 raise_home()
                 return self._json(200, {"running": APPS.running()})
             if parts == ["api", "report"]:             # Einstellungen → System → Fehlerbericht (vsctl report: vsreport.py direkt)
+                if not self._check_action("settings_system"):
+                    return
                 try:
                     rep = vsreport.create(status={"running": APPS.running(), "front": APPS.front()})
                 except RuntimeError:
@@ -15913,7 +16350,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(200 if path else 500, {"path": str(path) if path else "", "error": err})
             if parts == ["api", "osk", "field"]:       # Firefox-Erweiterung: Eingabefeld an/ab
                 return self._json(200 if OSK_FIELD.post(self._body()) else 400, {"ok": True})
+            if parts[:2] in (["api", "session"], ["api", "accounts"]):
+                return self._account_post(parts, self._body())
             if parts[:2] == ["api", "vpn"] and len(parts) == 3:
+                if not self._check_action("settings_system"):
+                    return
                 b = self._body()
                 try:
                     act = parts[2]
@@ -15936,6 +16377,9 @@ class Handler(BaseHTTPRequestHandler):
             if parts == ["api", "nowplaying", "control"]:
                 return self._json(200, now_control(str(self._body().get("action", ""))))
             if parts == ["api", "radio", "play"]:
+                dec = accounts().parental.check_tile("radio", cat="Medien", consume_once=True)
+                if not dec.allowed:
+                    return self._send_parental_denied(dec)
                 RADIO.play(self._body())
                 return self._json(200, RADIO.status())
             if parts == ["api", "radio", "stop"]:
@@ -15954,6 +16398,9 @@ class Handler(BaseHTTPRequestHandler):
                 favs_save(favs)
                 return self._json(200, favs)
             if parts == ["api", "tv", "play"]:
+                dec = accounts().parental.check_tile("tv", cat="Medien", consume_once=True, already_running=bool(APPS._get("tv")))
+                if not dec.allowed:
+                    return self._send_parental_denied(dec)
                 b = self._body()
                 return self._json(200, TV.play(str(b.get("key", "")), b.get("ctx")))
             if parts == ["api", "tv", "tune"]:              # Player schaltet um
@@ -15967,6 +16414,10 @@ class Handler(BaseHTTPRequestHandler):
             if parts[:2] == ["api", "yt"]:                        # YouTube Light
                 b = self._body()
                 act = "/".join(parts[2:])
+                if act == "resolve" and not self._check_action("yt_play"):
+                    return
+                if act == "update" and not self._check_action("apps_manage"):
+                    return
                 res = {"settings": lambda: YT.save_settings(b),
                        "resolve": lambda: YT.resolve(str(b.get("id") or ""), str(b.get("quality") or ""),
                                                      str(b.get("lang") or "de")),
@@ -16053,6 +16504,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(409, {"error": str(e)})
                 return self._send(404)
             if parts == ["api", "settings", "ssh"]:
+                if not self._check_action("settings_system"):
+                    return
                 on = bool(self._body().get("on"))
                 r = subprocess.run(["sudo", "-n", PKG_HELPER, "ssh", "on" if on else "off"],
                                    capture_output=True, text=True, timeout=180)
@@ -16061,6 +16514,8 @@ class Handler(BaseHTTPRequestHandler):
                 log("Fernzugriff (SSH):", "an" if on else "aus")
                 return self._json(200, {"ssh": ssh_state()})
             if parts == ["api", "selfupdate", "channel"]:
+                if not self._check_action("apps_manage"):
+                    return
                 # Seit 2026.11 nur noch zurueck zu Stable; Testing gibt es nur im Terminal (vsctl channel testing)
                 ch = str(self._body().get("channel", ""))
                 if ch != "stable":
@@ -16071,6 +16526,8 @@ class Handler(BaseHTTPRequestHandler):
                 vs_update_status(force=True)
                 return self._json(200, updates_state())
             if parts == ["api", "apps", "localtile"]:
+                if not self._check_action("apps_manage"):
+                    return
                 b = self._body()
                 try:
                     local_tile(str(b.get("id", "")), bool(b.get("on")))
@@ -16078,6 +16535,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(404, {"error": str(e)})
                 return self._json(200, apps_payload())
             if parts[:2] == ["api", "apps"] and len(parts) == 3:
+                if not self._check_action("apps_manage"):
+                    return
                 act = parts[2]
                 try:
                     if act in ("install", "remove"):
@@ -16099,6 +16558,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(409, {"error": str(e)})
                 return self._json(200, JOBS.current())
             if parts == ["api", "settings", "sysupd"]:
+                if not self._check_action("settings_system"):
+                    return
                 days = self._body().get("days")
                 if days not in SYSUPD_DAYS:
                     return self._json(400, {"error": "ungueltige Frist"})
@@ -16109,7 +16570,7 @@ class Handler(BaseHTTPRequestHandler):
                 lang = str(self._body().get("lang", ""))
                 if lang not in {l["id"] for l in LANGS}:
                     return self._json(400, {"error": "unbekannte Sprache"})
-                s = settings_load(); s["lang"] = lang; settings_save(s)
+                profile_prefs_save({"lang": lang})
                 log("Sprache:", lang)
                 threading.Thread(target=bios_sync, daemon=True).start()      # Hinweise in den bios-Ordnern
                 threading.Thread(target=ime_sync, daemon=True).start()       # Eingabemethode ja/ko/zh
@@ -16118,42 +16579,44 @@ class Handler(BaseHTTPRequestHandler):
                 val = float(self._body().get("scale", 1.75))
                 if val not in SCALES:
                     return self._json(400, {"error": "ungueltige Skalierung"})
-                s = settings_load(); s["scale"] = val; settings_save(s)
+                s = profile_prefs_save({"scale": val})
                 apply_appearance(s)
                 return self._json(200, settings_payload())
             if parts == ["api", "settings", "theme"]:
                 th = str(self._body().get("theme", "")).strip()
                 if th not in available_themes():
                     return self._json(400, {"error": "unbekanntes Theme"})
-                s = settings_load(); s["theme"] = th; settings_save(s)
+                s = profile_prefs_save({"theme": th})
                 apply_appearance(s)                    # Programme folgen hell/dunkel
                 return self._json(200, settings_payload())
             if parts == ["api", "settings", "osk"]:      # Bildschirmtastatur: {layout: "auto" | Kennung, mode}
                 b = self._body()
-                s = settings_load()
+                upd: dict[str, Any] = {}
                 if "layout" in b:
                     lay = str(b.get("layout") or "auto")
                     if lay != "auto" and lay not in OSK_LAYOUTS:
                         return self._json(400, {"error": "unbekannte Belegung"})
-                    s["osk_layout"] = None if lay == "auto" else lay
+                    upd["osk_layout"] = None if lay == "auto" else lay
                 if "mode" in b:
                     mode = str(b.get("mode"))
                     if mode not in OSK_MODES:
                         return self._json(400, {"error": "unbekannte Einstellung"})
-                    s["osk_mode"] = mode
-                settings_save(s)
+                    upd["osk_mode"] = mode
+                s = profile_prefs_save(upd) if upd else settings_load()
                 log("Bildschirmtastatur:", s.get("osk_layout") or "nach Sprache", s.get("osk_mode"))
                 return self._json(200, settings_payload())
             if parts == ["api", "settings", "padmouse"]:
+                if not self._check_action("settings_system"):
+                    return
                 on = bool(self._body().get("on"))
                 s = settings_load(); s["padmouse"] = on; settings_save(s)
                 log("Controller-Maus:", "an" if on else "aus")
                 return self._json(200, settings_payload())
             if parts == ["api", "settings", "sounds"]:
                 b = self._body()
-                s = settings_load()
+                upd_snd: dict[str, Any] = {}
                 if "on" in b:
-                    s["ui_sounds"] = bool(b["on"])
+                    upd_snd["ui_sounds"] = bool(b["on"])
                 if "volume" in b:
                     try:
                         vol = int(round(float(b["volume"])))
@@ -16161,29 +16624,31 @@ class Handler(BaseHTTPRequestHandler):
                         return self._json(400, {"error": "ungueltige Lautstaerke"})
                     if vol < 1 or vol > 100:
                         return self._json(400, {"error": "Lautstaerke 1..100"})
-                    s["ui_sounds_volume"] = vol
+                    upd_snd["ui_sounds_volume"] = vol
                 if "preset" in b:
                     pr = str(b.get("preset") or "").strip().lower()
                     if pr not in vssound.PRESETS:
                         return self._json(400, {"error": "unbekannter Klangstil"})
-                    s["ui_sounds_preset"] = pr
-                settings_save(s)
+                    upd_snd["ui_sounds_preset"] = pr
+                s = profile_prefs_save(upd_snd) if upd_snd else settings_load()
                 sound_sync(s)
                 log("Oberflaechentoene:", "an" if s.get("ui_sounds", True) else "aus",
                     s.get("ui_sounds_preset"), f"{s.get('ui_sounds_volume')}%")
                 return self._json(200, settings_payload())
             if parts == ["api", "settings", "cursor"]:
                 b = self._body()
-                s = settings_load()
+                upd_cur: dict[str, Any] = {}
                 if b.get("theme") in cursor_themes():
-                    s["cursor_theme"] = b["theme"]
+                    upd_cur["cursor_theme"] = b["theme"]
                 if int(b.get("size") or 0) in CURSOR_SIZES:
-                    s["cursor_size"] = int(b["size"])
-                settings_save(s)
+                    upd_cur["cursor_size"] = int(b["size"])
+                s = profile_prefs_save(upd_cur) if upd_cur else settings_load()
                 apply_appearance(s)
                 restart_home_later()
                 return self._json(200, settings_payload())
             if parts == ["api", "settings", "resolution"]:
+                if not self._check_action("settings_system"):
+                    return
                 b = self._body()
                 mode = str(b.get("mode", ""))
                 outs = [o for o in xrandr_info() if mode in o["modes"]]
@@ -16203,12 +16668,16 @@ class Handler(BaseHTTPRequestHandler):
                 s = settings_load(); s["resolution"] = mode; s["rate"] = rate; settings_save(s)
                 return self._json(200, settings_payload())
             if parts == ["api", "settings", "matchrate"]:
+                if not self._check_action("settings_system"):
+                    return
                 on = bool(self._body().get("on"))
                 s = settings_load(); s["match_rate"] = on; settings_save(s)
                 log("Bildrate an Video anpassen:", "an" if on else "aus")
                 DISPLAY_RATE.reapply()
                 return self._json(200, settings_payload())
             if parts == ["api", "settings", "gamefx"]:
+                if not self._check_action("settings_system"):
+                    return
                 try:
                     game_fx_set(str(self._body().get("mode")))
                 except ValueError as e:
@@ -16231,6 +16700,8 @@ class Handler(BaseHTTPRequestHandler):
                 s = settings_load(); s["audio_auto"] = bool(self._body().get("on")); settings_save(s)
                 return self._json(200, settings_payload())
             if parts == ["api", "net", "prefer"]:
+                if not self._check_action("settings_system"):
+                    return
                 try:
                     net_mode_set(str(self._body().get("mode", "")))
                 except ValueError as e:
@@ -16238,6 +16709,8 @@ class Handler(BaseHTTPRequestHandler):
                 time.sleep(2)                     # Routen stehen nach reapply erst nach einem Moment
                 return self._json(200, settings_payload())
             if parts in (["api", "net", "disconnect"], ["api", "net", "connect"]):
+                if not self._check_action("settings_system"):
+                    return
                 kind = self._body().get("type")
                 if kind not in ("wired", "wifi") or (parts[2] == "connect" and kind != "wired"):
                     return self._json(400, {"error": "unbekannte Verbindungsart"})
@@ -16247,6 +16720,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json(502, {"error": str(e)})
                 return self._json(200, settings_payload())
             if parts == ["api", "wifi", "connect"]:
+                if not self._check_action("settings_system"):
+                    return
                 b = self._body()
                 if not b.get("ssid"):
                     return self._json(400, {"error": "kein Netz gewaehlt"})
@@ -16282,6 +16757,19 @@ class Handler(BaseHTTPRequestHandler):
             if parts == ["api", "roms", "launch"]:
                 b = self._body()
                 sys_id = str(b.get("system", ""))
+                emu_tid = ROMS.SYSTEM_TO_TILE.get(sys_id, sys_id)
+                cat, age_rating, is_browser, cmd = _tile_meta(emu_tid)
+                dec = accounts().parental.check_tile(
+                    emu_tid,
+                    cat=cat or "Emulatoren",
+                    age_rating=age_rating,
+                    is_browser=is_browser,
+                    cmd=cmd,
+                    consume_once=True,
+                    already_running=bool(APPS._get(emu_tid)),
+                )
+                if not dec.allowed:
+                    return self._send_parental_denied(dec)
                 filename = str(b.get("file") or b.get("filename") or b.get("path") or "")
                 folder = str(b.get("folder") or "") or None
                 try:
@@ -16292,33 +16780,45 @@ class Handler(BaseHTTPRequestHandler):
                 except (ValueError, RuntimeError) as e:
                     return self._json(400, {"error": str(e)})
             if parts == ["api", "bluetooth", "scan"]:
+                if not self._check_action("settings_system"):
+                    return
                 BLUETOOTH.start_scan()
                 return self._json(200, BLUETOOTH.status())
             if parts == ["api", "bluetooth", "pair"]:
+                if not self._check_action("settings_system"):
+                    return
                 mac = str(self._body().get("mac", ""))
                 if not BLUETOOTH.MAC_RE.match(mac):
                     return self._json(400, {"error": "ungueltige Geraeteadresse"})
                 ok, err = BLUETOOTH.pair(mac)
                 return self._json(200, {"ok": ok, "error": err, "status": BLUETOOTH.status()})
             if parts == ["api", "bluetooth", "connect"]:
+                if not self._check_action("settings_system"):
+                    return
                 mac = str(self._body().get("mac", ""))
                 if not BLUETOOTH.MAC_RE.match(mac):
                     return self._json(400, {"error": "ungueltige Geraeteadresse"})
                 ok, err = BLUETOOTH.connect(mac)
                 return self._json(200, {"ok": ok, "error": err, "status": BLUETOOTH.status()})
             if parts == ["api", "bluetooth", "disconnect"]:
+                if not self._check_action("settings_system"):
+                    return
                 mac = str(self._body().get("mac", ""))
                 if not BLUETOOTH.MAC_RE.match(mac):
                     return self._json(400, {"error": "ungueltige Geraeteadresse"})
                 ok = BLUETOOTH.disconnect(mac)
                 return self._json(200, {"ok": ok, "status": BLUETOOTH.status()})
             if parts == ["api", "bluetooth", "remove"]:
+                if not self._check_action("settings_system"):
+                    return
                 mac = str(self._body().get("mac", ""))
                 if not BLUETOOTH.MAC_RE.match(mac):
                     return self._json(400, {"error": "ungueltige Geraeteadresse"})
                 ok = BLUETOOTH.remove(mac)
                 return self._json(200, {"ok": ok, "status": BLUETOOTH.status()})
             if parts == ["api", "bluetooth", "rename"]:
+                if not self._check_action("settings_system"):
+                    return
                 b = self._body()
                 mac = str(b.get("mac", ""))
                 if not BLUETOOTH.MAC_RE.match(mac):
@@ -16326,11 +16826,15 @@ class Handler(BaseHTTPRequestHandler):
                 ok = BLUETOOTH.rename(mac, b.get("name", ""))
                 return self._json(200, {"ok": ok, "status": BLUETOOTH.status()})
             if parts == ["api", "bluetooth", "power"]:
+                if not self._check_action("settings_system"):
+                    return
                 b = self._body()
                 on = b.get("powered") if "powered" in b else b.get("on")
                 ok = BLUETOOTH.power(bool(on))
                 return self._json(200, {"ok": ok, "status": BLUETOOTH.status()})
             if parts == ["api", "bluetooth", "service"]:
+                if not self._check_action("settings_system"):
+                    return
                 b = self._body()
                 on = (b.get("action") == "start") if "action" in b else bool(b.get("on"))
                 subprocess.run(["sudo", "-n", PKG_HELPER, "bluetooth", "on" if on else "off"],
@@ -16339,6 +16843,8 @@ class Handler(BaseHTTPRequestHandler):
             if parts[:2] == ["api", "volume"] and len(parts) == 3:
                 return self._json(200, volume_set(parts[2]) or {})
             if parts == ["api", "power", "suspend"]:
+                if not self._check_action("power_menu"):
+                    return
                 if not can_suspend():
                     return self._json(400, {"error": "Standby wird hier nicht unterstuetzt"})
                 RADIO.stop()                           # wie beim Fernseher: Ton aus; Programme bleiben offen
@@ -16347,12 +16853,15 @@ class Handler(BaseHTTPRequestHandler):
                 threading.Timer(0.8, lambda: subprocess.Popen(POWER["suspend"])).start()
                 return self._json(200, {"ok": True})
             if parts[:2] == ["api", "power"] and len(parts) == 3 and parts[2] in POWER:
+                if not self._check_action("power_menu"):
+                    return
                 act = parts[2]
                 def _do_power() -> None:
                     RADIO.stop()
                     APPS.close_all()
                     sound_sync()
                     SOUND.play_sync("shutdown", timeout=1.4)
+                    close_accounts()
                     subprocess.Popen(POWER[act])
                 threading.Thread(target=_do_power, daemon=True).start()
                 return self._json(200, {"ok": True})
@@ -16629,6 +17138,7 @@ def on_term(sig, _frame):
     """SIGTERM: angehaltene Programme fortsetzen, sonst wie bisher sofort beenden (Radio & Co. laufen weiter)."""
     try:
         APPS.resume_all()
+        close_accounts()
     finally:
         signal.signal(sig, signal.SIG_DFL)
         os.kill(os.getpid(), sig)
@@ -16637,6 +17147,9 @@ def on_term(sig, _frame):
 def main():
     global BOOT_BUILD
     BOOT_BUILD = vs_version().get("build")
+    init_api_token()
+    init_accounts()
+    accounts().parental.start_tracker(_handle_parental_event, interval=vsaccount.USAGE_TICK_SECONDS)
     resume_leftovers()
     signal.signal(signal.SIGTERM, on_term)
     app_prefs()
@@ -16664,6 +17177,7 @@ def main():
     finally:
         APPS.resume_all()
         RADIO.stop()
+        close_accounts()
 
 
 if __name__ == "__main__":

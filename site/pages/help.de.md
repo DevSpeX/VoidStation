@@ -135,6 +135,14 @@ Laufende und nächste Sendung erscheinen beim Umschalten und mit <kbd>A</kbd> im
 echo 'https://…/epg.xml.gz' | sudo tee /usr/local/share/voidstation/epg-url
 ```
 
+## Konten und Kindersicherung {#konten}
+
+Unter **Einstellungen → Konten & Profile** lassen sich mehrere lokale Profile anlegen (**Eltern / Admin**, **Standard**, **Kind** und optional ein temporärer **Gast**). Favoriten, Verlauf, Mediathek-Fortschritt, Browser-Profile, Sprache und Erscheinungsbild bleiben je Profil getrennt; beim ersten Start nach dem Update übernimmt VoidStation bestehende Daten automatisch in das erste Admin-Konto.
+
+- **Kindersicherung:** Kinder-Profile sperren standardmäßig Terminal, Dateimanager, Browser, AppCenter und Systemeinstellungen – sowohl in der Oberfläche als auch in der API. Je Kinder-Konto lassen sich Altersstufe, erlaubte/gesperrte Apps und Kategorien, ein Tageslimit sowie eine Ruhezeit festlegen; Eltern können mit ihrer PIN einmalig Apps freigeben oder Zeit verlängern.
+- **Eltern-PIN erforderlich:** Ein Kinder-Konto lässt sich erst anlegen, wenn das Eltern-/Admin-Konto eine PIN oder ein Passwort hat, damit Kinder nicht einfach auf das Eltern-Konto wechseln können.
+- **Grenzen des Kinderschutzes:** Die Kindersicherung richtet sich an die Nutzung am Wohnzimmer-Fernseher. Wer direkten Zugriff auf ein Terminal, eine Textkonsole (`Strg`+`Alt`+`F2`) oder SSH hat, handelt auf dem Gerät als Administrator und kann eine vergessene PIN ohne Anmeldung zurücksetzen (`vsctl account reset-pin`, `vsctl account unlock`). Sie ersetzt also keine Systemabschottung gegen lokalen Shell- oder SSH-Zugriff.
+
 ## Häufige Fragen {#faq}
 
 ### Brauche ich ein Konto?

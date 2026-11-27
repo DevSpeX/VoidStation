@@ -108,6 +108,8 @@ def log(*a):
     line = " ".join(str(x) for x in a)
     for sec in SECRETS:
         line = line.replace("=" + sec, "=***")           # steht nur als SMBPASS=… in Befehlszeilen
+    line = re.sub(r'("(?:password|pin)"\s*:\s*)"[^"]*"', r'\1"***"', line)
+    line = re.sub(r'(?i)\b(password|pin|passwort)\s*([=:])\s*[^\s,;}\]]+', r'\1\2***', line)
     with open(LOG, "a", encoding="utf-8") as f:
         f.write(time.strftime("%H:%M:%S ") + line + "\n")
 
@@ -174,6 +176,22 @@ def save_state(st):
     tmp.write_text(json.dumps(st, ensure_ascii=False), encoding="utf-8")
     os.chmod(tmp, 0o600)
     tmp.replace(STATE)
+
+
+def redact_state(st: dict[str, Any]) -> dict[str, Any]:
+    """Entfernt Passwort und PIN aus einer Zustandskopie fuer status/Ausgaben."""
+    out = dict(st)
+    cfg = out.get("config")
+    if isinstance(cfg, dict):
+        cfg_copy = dict(cfg)
+        user = cfg_copy.get("user")
+        if isinstance(user, dict):
+            user_copy = dict(user)
+            user_copy.pop("password", None)
+            user_copy.pop("pin", None)
+            cfg_copy["user"] = user_copy
+        out["config"] = cfg_copy
+    return out
 
 
 def settle():
@@ -661,6 +679,7 @@ class Run:
             self.st["done"].append(phase)
         if phase == "configure":
             self.cfg["user"]["password"] = ""              # danach nicht mehr noetig
+            self.cfg["user"]["pin"] = ""
         save_state(self.st)
 
     # --- Einhaengen
@@ -728,9 +747,11 @@ class Run:
             self.mark_done(ph)
         self.st["finished"] = time.time()
         self.cfg["user"]["password"] = ""                  # nicht laenger als noetig aufheben
+        self.cfg["user"]["pin"] = ""
         save_state(self.st)
         emit(ev="done", pct=100, seconds=int(time.time() - self.st["started"]), user=self.cfg["user"]["name"],
-             login=self.cfg["user"]["login"], hostname=self.cfg["hostname"])
+             login=self.cfg["user"]["login"], hostname=self.cfg["hostname"],
+             auto_login=bool(self.cfg["user"].get("auto_login", True)))
         return 0
 
     def fail(self, phase, code, msg):
@@ -1236,6 +1257,7 @@ class Run:
             for f in ("radio.json", "tvfavs.json"):
                 if (live / f).is_file():
                     shutil.copy2(live / f, vs / f)
+        bootstrap_account(T, login, u)
         chroot(["chown", "-R", f"{login}:{login}", f"/home/{login}/.local"])
         sv = T / "etc/runit/runsvdir/default"
         for s_ in ("sshd",) + (() if c.get("share", True) else ("smbd", "nmbd")):
@@ -1449,6 +1471,49 @@ def nvidia_active():
     return False
 
 
+def bootstrap_account(target: Path, login: str, user_cfg: dict[str, Any], runner=chroot) -> None:
+    """Richtet das erste Admin-Konto im Zielsystem via 0600-Datei ein (ohne Secrets in argv/Logs)."""
+    boot_secret = target / "root" / ".voidstation-account-bootstrap.json"
+    boot_secret.parent.mkdir(parents=True, exist_ok=True)
+    boot_secret.unlink(missing_ok=True)
+    pin = str(user_cfg.get("pin") or "")
+    auto_login = False if pin else bool(user_cfg.get("auto_login", True))
+    payload: dict[str, Any] = {
+        "display_name": str(user_cfg["name"]),
+        "password": str(user_cfg["password"]),
+        "auto_login": auto_login,
+        "ask_on_boot": not auto_login,
+    }
+    if pin:
+        payload["pin"] = pin
+    fd = os.open(boot_secret, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, ensure_ascii=False)
+            fh.flush()
+        os.chmod(boot_secret, 0o600)
+        r = runner(
+            [
+                "env",
+                "HOME=/root",
+                f"PYTHONPATH=/home/{login}/.local/share/voidstation",
+                "python3",
+                "-m",
+                "vsaccount.cli",
+                "--base",
+                f"/home/{login}/.local/share/voidstation",
+                "bootstrap",
+                "--secret-file",
+                "/root/.voidstation-account-bootstrap.json",
+            ],
+            check=False,
+        )
+    finally:
+        boot_secret.unlink(missing_ok=True)
+    if r.returncode != 0:
+        raise Fail("setup", "Account-Bootstrap fehlgeschlagen")
+
+
 def disk_of(dev):
     r = sh(["lsblk", "-no", "PKNAME", dev], check=False, quiet=True).stdout.split()
     return "/dev/" + r[0] if r else None
@@ -1483,6 +1548,14 @@ def validate(cfg):
         return "bad_name"
     if not pw or re.search(r"[\n\r\x00]", pw) or len(pw) > 200:
         return "bad_password"
+    pin = u.get("pin", "")
+    if pin is None:
+        pin = ""
+    if not isinstance(pin, str) or (pin != "" and not re.fullmatch(r"\d{4,8}", pin)):
+        return "bad_pin"
+    auto_login = u.get("auto_login", not bool(pin))
+    if not isinstance(auto_login, bool) or (pin and auto_login):
+        return "bad_config"
     if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,13}[A-Za-z0-9])?", cfg.get("hostname", "")):
         return "bad_hostname"
     if cfg.get("lang", "de") not in LOCALES or cfg.get("keymap", "de") not in KEYMAPS:
@@ -1639,10 +1712,31 @@ def cmd_text(_args):
         if pw and pw == getpass.getpass("Nochmal: "):
             break
         print("Leer oder nicht gleich.")
+    pin = ""
+    while True:
+        p1 = getpass.getpass("TV-PIN (4-8 Ziffern, leer = ohne): ")
+        if not p1:
+            break
+        if not re.fullmatch(r"\d{4,8}", p1):
+            print("Die PIN muss aus 4 bis 8 Ziffern bestehen.")
+            continue
+        if p1 == getpass.getpass("PIN nochmal: "):
+            pin = p1
+            break
+        print("PINs sind nicht gleich.")
+    if pin:
+        auto_login = False
+        print("Hinweis: Mit TV-PIN ist automatisches Anmelden deaktiviert.")
+    else:
+        auto_ans = input("Automatisch anmelden? [J/n]: ").strip().lower()
+        auto_login = auto_ans not in ("n", "no", "nein")
     host = input("Rechnername [tv]: ").strip() or "tv"
     if input(f"ALLE Daten auf {disk} loeschen? JA eintippen: ") != "JA":
         print("Abgebrochen."); return 1
-    cfg = {"mode": "whole", "disk": disk, "user": {"name": name, "login": login, "password": pw}, "hostname": host,
+    user_cfg: dict[str, Any] = {"name": name, "login": login, "password": pw, "auto_login": auto_login}
+    if pin:
+        user_cfg["pin"] = pin
+    cfg = {"mode": "whole", "disk": disk, "user": user_cfg, "hostname": host,
            "lang": "de", "keymap": "de", "timezone": "Europe/Berlin", "wifi": True, "share": True,
            "favorites": True, "rtc_local": False}
     bad = validate(cfg)
@@ -1669,8 +1763,7 @@ def main(argv):
     if cmd == "savelog":
         return cmd_savelog(args)
     if cmd == "status":
-        st = read_json_state() or {}
-        st.get("config", {}).get("user", {}).pop("password", None)
+        st = redact_state(read_json_state() or {})
         print(json.dumps(st, ensure_ascii=False)); return 0
     if cmd == "log":
         try:

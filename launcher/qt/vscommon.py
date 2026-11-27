@@ -43,6 +43,21 @@ if str(HERE.parent) not in sys.path:
     sys.path.append(str(HERE.parent))
 from icons import ICONS  # noqa: E402
 import vssound  # noqa: E402
+try:
+    from vsaccount.storage import API_TOKEN_HEADER, read_api_token  # noqa: E402
+except ImportError:
+    API_TOKEN_HEADER = "X-VS-Token"
+
+    def read_api_token(runtime_dir: Path | None = None) -> str:
+        base = runtime_dir or Path(os.environ.get("XDG_RUNTIME_DIR", "").strip()
+                                   or f"/tmp/voidstation-runtime-{os.getuid()}")
+        path = base / "voidstation-api.token"
+        try:
+            if path.is_symlink() or not path.is_file():
+                return ""
+            return path.read_text(encoding="utf-8").strip()
+        except OSError:
+            return ""
 
 
 # ---------------------------------------------------------------------------
@@ -772,8 +787,11 @@ class VsBase(QObject):
 
     def _do(self, rid, method, path, body):
         data = body.encode() if method == "POST" else None
-        req = urllib.request.Request(API + path, data=data, method=method,
-                                     headers={"X-TV": "1", "Content-Type": "application/json"})
+        headers = {"X-TV": "1", "Content-Type": "application/json"}
+        token = read_api_token()
+        if token:
+            headers[API_TOKEN_HEADER] = token
+        req = urllib.request.Request(API + path, data=data, method=method, headers=headers)
         try:
             with urllib.request.urlopen(req, timeout=300) as r:
                 self.replied.emit(rid, True, r.status, r.read().decode("utf-8", "replace"))

@@ -25,6 +25,9 @@ Layer {
     property string name: ""
     property string pw: ""
     property string pw2: ""
+    property string pin: ""
+    property bool autoLogin: true
+    onPinChanged: if (pin.length > 0 && autoLogin) autoLogin = false
     property string host: "tv"
     property string hostEdit: ""
     property int field: 0
@@ -155,7 +158,7 @@ Layer {
     function fresh(p) {
         var l = (p && p.lang) || Ui.lang, ld = langDef(l, p)       // p: probe ist hier noch nicht gesetzt
         probe = p; disk = null; mode = ""; opt = null; newSize = 0; region = null; roles = ({}); manual = null
-        name = ""; pw = ""; pw2 = ""; host = "tv"; hostEdit = ""; field = 0; shift = false; sym = false
+        name = ""; pw = ""; pw2 = ""; pin = ""; autoLogin = true; host = "tv"; hostEdit = ""; field = 0; shift = false; sym = false
         keymap = (p && p.kb) || ld.kb; lang = ld.id; tz = ld.tz; langFocus = "lang"
         wifi = !!(p && (p.wifi_saved || []).length); share = true; rtc = false; rtcSet = false
         status = null; t0 = 0
@@ -176,7 +179,11 @@ Layer {
     function runProbe(force, then) {
         step = "probing"; probeError = ""
         Api.get("/api/install/probe" + (force ? "?force=1" : ""), function (p) {
-            if (!probe) { var keep = { name: name, pw: pw, pw2: pw2 }; fresh(p); if (keep.name) { name = keep.name; pw = keep.pw; pw2 = keep.pw2 } }
+            if (!probe) {
+                var keep = { name: name, pw: pw, pw2: pw2, pin: pin, autoLogin: autoLogin }
+                fresh(p)
+                if (keep.name) { name = keep.name; pw = keep.pw; pw2 = keep.pw2; pin = keep.pin; autoLogin = keep.autoLogin }
+            }
             else probe = p
             if (then) then()
         }, function (e) { probeError = Ui.t("inst.probeFailed", { msg: e }) })
@@ -243,6 +250,8 @@ Layer {
     function keyFilter(e) {
         if (step !== "account" && step !== "host") return false
         if (e.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)) return false
+        if (e.key === Qt.Key_Space && Nav.current && Nav.current.isToggle) { Nav.current.triggered(); return true }
+        if ((e.key === Qt.Key_Return || e.key === Qt.Key_Enter) && Nav.current && Nav.current.isToggle) return false
         if (e.key === Qt.Key_Backspace) { del(); return true }
         if (e.key === Qt.Key_Tab || e.key === Qt.Key_Backtab) { nextField(e.key === Qt.Key_Backtab || (e.modifiers & Qt.ShiftModifier) ? -1 : 1); return true }
         if ((e.key === Qt.Key_Return || e.key === Qt.Key_Enter) && (phys || (Nav.current && Nav.current.isField))) { nextField(1); return true }
@@ -400,7 +409,9 @@ Layer {
         var extras = [(probe.wifi_saved || []).length && wifi ? T("inst.wifi") : null, share ? T("inst.whatShare") : null].filter(function (x) { return !!x })
         return [
             { k: T("inst.sumDisk"), html: "<b>" + Ui.esc(diskName(d)) + " · " + Ui.esc(gb(d.size)) + "</b><br>" + Ui.esc(eff) },
-            { k: T("inst.sumAccount"), html: "<b>" + Ui.esc(name) + "</b> · " + Ui.esc(T("inst.sumLogin", { login: loginOf(name) })) },
+            { k: T("inst.sumAccount"), html: "<b>" + Ui.esc(name) + "</b> · " + Ui.esc(T("inst.sumLogin", { login: loginOf(name) }))
+                                           + " · " + Ui.esc(T(pin.length > 0 ? "inst.sumPinSet" : "inst.sumPinNone"))
+                                           + " · " + Ui.esc(T((autoLogin && pin.length === 0) ? "inst.sumAutoLoginOn" : "inst.sumAutoLoginOff")) },
             { k: T("inst.sumDevice"), html: "<b>" + Ui.esc(host) + "</b> · " + Ui.esc(langName(lang)) + " · " + Ui.esc(tzLabel(tz).split(" · ")[0])
                                            + (probe.screen ? " · " + probe.screen.mode.replace("x", "\u00d7") : "") },
             { k: T("inst.sumUpdates"), v: T("inst.sumChannel") },
@@ -458,7 +469,8 @@ Layer {
     function fields() {
         return step === "host" ? [{ id: "hostEdit", label: Ui.t("inst.hostname"), max: 15, filter: /[A-Za-z0-9-]/ }]
              : [{ id: "name", label: Ui.t("inst.name"), max: 60, filter: /[^:,=\\]/ }, { id: "pw", label: Ui.t("inst.password"), max: 200, secret: true },
-                { id: "pw2", label: Ui.t("inst.password2"), max: 200, secret: true }]
+                { id: "pw2", label: Ui.t("inst.password2"), max: 200, secret: true },
+                { id: "pin", label: Ui.t("inst.pin"), max: 8, filter: /[0-9]/, secret: true, placeholder: Ui.t("inst.pinOptional") }]
     }
     function type(ch) {
         var f = fields()[field]
@@ -488,6 +500,7 @@ Layer {
         if (!name.trim() || !/^[a-z_][a-z0-9_-]{0,30}$/.test(login)) { field = 0; app.toast(Ui.t("inst.errName"), true); return focusField() }
         if (!pw) { field = 1; app.toast(Ui.t("inst.errPw"), true); return focusField() }
         if (pw !== pw2) { field = 2; pw2 = ""; app.toast(Ui.t("inst.errPw2"), true); return focusField() }
+        if (pin.length > 0 && !/^\d{4,8}$/.test(pin)) { field = 3; app.toast(Ui.t("inst.errPin"), true); return focusField() }
         name = name.trim()
         if (!rtcSet) { rtc = !!probe.windows && mode !== "whole"; rtcSet = true }
         go("device")
@@ -518,7 +531,9 @@ Layer {
         }
     }
     function config() {
-        var c = { mode: mode, disk: disk.path, user: { name: name, login: loginOf(name), password: pw }, hostname: host,
+        var u = { name: name, login: loginOf(name), password: pw, auto_login: pin.length > 0 ? false : autoLogin }
+        if (pin.length > 0) u.pin = pin
+        var c = { mode: mode, disk: disk.path, user: u, hostname: host,
                   lang: lang, keymap: keymap, timezone: tz, wifi: wifi && !!(probe.wifi_saved || []).length,
                   share: share, rtc_local: rtc && !!probe.windows }
         if (mode === "beside") { c.part = opt.part; c.new_size = newSize }
@@ -897,8 +912,10 @@ Layer {
                                     Txt { width: parent.width; text: modelData.label; font.pixelSize: 12.5 * Ui.f; color: Ui.c.textDim }
                                     Row {
                                         height: 19 * Ui.f * 1.35
+                                        width: parent.width
                                         Txt {
                                             id: fv
+                                            visible: il[modelData.id].length > 0
                                             text: { var v = il[modelData.id]; return modelData.secret ? "\u2022".repeat(v.length) : v }
                                             font.pixelSize: 19 * Ui.f
                                             width: Math.min(implicitWidth, fcol.width - 6)
@@ -911,6 +928,15 @@ Layer {
                                             anchors.verticalCenter: parent.verticalCenter
                                             SequentialAnimation on opacity { running: fb.cur; loops: Animation.Infinite
                                                 NumberAnimation { to: 1; duration: 0 } PauseAnimation { duration: 500 } NumberAnimation { to: 0; duration: 0 } PauseAnimation { duration: 500 } }
+                                        }
+                                        Txt {
+                                            visible: !il[modelData.id].length && !!modelData.placeholder
+                                            text: modelData.placeholder || ""
+                                            font.pixelSize: 14.5 * Ui.f
+                                            color: Ui.c.textFaint
+                                            leftPadding: 6 * Ui.f
+                                            width: fcol.width - 10 * Ui.f
+                                            anchors.verticalCenter: parent.verticalCenter
                                         }
                                     }
                                 }
@@ -925,6 +951,56 @@ Layer {
                                     Txt { width: parent.width; text: Ui.t("inst.login"); font.pixelSize: 12.5 * Ui.f; color: Ui.c.textDim }
                                     Txt { width: parent.width; text: il.loginOf(il.name); font.pixelSize: 19 * Ui.f; height: 19 * Ui.f * 1.35 }
                                 }
+                            }
+                        }
+                    }
+                    Focusable {
+                        id: autoToggle
+                        visible: il.step === "account"
+                        property string key: "fautoLogin"
+                        property bool isToggle: true
+                        sound: "toggle"
+                        width: parent.width
+                        height: autoRow.implicitHeight + 14 * Ui.f + 4
+                        opacity: il.pin.length > 0 ? 0.6 : 1.0
+                        onTriggered: {
+                            if (il.pin.length > 0) {
+                                il.autoLogin = false
+                                app.toast(Ui.t("inst.autoLoginPinDisabled"))
+                            } else {
+                                il.autoLogin = !il.autoLogin
+                            }
+                        }
+                        Rectangle {
+                            anchors.fill: parent
+                            color: Ui.c.surfaceRaised
+                            border.width: 2
+                            border.color: autoToggle.focused ? Ui.c.borderFocus : Ui.c.borderSubtle
+                        }
+                        Row {
+                            id: autoRow
+                            x: 12 * Ui.f + 2; y: 7 * Ui.f + 2
+                            width: parent.width - 24 * Ui.f - 4
+                            spacing: 10 * Ui.f
+                            Column {
+                                width: parent.width - autoBadge.width - 10 * Ui.f
+                                anchors.verticalCenter: parent.verticalCenter
+                                Txt { width: parent.width; text: Ui.t("inst.autoLogin"); font.pixelSize: 12.5 * Ui.f; color: Ui.c.textDim }
+                                Txt {
+                                    width: parent.width
+                                    text: il.pin.length > 0 ? Ui.t("inst.autoLoginPinDisabled") : Ui.t(il.autoLogin ? "inst.autoLoginOn" : "inst.autoLoginOff")
+                                    font.pixelSize: 15.5 * Ui.f
+                                    wrapMode: Text.WordWrap
+                                    elide: Text.ElideNone
+                                }
+                            }
+                            Rectangle {
+                                id: autoBadge
+                                width: autoBadgeTxt.implicitWidth + 18 * Ui.f
+                                height: autoBadgeTxt.implicitHeight + 8 * Ui.f
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: (il.autoLogin && il.pin.length === 0) ? Ui.c.statusOkBg : Ui.c.surfaceCard
+                                Txt { id: autoBadgeTxt; anchors.centerIn: parent; text: Ui.t((il.autoLogin && il.pin.length === 0) ? "common.on" : "common.off"); font.pixelSize: 13.5 * Ui.f; elide: Text.ElideNone }
                             }
                         }
                     }
@@ -976,6 +1052,7 @@ Layer {
                         }
                     }
                     Txt { width: il.iu * 1.9; text: Ui.t("inst.pwInfo"); font.pixelSize: 14 * Ui.f; color: Ui.c.textDim; wrapMode: Text.WordWrap; elide: Text.ElideNone; lineHeight: 1.4 }
+                    Txt { width: il.iu * 1.9; text: Ui.t("inst.pinInfo"); font.pixelSize: 14 * Ui.f; color: Ui.c.textDim; wrapMode: Text.WordWrap; elide: Text.ElideNone; lineHeight: 1.4 }
                     Txt { width: il.iu * 1.9; text: Ui.t("inst.usbKb"); font.pixelSize: 14 * Ui.f; color: Ui.c.textDim; wrapMode: Text.WordWrap; elide: Text.ElideNone; lineHeight: 1.4 }
                 }
             }
@@ -1156,7 +1233,7 @@ Layer {
                 title: Ui.t("inst.afterReboot")
                 IPanel {
                     u: il.iu; wide: true
-                    rows: [{ k: Ui.t("inst.loginAuto"), v: Ui.t("inst.loginAutoText", { name: r.user || il.name }) },
+                    rows: [{ k: Ui.t("inst.loginAuto"), v: (r.auto_login === false || (!("auto_login" in r) && !il.autoLogin)) ? Ui.t("inst.loginAskText", { name: r.user || il.name }) : Ui.t("inst.loginAutoText", { name: r.user || il.name }) },
                            il.share ? { k: Ui.t("inst.whatShare"), v: Ui.t("inst.shareText", { host: r.hostname || il.host, login: r.login || il.loginOf(il.name) }) } : null,
                            { k: Ui.t("inst.sumUpdates"), v: Ui.t("inst.updText") },
                            secs ? { k: Ui.t("inst.duration"), v: Ui.t("inst.durationText", { min: Math.floor(secs / 60), sec: secs % 60 }) } : null,
